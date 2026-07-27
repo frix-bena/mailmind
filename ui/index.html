@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MailMind</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+  <div style="text-align:center">
+    <div style="font-size:44px;margin-bottom:16px">✉️</div>
+    <div class="spinner" style="width:24px;height:24px;margin:0 auto"></div>
+  </div>
+</div>
+<script>
+try {
+  const u = JSON.parse(localStorage.getItem('mailmind_user'));
+  window.location.replace(u?.connected ? 'inbox.html' : 'onboarding.html');
+} catch { window.location.replace('onboarding.html'); }
+</script>
+</body>
+</html>

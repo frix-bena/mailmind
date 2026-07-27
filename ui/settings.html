@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MailMind — Settings</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.section{margin-bottom:28px}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted2);margin-bottom:12px;padding-left:2px}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:17px 22px;border-bottom:1px solid var(--border);transition:background var(--t);
+}
+.settings-row:last-child{border-bottom:none}
+.settings-row:hover{background:rgba(255,255,255,.02)}
+.row-label{font-size:14px;font-weight:600;line-height:1.2}
+.row-desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.row-danger .row-label{color:var(--danger)}
+.tone-group{display:flex;gap:7px}
+.tone-btn{
+  padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:600;
+  background:var(--surface2);color:var(--muted);border:1px solid var(--border);
+  cursor:pointer;transition:all var(--t);
+}
+.tone-btn:hover{border-color:var(--border2);color:var(--text)}
+.tone-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+select.styled{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:8px 12px;color:var(--text);font-size:13.5px;cursor:pointer;
+  transition:border-color var(--t);font-family:inherit;
+}
+select.styled:focus{border-color:var(--accent)}
+.save-bar{
+  position:sticky;bottom:0;padding:16px 0 24px;
+  background:linear-gradient(to top,var(--bg) 60%,transparent);
+  display:flex;justify-content:flex-end;gap:10px;align-items:center;
+}
+.saved-badge{animation:fadeIn .3s ease;opacity:0;animation-fill-mode:forwards}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-root"></div>
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">⚙️ Settings</span>
+      <div id="topbar-right"></div>
+    </div>
+    <div class="content">
+
+      <!-- Connected Account -->
+      <div class="section">
+        <div class="section-label">Connected Account</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Google Account</div>
+              <div class="row-desc" id="connected-email">alex.rivera@gmail.com · Connected via OAuth 2.0</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+              <span class="badge badge-low"><span class="dot dot-green" style="animation:none"></span> Connected</span>
+              <button class="btn btn-danger btn-sm" id="disconnect-btn" onclick="disconnect()">Disconnect</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="row-label">OAuth Scopes</div>
+              <div class="row-desc">gmail.readonly · gmail.send · gmail.modify</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="alert('Opens Google account permissions page')">Manage in Google →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reply Preferences -->
+      <div class="section">
+        <div class="section-label">Reply Preferences</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Reply tone</div>
+              <div class="row-desc">Applied to all AI-drafted replies</div>
+            </div>
+            <div class="tone-group" id="tone-group">
+              <button class="tone-btn active" data-t="professional" onclick="setTone(this)">💼 Professional</button>
+              <button class="tone-btn" data-t="casual" onclick="setTone(this)">😊 Casual</button>
+              <button class="tone-btn" data-t="brief" onclick="setTone(this)">⚡ Brief</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="section">
+        <div class="section-label">Notifications</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">In-app notifications</div>
+              <div class="row-desc">Real-time bell alerts inside MailMind</div>
+            </div>
+            <div class="toggle on" id="tog-inapp" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Daily digest email</div>
+              <div class="row-desc">Morning summary sent to your inbox</div>
+            </div>
+            <div class="toggle" id="tog-digest" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Polling -->
+      <div class="section">
+        <div class="section-label">Inbox Polling</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Check for new emails</div>
+              <div class="row-desc">How often MailMind polls your inbox via the n8n workflow</div>
+            </div>
+            <select class="styled" id="poll-select">
+              <option value="1">Every 1 minute</option>
+              <option value="3" selected>Every 3 minutes</option>
+              <option value="5">Every 5 minutes</option>
+              <option value="15">Every 15 minutes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- n8n Automation Engine -->
+      <div class="section">
+        <div class="section-label">Automation Engine (n8n)</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Workflow Status</div>
+              <div class="row-desc">Backend powering inbox reads, classification, and drafts</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+              <span class="badge badge-low"><span class="dot dot-green" style="animation:none"></span> Running</span>
+              <button class="btn btn-ghost btn-sm" onclick="alert('Opens n8n dashboard')">Open n8n →</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Classification Model</div>
+              <div class="row-desc">Classifies every email: needsReply, category, urgency, summary</div>
+            </div>
+            <span class="chip" style="cursor:default">GPT-4o</span>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Drafting Model</div>
+              <div class="row-desc">Generates human-sounding replies in your chosen tone</div>
+            </div>
+            <span class="chip" style="cursor:default">GPT-4o</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="section">
+        <div class="section-label">Danger Zone</div>
+        <div class="settings-card">
+          <div class="settings-row row-danger">
+            <div>
+              <div class="row-label">Delete all data</div>
+              <div class="row-desc" style="color:var(--muted)">Permanently remove all emails, drafts, and preferences from MailMind</div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="alert('Would open a confirmation dialog in production')">Delete account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save bar -->
+      <div class="save-bar">
+        <span id="saved-label" class="saved-badge badge badge-low" style="display:none">✅ Saved</span>
+        <button class="btn btn-primary" onclick="save()" style="min-width:140px">Save changes</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+document.body.insertAdjacentHTML('afterbegin', renderSidebar('settings'));
+initSidebar();
+
+// Load saved prefs
+const user = getUser();
+if (user.tone) {
+  document.querySelectorAll('.tone-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.t === user.tone);
+  });
+}
+if (user.inApp === false) document.getElementById('tog-inapp').classList.remove('on');
+if (user.digest)          document.getElementById('tog-digest').classList.add('on');
+if (user.email)           document.getElementById('connected-email').textContent = user.email + ' · Connected via OAuth 2.0';
+
+function setTone(el) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function save() {
+  const existing = getUser();
+  const activeTone = document.querySelector('.tone-btn.active')?.dataset.t || existing.tone;
+  localStorage.setItem('mailmind_user', JSON.stringify({
+    ...existing,
+    tone: activeTone,
+    inApp: document.getElementById('tog-inapp').classList.contains('on'),
+    digest: document.getElementById('tog-digest').classList.contains('on'),
+    pollInterval: document.getElementById('poll-select').value,
+  }));
+  const label = document.getElementById('saved-label');
+  label.style.display = '';
+  setTimeout(() => { label.style.display = 'none'; }, 2500);
+}
+
+function disconnect() {
+  if (!confirm('Disconnect your inbox? This will stop all email monitoring.')) return;
+  const btn = document.getElementById('disconnect-btn');
+  btn.disabled = true; btn.textContent = 'Disconnecting…';
+  setTimeout(() => { localStorage.removeItem('mailmind_user'); window.location.href = 'onboarding.html'; }, 1200);
+}
+</script>
+</body>
+</html>

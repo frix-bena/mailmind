@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MailMind — Inbox</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ── Inbox-specific ── */
+.banner{
+  display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:20px;
+  background:var(--accent-glow);border:1px solid var(--accent-border);border-radius:var(--radius);
+  animation:fadeIn .4s ease;
+}
+.banner-text{flex:1;font-size:14px}
+.search-wrap{position:relative;margin-bottom:16px}
+.search-wrap .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+.search-wrap input{padding-left:42px;height:44px;font-size:14px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.filter-chip{
+  padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);transition:all var(--t);
+}
+.filter-chip:hover{border-color:var(--border2);color:var(--text)}
+.filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.poll-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* ── Email Card ── */
+.email-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:14px;overflow:hidden;transition:all var(--t);
+  border-left:3px solid transparent;
+}
+.email-card:hover{border-color:var(--border2);box-shadow:var(--shadow)}
+.email-card.needs-reply{border-left-color:var(--accent)}
+.email-card.done{opacity:.58}
+.email-card-header{padding:18px 20px 0;display:flex;gap:13px;align-items:flex-start}
+.email-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:14px;color:#fff;
+}
+.email-sender{font-weight:700;font-size:14px;line-height:1.2}
+.email-subject{font-size:13px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px}
+.email-time{font-size:12px;color:var(--muted2);flex-shrink:0;margin-top:2px}
+.email-tags{display:flex;gap:7px;flex-wrap:wrap;padding:12px 20px 0}
+.email-divider{height:1px;background:var(--border);margin:14px 20px}
+.ai-summary{padding:0 20px 14px;display:flex;gap:11px;align-items:flex-start}
+.ai-label{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.ai-text{font-size:13.5px;line-height:1.65;color:var(--text2)}
+.view-orig{background:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;padding:0 20px 14px;display:block;transition:color var(--t);border:none}
+.view-orig:hover{color:var(--accent)}
+.draft-section{border-top:1px solid var(--border);padding:16px 20px}
+.draft-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0}
+.draft-toggle-label{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px}
+.draft-toggle-arrow{font-size:12px;color:var(--accent);transition:transform var(--t)}
+.draft-toggle-arrow.open{transform:rotate(90deg)}
+.draft-body{
+  margin-top:12px;padding:15px 16px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-size:13.5px;line-height:1.8;white-space:pre-wrap;color:var(--text2);
+  display:none;
+}
+.draft-body.visible{display:block;animation:fadeIn .25s ease}
+.draft-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+.no-reply-footer{padding:12px 20px;display:flex;justify-content:flex-end;border-top:1px solid var(--border)}
+
+/* ── Modals ── */
+.modal textarea{width:100%;min-height:220px;font-size:13.5px;line-height:1.75}
+.placeholder-hint{font-size:12px;color:var(--muted);margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-root"></div>
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">📥 Inbox</span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="poll-chip"><span class="dot dot-green"></span><span id="poll-status">Checking…</span></div>
+        <span class="badge badge-accent" id="pending-badge">2 awaiting approval</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Banner -->
+      <div class="banner" id="banner">
+        <span style="font-size:20px">📬</span>
+        <div class="banner-text"><strong>6 new emails</strong> arrived. 2 need your reply — drafts are ready below.</div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('banner').remove()">Dismiss</button>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="input" id="search-input" placeholder="Search emails…" oninput="renderEmails()">
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-chip" data-filter="all" onclick="setFilter(this)">All</div>
+        <div class="filter-chip active" data-filter="needs-reply" onclick="setFilter(this)">Needs Reply</div>
+        <div class="filter-chip" data-filter="no-reply" onclick="setFilter(this)">No Reply Needed</div>
+        <div class="filter-chip" data-filter="replied" onclick="setFilter(this)">Replied</div>
+      </div>
+
+      <!-- Email list -->
+      <div id="email-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- View Original Modal -->
+<div class="modal-overlay" id="orig-modal" style="display:none" onclick="closeOrig(event)">
+  <div class="modal">
+    <div class="modal-header" id="orig-subject">Email</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="orig-from"></div>
+    <div id="orig-body" style="background:var(--surface2);border-radius:var(--radius-sm);padding:18px;font-size:13.5px;line-height:1.8;white-space:pre-wrap;color:var(--text2);max-height:400px;overflow-y:auto"></div>
+    <div class="modal-footer"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('orig-modal').style.display='none'">Close</button></div>
+  </div>
+</div>
+
+<!-- Edit Draft Modal -->
+<div class="modal-overlay" id="edit-modal" style="display:none" onclick="closeEdit(event)">
+  <div class="modal">
+    <div class="modal-header" id="edit-title">Edit reply</div>
+    <textarea class="input" id="edit-textarea"></textarea>
+    <div class="placeholder-hint">💡 Replace any <code style="background:var(--surface3);padding:1px 5px;border-radius:4px">{{PLACEHOLDER}}</code> text before sending.</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('edit-modal').style.display='none'">Discard</button>
+      <button class="btn btn-primary btn-sm" onclick="sendEdited()">Send Reply</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let emails = [];
+let activeFilter = 'needs-reply';
+let editingEmailId = null;
+const userStr = localStorage.getItem('mailmind_user');
+const user = userStr ? JSON.parse(userStr) : null;
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+document.body.insertAdjacentHTML('afterbegin', renderSidebar('inbox'));
+document.getElementById('sidebar-root').remove();
+initSidebar();
+
+// ── Poll status animation ──────────────────────────────────────────────────
+setTimeout(() => { document.getElementById('poll-status').textContent = 'Up to date'; }, 2200);
+setInterval(() => {
+  document.getElementById('poll-status').textContent = 'Checking…';
+  setTimeout(() => { document.getElementById('poll-status').textContent = 'Up to date'; }, 1500);
+}, 18000);
+
+// ── Filters ───────────────────────────────────────────────────────────────
+function setFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = el.dataset.filter;
+  renderEmails();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderEmails() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = emails.filter(e => {
+    const matchQ = !q || [e.subject, e.sender, e.summary].some(s => s.toLowerCase().includes(q));
+    if (!matchQ) return false;
+    if (activeFilter === 'needs-reply') return e.needsReply && e.draftStatus === 'pending';
+    if (activeFilter === 'no-reply')    return !e.needsReply;
+    if (activeFilter === 'replied')     return e.draftStatus === 'sent';
+    return true;
+  });
+
+  const pending = emails.filter(e => e.needsReply && e.draftStatus === 'pending').length;
+  const pb = document.getElementById('pending-badge');
+  pb.textContent = pending + ' awaiting approval';
+  pb.style.display = pending ? '' : 'none';
+
+  const list = document.getElementById('email-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No emails here</h3><p>Try a different filter or search term.</p></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(buildCard).join('');
+
+  // Wire up draft toggles
+  list.querySelectorAll('.draft-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const body = btn.nextElementSibling;
+      const arr  = btn.querySelector('.draft-toggle-arrow');
+      body.classList.toggle('visible');
+      arr.classList.toggle('open');
+    });
+  });
+}
+
+function buildCard(e) {
+  const done = e.draftStatus === 'sent' || e.draftStatus === 'declined';
+  const bgColor = avatarColor(e.sender);
+  return `
+  <div class="email-card${e.needsReply ? ' needs-reply' : ''}${done ? ' done' : ''} fade-in" id="card-${e.id}">
+    <div class="email-card-header">
+      <div class="email-avatar" style="background:${bgColor}">${e.sender[0]}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div class="email-sender">${e.sender}</div>
+          <div class="email-time">${timeAgo(e.receivedAt)}</div>
+        </div>
+        <div class="email-subject">${e.subject}</div>
+      </div>
+    </div>
+
+    <div class="email-tags">
+      <span class="badge ${urgencyClass(e.urgency)}">● ${e.urgency}</span>
+      <span class="badge badge-muted">${categoryLabel(e.category)}</span>
+      ${e.needsReply && !done ? '<span class="badge badge-accent">💬 Needs reply</span>' : ''}
+      ${e.draftStatus === 'sent'     ? '<span class="badge badge-low">✅ Replied</span>' : ''}
+      ${e.draftStatus === 'declined' ? '<span class="badge badge-info">✗ Skipped</span>' : ''}
+    </div>
+
+    <div class="email-divider"></div>
+
+    <div class="ai-summary">
+      <span style="font-size:18px;flex-shrink:0;margin-top:1px">🤖</span>
+      <div>
+        <div class="ai-label">AI Summary</div>
+        <div class="ai-text">${e.summary}</div>
+      </div>
+    </div>
+
+    <button class="view-orig" onclick="viewOrig('${e.id}')">View original email →</button>
+
+    ${e.draft && !done ? `
+    <div class="draft-section">
+      <div class="draft-toggle">
+        <span class="draft-toggle-arrow${e.needsReply ? ' open' : ''}">▶</span>
+        <span class="draft-toggle-label">Suggested Reply</span>
+      </div>
+      <div class="draft-body${e.needsReply ? ' visible' : ''}">${escHtml(e.draft)}</div>
+      <div class="draft-actions">
+        <button class="btn btn-success btn-sm" onclick="sendDraft('${e.id}')">✅ Send as-is</button>
+        <button class="btn btn-warning btn-sm" onclick="openEdit('${e.id}')">✏️ Edit &amp; send</button>
+        <button class="btn btn-danger btn-sm"  onclick="declineDraft('${e.id}')">✗ Don't send</button>
+      </div>
+    </div>` : ''}
+
+    ${!e.needsReply ? `<div class="no-reply-footer"><button class="btn btn-ghost btn-sm" onclick="dismissEmail('${e.id}')">Dismiss</button></div>` : ''}
+  </div>`;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function sendDraft(id) {
+  const card = document.getElementById('card-'+id);
+  const btn  = card.querySelector('.btn-success');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:13px;height:13px"></span> Sending…';
+  setTimeout(() => {
+    emails.find(e => e.id === id).draftStatus = 'sent';
+    renderEmails();
+  }, 900);
+}
+
+function declineDraft(id) {
+  emails.find(e => e.id === id).draftStatus = 'declined';
+  renderEmails();
+}
+
+function dismissEmail(id) {
+  emails = emails.filter(e => e.id !== id);
+  renderEmails();
+}
+
+function viewOrig(id) {
+  const e = emails.find(e => e.id === id);
+  document.getElementById('orig-subject').textContent = '📧 ' + e.subject;
+  document.getElementById('orig-from').textContent    = `From: ${e.sender} <${e.senderEmail}>`;
+  document.getElementById('orig-body').innerHTML      = e.body;
+  document.getElementById('orig-modal').style.display = 'flex';
+}
+function closeOrig(ev) { if(ev.target===ev.currentTarget) ev.target.style.display='none'; }
+
+function openEdit(id) {
+  editingEmailId = id;
+  const e = emails.find(e => e.id === id);
+  document.getElementById('edit-title').textContent = `✏️ Edit reply to ${e.sender}`;
+  document.getElementById('edit-textarea').value = e.draft;
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+function closeEdit(ev) { if(ev.target===ev.currentTarget) ev.target.style.display='none'; }
+function sendEdited() {
+  emails.find(e => e.id === editingEmailId).draftStatus = 'sent';
+  document.getElementById('edit-modal').style.display = 'none';
+  renderEmails();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function initInbox() {
+  if (!user || !user.email || !user.password) {
+    console.log('No real credentials found. Using demo emails.');
+    emails = MOCK_EMAILS.map(e => ({ ...e }));
+    renderEmails();
+    return;
+  }
+  
+  document.getElementById('email-list').innerHTML = `
+    <div style="padding:40px;text-align:center;">
+      <div class="spinner" style="width:30px;height:30px;margin:0 auto 16px"></div>
+      <div style="color:var(--muted);font-size:14px">Connecting to ${user.provider || 'email'} and fetching real emails...<br><span style="font-size:12px;opacity:0.7">(This might take 5-10 seconds)</span></div>
+    </div>`;
+
+  try {
+    const res = await fetch('http://localhost:3002/api/fetch-emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider })
+    });
+    const data = await res.json();
+    if (data.success && data.emails && data.emails.length > 0) {
+      emails = data.emails;
+    } else {
+      console.warn('Failed to fetch real emails or inbox empty, falling back to demo data.', data.error);
+      emails = MOCK_EMAILS.map(e => ({ ...e }));
+    }
+  } catch (err) {
+    console.error('Error connecting to backend API', err);
+    emails = MOCK_EMAILS.map(e => ({ ...e }));
+  }
+  
+  renderEmails();
+}
+
+initInbox();
+</script>
+</body>
+</html>

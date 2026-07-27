@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MailMind — Ask your inbox</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.hero{text-align:center;padding:32px 0 36px}
+.hero h1{font-size:30px;font-weight:800;letter-spacing:-.6px;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:15px}
+.search-bar{
+  position:relative;margin-bottom:14px;
+  display:flex;gap:10px;align-items:stretch;
+}
+.search-bar input{
+  flex:1;height:52px;font-size:15px;padding:0 16px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius);color:var(--text);
+  transition:all var(--t);
+}
+.search-bar input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,109,250,.14)}
+.search-bar input::placeholder{color:var(--muted2)}
+.search-bar button{height:52px;padding:0 22px;border-radius:var(--radius);min-width:110px}
+.suggestions-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted2);margin-bottom:10px}
+.suggestions{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:36px}
+.answer-card{animation:fadeIn .4s ease}
+.answer-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.answer-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--accent)}
+.answer-query{font-size:12px;color:var(--muted);margin-bottom:16px;font-style:italic}
+.answer-body{line-height:1.85;font-size:14px;color:var(--text2)}
+.answer-body strong{color:var(--text);font-weight:700}
+.answer-line{margin:3px 0}
+.answer-bullet{padding-left:18px;position:relative}
+.answer-bullet::before{content:'•';position:absolute;left:4px;color:var(--accent)}
+.loading-state{text-align:center;padding:48px 24px}
+.loading-state p{color:var(--muted);font-size:14px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-root"></div>
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">🔍 Ask your inbox</span>
+    </div>
+    <div class="content">
+      <div class="hero">
+        <h1>Ask anything about your inbox</h1>
+        <p>Natural language questions — get plain-English answers, not raw email dumps.</p>
+      </div>
+
+      <!-- Search bar -->
+      <div class="search-bar">
+        <input id="query-input" placeholder='e.g. "Summarize what I missed this week" or "Find emails about the Johnson contract"'
+          onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn btn-primary" id="search-btn" onclick="doSearch()">Ask →</button>
+      </div>
+
+      <!-- Suggestions -->
+      <div id="suggestions-wrap">
+        <div class="suggestions-label">Try asking…</div>
+        <div class="suggestions">
+          <span class="chip" onclick="askSuggestion(this)">Summarize what I missed this week</span>
+          <span class="chip" onclick="askSuggestion(this)">Find emails about the Johnson contract</span>
+          <span class="chip" onclick="askSuggestion(this)">Any urgent emails I haven't replied to?</span>
+          <span class="chip" onclick="askSuggestion(this)">Show me all receipts this month</span>
+          <span class="chip" onclick="askSuggestion(this)">Who emailed me most this week?</span>
+        </div>
+      </div>
+
+      <!-- Results area -->
+      <div id="result-area"></div>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+document.body.insertAdjacentHTML('afterbegin', renderSidebar('search'));
+initSidebar();
+
+function askSuggestion(el) {
+  document.getElementById('query-input').value = el.textContent;
+  doSearch();
+}
+
+function doSearch() {
+  const q = document.getElementById('query-input').value.trim();
+  if (!q) return;
+  document.getElementById('suggestions-wrap').style.display = 'none';
+
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px"></span>';
+
+  document.getElementById('result-area').innerHTML = `
+    <div class="loading-state fade-in">
+      <div class="spinner" style="width:30px;height:30px;margin:0 auto"></div>
+      <p>Searching through your emails…</p>
+    </div>`;
+
+  setTimeout(() => {
+    btn.disabled = false; btn.innerHTML = 'Ask →';
+    showAnswer(q);
+  }, 1400);
+}
+
+function showAnswer(q) {
+  const answer = generateAnswer(q.toLowerCase());
+  document.getElementById('result-area').innerHTML = `
+    <div class="answer-card">
+      <div class="answer-query">"${q}"</div>
+      <div class="card">
+        <div class="answer-header">
+          <span style="font-size:22px">🤖</span>
+          <span class="answer-label">AI Analysis</span>
+        </div>
+        <div class="answer-body">${formatAnswer(answer)}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:16px" onclick="resetSearch()">← Ask something else</button>
+    </div>`;
+}
+
+function resetSearch() {
+  document.getElementById('query-input').value = '';
+  document.getElementById('result-area').innerHTML = '';
+  document.getElementById('suggestions-wrap').style.display = '';
+}
+
+function formatAnswer(text) {
+  return text.split('\n').map(line => {
+    // Bold: **text**
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    if (line.startsWith('•')) {
+      return `<div class="answer-line answer-bullet">${line.slice(1).trim()}</div>`;
+    }
+    if (!line.trim()) return '<div style="height:10px"></div>';
+    return `<div class="answer-line">${line}</div>`;
+  }).join('');
+}
+
+function generateAnswer(q) {
+  if (q.includes('week') || q.includes('miss')) {
+    const needsReply = MOCK_EMAILS.filter(e => e.needsReply);
+    const noReply    = MOCK_EMAILS.filter(e => !e.needsReply);
+    return `You received **${MOCK_EMAILS.length} emails** this week. Here's what stood out:\n\n${needsReply.map(e => `• **${e.sender}** — ${e.summary}`).join('\n')}\n\n📰 ${noReply.length} newsletters / receipts / notifications needed no action.\n\nYou still have **${needsReply.length} emails** waiting for a reply.`;
+  }
+  if (q.includes('johnson') || q.includes('contract')) {
+    const m = MOCK_EMAILS.find(e => e.subject.toLowerCase().includes('johnson') || e.summary.toLowerCase().includes('contract'));
+    if (m) return `Found **1 email** about the Johnson contract:\n\n• **From:** ${m.sender} <${m.senderEmail}>\n• **Subject:** ${m.subject}\n\n${m.summary}\n\nThis is marked **${m.urgency} urgency** and is still waiting for your reply.`;
+    return 'No emails matching "Johnson contract" found in the current inbox window.';
+  }
+  if (q.includes('urgent') || q.includes("haven't replied") || q.includes('unanswered')) {
+    const urgent = MOCK_EMAILS.filter(e => e.needsReply && e.draftStatus === 'pending');
+    if (!urgent.length) return '✅ You\'re all caught up! No urgent unanswered emails right now.';
+    return `**${urgent.length} emails** are still waiting for your reply:\n\n${urgent.map(e => `• **${e.sender}** (${e.urgency} urgency) — ${e.summary}`).join('\n')}`;
+  }
+  if (q.includes('receipt') || q.includes('invoice')) {
+    const r = MOCK_EMAILS.filter(e => e.category === 'receipt');
+    if (!r.length) return 'No receipts found in your current inbox window.';
+    return `Found **${r.length} receipt(s)**:\n\n${r.map(e => `• **${e.sender}** — ${e.summary}`).join('\n')}`;
+  }
+  if (q.includes('who') && q.includes('most')) {
+    return `Looking at this week's inbox:\n\n• **Sarah Chen** — 1 email\n• **Mark Johnson** — 1 email\n• **Priya Mehta** — 1 email\n• Automated senders (Stripe, GitHub, TechCrunch) — 3 emails\n\nNo single person dominated your inbox this week.`;
+  }
+  const rel = MOCK_EMAILS.filter(e =>
+    e.subject.toLowerCase().includes(q) || e.sender.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q)
+  );
+  if (rel.length) return `Found **${rel.length} related email(s)**:\n\n${rel.map(e => `• **${e.sender}** — ${e.summary}`).join('\n')}`;
+  return `I searched your inbox but couldn't find anything specifically about "${q}".\n\nTry: "emails from [name]", "summarize this week", or "any receipts".`;
+}
+</script>
+</body>
+</html>
