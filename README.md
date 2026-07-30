@@ -31,7 +31,7 @@
 
 ## 🎯 About
 
-**MailMind** is an email assistant built on **n8n** that reads incoming email, notifies you as messages arrive, and drafts replies in plain, human language — but never sends anything without your explicit approval. It's designed to cut down on inbox anxiety and repetitive replying, without turning into a black-box bot that acts on your behalf without asking.
+**MailMind** is an email assistant built on **n8n** that reads incoming emails, notifies you as messages arrive, and drafts replies in plain, human language — but never sends anything without your explicit approval. It's designed to cut down on inbox anxiety and repetitive replying, without turning into a black-box bot that acts on your behalf without asking.
 
 Newsletters, receipts, and notifications are read and summarized automatically. Anything that looks like it needs a real response gets flagged, drafted, and handed back to you for a final decision.
 
