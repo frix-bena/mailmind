@@ -1,55 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import { mockUser, mockEmails } from '@/lib/mockData';
 
 const SUGGESTIONS = [
   'Summarize what I missed this week',
-  'Find emails about the Johnson contract',
+  'Find emails about invoices or receipts',
   'Any urgent emails I haven\'t replied to?',
   'Show me all receipts from this month',
   'Who emailed me the most in my history?'
 ];
-
-function fallbackGenerateAnswer(query, emails) {
-  const q = query.toLowerCase();
-
-  if (q.includes('week') || q.includes('miss') || q.includes('recent') || q.includes('summary')) {
-    const total = emails.length;
-    const needsReply = emails.filter(e => e.needs_reply || e.needsReply);
-    const newsletters = emails.filter(e => ['newsletter', 'receipt', 'notification'].includes(e.category));
-    return `Here's your inbox summary:\n\nYou received **${total} emails** total in this lookback window. Here's what stands out:\n\n${needsReply.map(e => `• **${e.sender_name || e.sender}** — ${e.ai_summary || e.summary}`).join('\n')}\n\n📰 ${newsletters.length} newsletters/receipts/notifications that needed no action.\n\nYou have **${needsReply.length} emails still waiting for your reply**.`;
-  }
-
-  if (q.includes('johnson') || q.includes('contract')) {
-    const match = emails.find(e => (e.subject || '').toLowerCase().includes('johnson') || (e.ai_summary || e.summary || '').toLowerCase().includes('contract'));
-    if (match) return `Found 1 email about the Johnson contract:\n\n**From:** ${match.sender_name || match.sender}\n**Subject:** ${match.subject}\n\n${match.ai_summary || match.summary}\n\nThis email is marked as **${match.urgency} urgency** and is waiting for your reply.`;
-    return 'No emails matching "Johnson contract" found in the current inbox history.';
-  }
-
-  if (q.includes('urgent') || q.includes('reply') || q.includes('action')) {
-    const urgent = emails.filter(e => (e.needs_reply || e.needsReply) && (e.draft?.status === 'pending_approval' || e.draftStatus === 'pending'));
-    if (!urgent.length) return '✅ You\'re all caught up! No urgent unanswered emails right now.';
-    return `You have **${urgent.length} emails waiting for a reply**:\n\n${urgent.map(e => `• **${e.sender_name || e.sender}** (${e.urgency} urgency) — ${e.ai_summary || e.summary}`).join('\n')}`;
-  }
-
-  if (q.includes('receipt') || q.includes('invoice') || q.includes('payment') || q.includes('billing')) {
-    const receipts = emails.filter(e => e.category === 'receipt');
-    if (!receipts.length) return 'No receipts found in your current email history window.';
-    return `Found **${receipts.length} receipt(s)**:\n\n${receipts.map(e => `• **${e.sender_name || e.sender}** — ${e.ai_summary || e.summary}`).join('\n')}`;
-  }
-
-  // Generic fallback
-  const relevant = emails.filter(e =>
-    (e.subject || '').toLowerCase().includes(q) ||
-    (e.sender_name || e.sender || '').toLowerCase().includes(q) ||
-    (e.ai_summary || e.summary || '').toLowerCase().includes(q)
-  );
-  if (relevant.length) {
-    return `Found **${relevant.length} related email(s)**:\n\n${relevant.map(e => `• **${e.sender_name || e.sender}** — ${e.ai_summary || e.summary}`).join('\n')}`;
-  }
-  return `I searched through your email history but couldn't find anything specifically about "${query}". Try rephrasing — e.g. "find emails from [name]" or "any invoices this month".`;
-}
 
 function renderAnswer(text) {
   return text.split('\n').map((line, i) => {
@@ -63,21 +23,26 @@ function renderAnswer(text) {
 }
 
 export default function SearchPage() {
-  const [user, setUser] = useState(mockUser);
+  const router = useRouter();
+  const [user, setUser] = useState(null);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [answer, setAnswer] = useState(null);
   const [lastQuery, setLastQuery] = useState('');
-  const [historyScope, setHistoryScope] = useState('All Email History');
+  const [historyScope] = useState('All Email History');
 
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored) setUser(stored);
+      if (stored && stored.connected && stored.email) {
+        setUser(stored);
+      } else {
+        router.replace('/onboarding');
+      }
     } catch {
-      // ignore
+      router.replace('/onboarding');
     }
-  }, []);
+  }, [router]);
 
   const handleSearch = async (q) => {
     const finalQ = q || query;
@@ -102,10 +67,10 @@ export default function SearchPage() {
       if (res.ok && data.success && data.answer) {
         setAnswer(data.answer);
       } else {
-        setAnswer(fallbackGenerateAnswer(finalQ, mockEmails));
+        setAnswer(data.error || `No emails found in history matching "${finalQ}". Ensure your email account is connected and synced.`);
       }
-    } catch (err) {
-      setAnswer(fallbackGenerateAnswer(finalQ, mockEmails));
+    } catch {
+      setAnswer(`Unable to reach the email bridge API. Ensure the bridge is running ('npm run api' or 'npm run agent') to query your email history for "${finalQ}".`);
     } finally {
       setLoading(false);
     }
@@ -128,7 +93,7 @@ export default function SearchPage() {
               Ask anything about your emails & history
             </h1>
             <p style={{ color: 'var(--muted)', fontSize: 15 }}>
-              Natural language queries over live messages and past email archives — plain-English answers on demand.
+              Natural language queries over live messages and past email archives for {user?.email || 'your inbox'}.
             </p>
           </div>
 
@@ -136,7 +101,7 @@ export default function SearchPage() {
           <div style={{ position: 'relative', marginBottom: 16 }}>
             <input
               className="input"
-              placeholder='e.g. "Summarize what I missed this week" or "Find emails about the Johnson contract"'
+              placeholder='e.g. "Summarize what I missed this week" or "Find invoice emails"'
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -177,7 +142,7 @@ export default function SearchPage() {
           {loading && (
             <div className="card fade-in" style={{ padding: 36, textAlign: 'center' }}>
               <div className="spinner" style={{ width: 28, height: 28, margin: '0 auto 16px' }} />
-              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Accessing email history and analyzing messages…</p>
+              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Accessing email history and analyzing messages for {user?.email}…</p>
             </div>
           )}
 

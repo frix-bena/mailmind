@@ -55,8 +55,8 @@ select.styled:focus{border-color:var(--accent)}
         <div class="settings-card">
           <div class="settings-row">
             <div>
-              <div class="row-label">Google Account</div>
-              <div class="row-desc" id="connected-email">alex.rivera@gmail.com · Connected via OAuth 2.0</div>
+              <div class="row-label">Connected Account</div>
+              <div class="row-desc" id="connected-email">Connected via IMAP/OAuth</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
               <span class="badge badge-low"><span class="dot dot-green" style="animation:none"></span> Connected</span>
@@ -193,14 +193,18 @@ initSidebar();
 
 // Load saved prefs
 const user = getUser();
-if (user.tone) {
-  document.querySelectorAll('.tone-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.t === user.tone);
-  });
+if (!user || !user.email) {
+  window.location.replace('onboarding.html');
+} else {
+  if (user.tone) {
+    document.querySelectorAll('.tone-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.t === user.tone);
+    });
+  }
+  if (user.inApp === false) document.getElementById('tog-inapp').classList.remove('on');
+  if (user.digest)          document.getElementById('tog-digest').classList.add('on');
+  if (user.email)           document.getElementById('connected-email').textContent = user.email + ' · Connected';
 }
-if (user.inApp === false) document.getElementById('tog-inapp').classList.remove('on');
-if (user.digest)          document.getElementById('tog-digest').classList.add('on');
-if (user.email)           document.getElementById('connected-email').textContent = user.email + ' · Connected via OAuth 2.0';
 
 function setTone(el) {
   document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));

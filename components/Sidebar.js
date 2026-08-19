@@ -1,24 +1,43 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { mockNotifications } from '@/lib/mockData';
 
-export default function Sidebar({ user }) {
+export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [user, setUser] = useState(propUser || null);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState([
+    { id: 'n1', type: 'connected', text: 'Email inbox connected & monitoring', time: 'Just now', read: false },
+    { id: 'n2', type: 'system', text: 'Permission-first reply protection active', time: 'Just now', read: false }
+  ]);
+
+  useEffect(() => {
+    if (propUser) {
+      setUser(propUser);
+    } else {
+      try {
+        const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
+        if (stored) setUser(stored);
+      } catch {
+        // ignore
+      }
+    }
+  }, [propUser]);
 
   const unread = notifications.filter(n => !n.read).length;
 
   const nav = [
-    { href: '/inbox',    icon: '📥', label: 'Inbox',    badge: 3 },
+    { href: '/inbox',    icon: '📥', label: 'Inbox',    badge: null },
     { href: '/search',   icon: '🔍', label: 'Ask Inbox', badge: null },
     { href: '/terminal', icon: '💻', label: 'Terminal',  badge: null },
     { href: '/settings', icon: '⚙️',  label: 'Settings',  badge: null },
   ];
 
   const markAllRead = () => setNotifications(n => n.map(x => ({ ...x, read: true })));
+
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User');
+  const initial = displayName ? displayName[0].toUpperCase() : 'U';
 
   return (
     <>
@@ -88,11 +107,11 @@ export default function Sidebar({ user }) {
             )}
           </div>
 
-          {user && (
-            <div className="user-chip">
-              <div className="user-avatar">{user.name[0]}</div>
+          {user && user.email && (
+            <div className="user-chip" onClick={() => router.push('/settings')}>
+              <div className="user-avatar">{initial}</div>
               <div className="user-info">
-                <div className="user-name">{user.name}</div>
+                <div className="user-name">{displayName}</div>
                 <div className="user-email">{user.email}</div>
               </div>
             </div>

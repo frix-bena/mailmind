@@ -76,6 +76,11 @@
 
 <script src="shared.js"></script>
 <script>
+const user = getUser();
+if (!user || !user.email) {
+  window.location.replace('onboarding.html');
+}
+
 document.body.insertAdjacentHTML('afterbegin', renderSidebar('search'));
 initSidebar();
 
@@ -84,7 +89,7 @@ function askSuggestion(el) {
   doSearch();
 }
 
-function doSearch() {
+async function doSearch() {
   const q = document.getElementById('query-input').value.trim();
   if (!q) return;
   document.getElementById('suggestions-wrap').style.display = 'none';
@@ -96,17 +101,31 @@ function doSearch() {
   document.getElementById('result-area').innerHTML = `
     <div class="loading-state fade-in">
       <div class="spinner" style="width:30px;height:30px;margin:0 auto"></div>
-      <p>Searching through your emails…</p>
+      <p>Searching through your email history for ${user.email}…</p>
     </div>`;
 
-  setTimeout(() => {
-    btn.disabled = false; btn.innerHTML = 'Ask →';
-    showAnswer(q);
-  }, 1400);
+  try {
+    const res = await fetch('http://localhost:3002/api/ask-inbox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider, question: q })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = 'Ask →';
+    if (data.success && data.answer) {
+      showAnswer(q, data.answer);
+    } else {
+      showAnswer(q, data.error || `No emails found in history matching "${q}".`);
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = 'Ask →';
+    showAnswer(q, `Unable to connect to bridge API. Make sure 'npm run api' is running to analyze your email history.`);
+  }
 }
 
-function showAnswer(q) {
-  const answer = generateAnswer(q.toLowerCase());
+function showAnswer(q, answer) {
   document.getElementById('result-area').innerHTML = `
     <div class="answer-card">
       <div class="answer-query">"${q}"</div>
@@ -128,46 +147,14 @@ function resetSearch() {
 }
 
 function formatAnswer(text) {
-  return text.split('\n').map(line => {
-    // Bold: **text**
+  return (text || '').split('\n').map(line => {
     line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    if (line.startsWith('•')) {
+    if (line.startsWith('•') || line.startsWith('-')) {
       return `<div class="answer-line answer-bullet">${line.slice(1).trim()}</div>`;
     }
     if (!line.trim()) return '<div style="height:10px"></div>';
     return `<div class="answer-line">${line}</div>`;
   }).join('');
-}
-
-function generateAnswer(q) {
-  if (q.includes('week') || q.includes('miss')) {
-    const needsReply = MOCK_EMAILS.filter(e => e.needsReply);
-    const noReply    = MOCK_EMAILS.filter(e => !e.needsReply);
-    return `You received **${MOCK_EMAILS.length} emails** this week. Here's what stood out:\n\n${needsReply.map(e => `• **${e.sender}** — ${e.summary}`).join('\n')}\n\n📰 ${noReply.length} newsletters / receipts / notifications needed no action.\n\nYou still have **${needsReply.length} emails** waiting for a reply.`;
-  }
-  if (q.includes('johnson') || q.includes('contract')) {
-    const m = MOCK_EMAILS.find(e => e.subject.toLowerCase().includes('johnson') || e.summary.toLowerCase().includes('contract'));
-    if (m) return `Found **1 email** about the Johnson contract:\n\n• **From:** ${m.sender} <${m.senderEmail}>\n• **Subject:** ${m.subject}\n\n${m.summary}\n\nThis is marked **${m.urgency} urgency** and is still waiting for your reply.`;
-    return 'No emails matching "Johnson contract" found in the current inbox window.';
-  }
-  if (q.includes('urgent') || q.includes("haven't replied") || q.includes('unanswered')) {
-    const urgent = MOCK_EMAILS.filter(e => e.needsReply && e.draftStatus === 'pending');
-    if (!urgent.length) return '✅ You\'re all caught up! No urgent unanswered emails right now.';
-    return `**${urgent.length} emails** are still waiting for your reply:\n\n${urgent.map(e => `• **${e.sender}** (${e.urgency} urgency) — ${e.summary}`).join('\n')}`;
-  }
-  if (q.includes('receipt') || q.includes('invoice')) {
-    const r = MOCK_EMAILS.filter(e => e.category === 'receipt');
-    if (!r.length) return 'No receipts found in your current inbox window.';
-    return `Found **${r.length} receipt(s)**:\n\n${r.map(e => `• **${e.sender}** — ${e.summary}`).join('\n')}`;
-  }
-  if (q.includes('who') && q.includes('most')) {
-    return `Looking at this week's inbox:\n\n• **Sarah Chen** — 1 email\n• **Mark Johnson** — 1 email\n• **Priya Mehta** — 1 email\n• Automated senders (Stripe, GitHub, TechCrunch) — 3 emails\n\nNo single person dominated your inbox this week.`;
-  }
-  const rel = MOCK_EMAILS.filter(e =>
-    e.subject.toLowerCase().includes(q) || e.sender.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q)
-  );
-  if (rel.length) return `Found **${rel.length} related email(s)**:\n\n${rel.map(e => `• **${e.sender}** — ${e.summary}`).join('\n')}`;
-  return `I searched your inbox but couldn't find anything specifically about "${q}".\n\nTry: "emails from [name]", "summarize this week", or "any receipts".`;
 }
 </script>
 </body>

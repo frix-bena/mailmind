@@ -1,9 +1,9 @@
-// ─── Shared mock data & utilities ───────────────────────────────────────────
+// ─── Shared data & utilities ───────────────────────────────────────────
 
-const MOCK_USER = {
-  name: 'Alex Rivera', email: 'alex.rivera@gmail.com',
-  provider: 'google', tone: 'professional', connected: true,
-};
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('mailmind_user')) || null; }
+  catch { return null; }
+}
 
 const MOCK_EMAILS = [
   {
@@ -103,18 +103,14 @@ function el(tag, cls, html='') {
   return e;
 }
 
-function getUser() {
-  try { return JSON.parse(localStorage.getItem('mailmind_user')) || MOCK_USER; }
-  catch { return MOCK_USER; }
-}
-
 // ─── Sidebar renderer ─────────────────────────────────────────────────────────
 
 function renderSidebar(activePage) {
   const user = getUser();
-  const initial = user.name?.[0] || 'A';
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User');
+  const initial = displayName ? displayName[0].toUpperCase() : 'U';
   const navItems = [
-    { href:'inbox.html', icon:'📥', label:'Inbox', badge:3, id:'inbox' },
+    { href:'inbox.html', icon:'📥', label:'Inbox', badge:null, id:'inbox' },
     { href:'search.html', icon:'🔍', label:'Ask Inbox', badge:null, id:'search' },
     { href:'terminal.html', icon:'💻', label:'Terminal', badge:null, id:'terminal' },
     { href:'settings.html', icon:'⚙️', label:'Settings', badge:null, id:'settings' },
@@ -143,13 +139,14 @@ function renderSidebar(activePage) {
       </div>
     </nav>
     <div class="sidebar-bottom">
+      ${user && user.email ? `
       <div class="user-chip" onclick="window.location.href='settings.html'">
-        <div class="avatar" style="background:${avatarColor(user.name)}">${initial}</div>
+        <div class="avatar" style="background:${avatarColor(displayName)}">${initial}</div>
         <div>
-          <div class="user-name">${user.name}</div>
+          <div class="user-name">${displayName}</div>
           <div class="user-email">${user.email}</div>
         </div>
-      </div>
+      </div>` : ''}
     </div>
   </aside>
   <!-- Notification panel -->

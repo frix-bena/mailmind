@@ -299,35 +299,32 @@ function sendEdited() {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function initInbox() {
-  if (!user || !user.email || !user.password) {
-    console.log('No real credentials found. Using demo emails.');
-    emails = MOCK_EMAILS.map(e => ({ ...e }));
-    renderEmails();
+  if (!user || !user.email) {
+    window.location.replace('onboarding.html');
     return;
   }
   
   document.getElementById('email-list').innerHTML = `
     <div style="padding:40px;text-align:center;">
       <div class="spinner" style="width:30px;height:30px;margin:0 auto 16px"></div>
-      <div style="color:var(--muted);font-size:14px">Connecting to ${user.provider || 'email'} and fetching real emails...<br><span style="font-size:12px;opacity:0.7">(This might take 5-10 seconds)</span></div>
+      <div style="color:var(--muted);font-size:14px">Connecting to ${user.email} and checking for emails...<br><span style="font-size:12px;opacity:0.7">(Accessing via IMAP)</span></div>
     </div>`;
 
   try {
     const res = await fetch('http://localhost:3002/api/fetch-emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider })
+      body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider, tone: user.tone })
     });
     const data = await res.json();
-    if (data.success && data.emails && data.emails.length > 0) {
+    if (data.success && data.emails) {
       emails = data.emails;
     } else {
-      console.warn('Failed to fetch real emails or inbox empty, falling back to demo data.', data.error);
-      emails = MOCK_EMAILS.map(e => ({ ...e }));
+      emails = [];
     }
   } catch (err) {
     console.error('Error connecting to backend API', err);
-    emails = MOCK_EMAILS.map(e => ({ ...e }));
+    emails = [];
   }
   
   renderEmails();

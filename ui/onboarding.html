@@ -393,11 +393,14 @@ function selectTone(el) {
 }
 
 function finish() {
+  const name = selectedName || (selectedEmail ? selectedEmail.split('@')[0] : 'User');
   localStorage.setItem('mailmind_user', JSON.stringify({
-    name: selectedName || 'Alex Rivera',
-    email: selectedEmail || (selectedProvider === 'microsoft' ? 'alex.rivera@outlook.com' : 'alex.rivera@gmail.com'),
+    name: name,
+    email: selectedEmail,
     password: window.selectedPassword || '',
-    provider: selectedProvider, tone: selectedTone, connected: true,
+    provider: selectedProvider || 'google',
+    tone: selectedTone,
+    connected: true,
     inApp: document.getElementById('tog-inapp').classList.contains('on'),
     digest: document.getElementById('tog-digest').classList.contains('on'),
   }));

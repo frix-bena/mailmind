@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import { mockUser } from '@/lib/mockData';
 
 function Section({ title, children }) {
   return (
@@ -34,7 +34,8 @@ function Toggle({ value, onChange }) {
 }
 
 export default function SettingsPage() {
-  const [user, setUser] = useState(mockUser);
+  const router = useRouter();
+  const [user, setUser] = useState(null);
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
   const [digest, setDigest] = useState(false);
@@ -45,16 +46,19 @@ export default function SettingsPage() {
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored) {
+      if (stored && stored.connected && stored.email) {
         setUser(stored);
         if (stored.tone) setTone(stored.tone);
         if (stored.inApp !== undefined) setInApp(stored.inApp);
         if (stored.digest !== undefined) setDigest(stored.digest);
+        if (stored.pollInterval) setPollInterval(stored.pollInterval);
+      } else {
+        router.replace('/onboarding');
       }
     } catch {
-      // ignore
+      router.replace('/onboarding');
     }
-  }, []);
+  }, [router]);
 
   const tones = [
     { id: 'professional', label: '💼 Professional' },
@@ -63,6 +67,7 @@ export default function SettingsPage() {
   ];
 
   const handleSave = () => {
+    if (!user) return;
     const updated = {
       ...user,
       tone,
@@ -77,7 +82,7 @@ export default function SettingsPage() {
   };
 
   const handleDisconnect = async () => {
-    if (window.confirm('Disconnect your inbox? This will stop email monitoring and clear credentials.')) {
+    if (window.confirm('Disconnect your email account? This will log you out, stop email monitoring, and clear saved credentials.')) {
       setDisconnecting(true);
       try {
         await fetch('http://localhost:3002/api/auth/disconnect', { method: 'POST' });
@@ -86,9 +91,17 @@ export default function SettingsPage() {
       }
       localStorage.removeItem('mailmind_user');
       setTimeout(() => {
-        window.location.href = '/onboarding';
-      }, 500);
+        router.replace('/onboarding');
+      }, 400);
     }
+  };
+
+  const providerLabels = {
+    google: 'Google / Gmail',
+    microsoft: 'Microsoft Outlook',
+    yahoo: 'Yahoo Mail',
+    icloud: 'Apple iCloud',
+    custom: 'Custom IMAP'
   };
 
   return (
@@ -106,8 +119,8 @@ export default function SettingsPage() {
           {/* Connected Account */}
           <Section title="Connected Email Account">
             <Row
-              label={user?.email ? `Account: ${user.email}` : 'Connected Account'}
-              desc={`Provider: ${user?.provider || 'Google'} · IMAP/SMTP Access Active`}
+              label={user?.email ? `Account: ${user.email}` : 'Connected Email'}
+              desc={`Provider: ${providerLabels[user?.provider] || user?.provider || 'Email Server'} · IMAP/SMTP Access Active`}
             >
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="badge badge-low">● Connected</span>
@@ -116,7 +129,7 @@ export default function SettingsPage() {
                   onClick={handleDisconnect}
                   disabled={disconnecting}
                 >
-                  {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                  {disconnecting ? 'Disconnecting…' : 'Log out / Disconnect'}
                 </button>
               </div>
             </Row>

@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import { mockUser } from '@/lib/mockData';
 
 export default function TerminalPage() {
-  const [user, setUser] = useState(mockUser);
+  const router = useRouter();
+  const [user, setUser] = useState(null);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([
     { type: 'system', text: '📧 MailMind Terminal Agent Shell Initialized.' },
@@ -17,11 +18,15 @@ export default function TerminalPage() {
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored) setUser(stored);
+      if (stored && stored.connected && stored.email) {
+        setUser(stored);
+      } else {
+        router.replace('/onboarding');
+      }
     } catch {
-      // ignore
+      router.replace('/onboarding');
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });

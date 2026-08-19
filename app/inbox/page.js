@@ -1,67 +1,79 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import EmailCard from '@/components/EmailCard';
-import { mockEmails, mockUser } from '@/lib/mockData';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
 
 export default function InboxPage() {
-  const [user, setUser] = useState(mockUser);
-  const [emails, setEmails] = useState(mockEmails);
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [emails, setEmails] = useState([]);
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [newBanner, setNewBanner] = useState(true);
-  const [pollingBadge, setPollingBadge] = useState('Checking…');
-  const [loading, setLoading] = useState(false);
+  const [pollingBadge, setPollingBadge] = useState('Connecting…');
+  const [loading, setLoading] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isLive, setIsLive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [historyLimit, setHistoryLimit] = useState(15);
 
   const loadEmails = useCallback(async (customLimit = 15) => {
     let storedUser = null;
     try {
       storedUser = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (storedUser) setUser(storedUser);
     } catch {
       // ignore
     }
 
+    if (!storedUser || !storedUser.connected || !storedUser.email) {
+      router.replace('/onboarding');
+      return;
+    }
+
+    setUser(storedUser);
     setLoading(true);
+    setErrorMessage('');
+
     try {
       const res = await fetch('http://localhost:3002/api/fetch-emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: storedUser?.email,
-          password: storedUser?.password,
-          provider: storedUser?.provider,
+          email: storedUser.email,
+          password: storedUser.password,
+          provider: storedUser.provider,
+          tone: storedUser.tone,
           limit: customLimit
         })
       });
 
       const data = await res.json();
-      if (res.ok && data.success && data.emails && data.emails.length > 0) {
-        setEmails(data.emails);
+      if (res.ok && data.success) {
+        setEmails(data.emails || []);
         setIsLive(true);
         setPollingBadge('Live Sync');
       } else {
         setIsLive(false);
-        setPollingBadge('Demo Inbox');
+        setPollingBadge('Sync Error');
+        setErrorMessage(data.error || 'Unable to retrieve emails from server.');
       }
-    } catch (err) {
+    } catch {
       setIsLive(false);
-      setPollingBadge('Demo Inbox');
+      setPollingBadge('Bridge Offline');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     loadEmails(15);
   }, [loadEmails]);
 
   const loadMoreHistory = async () => {
+    if (!user) return;
     const nextLimit = historyLimit + 20;
     setHistoryLimit(nextLimit);
     setLoadingHistory(true);
@@ -71,9 +83,10 @@ export default function InboxPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: user?.email,
-          password: user?.password,
-          provider: user?.provider,
+          email: user.email,
+          password: user.password,
+          provider: user.provider,
+          tone: user.tone,
           limit: nextLimit
         })
       });
@@ -91,16 +104,15 @@ export default function InboxPage() {
   const handleAction = async (emailId, action, replyBody) => {
     const targetEmail = emails.find(e => e.id === emailId);
     
-    if (action === 'sent' && targetEmail) {
-      // Try to send via real SMTP if connected
+    if (action === 'sent' && targetEmail && user) {
       try {
         await fetch('http://localhost:3002/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: user?.email,
-            password: user?.password,
-            provider: user?.provider,
+            email: user.email,
+            password: user.password,
+            provider: user.provider,
             to: targetEmail.sender_email || targetEmail.senderEmail,
             subject: targetEmail.subject,
             body: replyBody || targetEmail.draft?.body || targetEmail.draftBody,
@@ -108,7 +120,7 @@ export default function InboxPage() {
           })
         });
       } catch {
-        // Fallback for simulation
+        // ignore
       }
     }
 
@@ -155,6 +167,7 @@ export default function InboxPage() {
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => loadEmails(historyLimit)}
+              disabled={loading}
               style={{ fontSize: 12 }}
               title="Refresh inbox"
             >
@@ -169,8 +182,8 @@ export default function InboxPage() {
         </div>
 
         <div className="page-content">
-          {/* New-email banner */}
-          {newBanner && (
+          {/* Email banner */}
+          {newBanner && user?.email && (
             <div className="fade-in" style={{
               background: 'var(--accent-glow)', border: '1px solid var(--accent)',
               borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
@@ -178,9 +191,29 @@ export default function InboxPage() {
             }}>
               <span style={{ fontSize: 18 }}>📬</span>
               <div style={{ flex: 1, fontSize: 14 }}>
-                <strong>{isLive ? `Live Inbox: ${user?.email}` : 'Demo Inbox Mode'}</strong> — {pending} email(s) currently need your review & approval before sending.
+                <strong>Inbox: {user.email}</strong>
+                {pending > 0 ? ` — ${pending} email(s) currently need your review & approval before sending.` : ' — Monitoring your inbox in real time.'}
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => setNewBanner(false)}>Dismiss</button>
+            </div>
+          )}
+
+          {/* Error Message if IMAP fails */}
+          {errorMessage && (
+            <div className="fade-in" style={{
+              background: 'rgba(239, 68, 68, 0.12)', border: '1px solid var(--danger)',
+              borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
+              color: '#fca5a5', fontSize: 13.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div>
+                <strong>⚠️ Sync Issue:</strong> {errorMessage}
+              </div>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => router.push('/settings')}
+              >
+                Check Settings
+              </button>
             </div>
           )}
 
@@ -218,15 +251,24 @@ export default function InboxPage() {
 
           {/* Loading state */}
           {loading ? (
-            <div className="card fade-in" style={{ padding: 36, textAlign: 'center' }}>
+            <div className="card fade-in" style={{ padding: 48, textAlign: 'center' }}>
               <div className="spinner" style={{ width: 28, height: 28, margin: '0 auto 16px' }} />
-              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Accessing emails via IMAP...</p>
+              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Connecting to {user?.email || 'inbox'} via IMAP...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="empty-state">
+            <div className="empty-state card fade-in" style={{ padding: 48 }}>
               <div className="empty-state-icon">📭</div>
-              <h3>No emails match this filter</h3>
-              <p>Try a different filter or search term.</p>
+              <h3>{emails.length === 0 ? 'Your inbox is clear' : 'No emails match this filter'}</h3>
+              <p>{emails.length === 0 ? 'No messages found in your inbox. Click Refresh to check for new emails.' : 'Try a different filter or search query.'}</p>
+              {emails.length === 0 && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => loadEmails(historyLimit)}
+                  style={{ marginTop: 8 }}
+                >
+                  🔄 Check for New Emails
+                </button>
+              )}
             </div>
           ) : (
             <>
