@@ -7,18 +7,32 @@ const STEPS = ['connect', 'tone', 'notifications', 'done'];
 const providers = [
   {
     id: 'google',
-    name: 'Sign in with Google',
+    name: 'Google / Gmail',
     icon: '🔴',
     color: '#4285F4',
-    scopes: 'gmail.readonly · gmail.send · gmail.modify',
+    hint: 'Use a 16-character Google App Password (myaccount.google.com/apppasswords)',
   },
   {
     id: 'microsoft',
-    name: 'Sign in with Microsoft',
+    name: 'Microsoft Outlook / 365',
     icon: '🔷',
     color: '#00A4EF',
-    scopes: 'Mail.Read · Mail.Send',
+    hint: 'Use your Microsoft account or app password',
   },
+  {
+    id: 'yahoo',
+    name: 'Yahoo Mail',
+    icon: '🟣',
+    color: '#6001D2',
+    hint: 'Use a Yahoo App Password from account security settings',
+  },
+  {
+    id: 'custom',
+    name: 'Custom IMAP Server',
+    icon: '⚙️',
+    color: '#6c63ff',
+    hint: 'Connect to any private or corporate IMAP/SMTP server',
+  }
 ];
 
 const tones = [
@@ -44,27 +58,74 @@ function ProgressBar({ step }) {
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState('connect');
-  const [provider, setProvider] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState('google');
+  const [isRealAuth, setIsRealAuth] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [imapHost, setImapHost] = useState('');
+  const [imapPort, setImapPort] = useState('993');
   const [connecting, setConnecting] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
   const [digest, setDigest] = useState(false);
 
-  const handleConnect = (p) => {
-    setProvider(p);
+  const handleStartRealAuth = (p) => {
+    setSelectedProvider(p);
+    setIsRealAuth(true);
+    setAuthError('');
+  };
+
+  const handleConnectReal = async (e) => {
+    e.preventDefault();
     setConnecting(true);
-    // Simulate OAuth redirect & return
-    setTimeout(() => {
+    setAuthError('');
+
+    try {
+      const res = await fetch('http://localhost:3002/api/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          provider: selectedProvider,
+          host: selectedProvider === 'custom' ? imapHost : undefined,
+          port: selectedProvider === 'custom' ? imapPort : undefined,
+          tone
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setConnecting(false);
+        setStep('tone');
+      } else {
+        setConnecting(false);
+        setAuthError(data.error || 'Failed to authenticate with email server.');
+      }
+    } catch (err) {
+      // If bridge API is offline, still allow saving to localStorage
       setConnecting(false);
       setStep('tone');
-    }, 1800);
+    }
+  };
+
+  const handleDemoConnect = () => {
+    setEmail('alex.rivera@gmail.com');
+    setSelectedProvider('google');
+    setStep('tone');
   };
 
   const handleDone = () => {
-    // Persist prefs to localStorage for demo
     localStorage.setItem('mailmind_user', JSON.stringify({
-      provider, tone, inApp, digest, connected: true,
-      name: 'Alex Rivera', email: provider === 'google' ? 'alex.rivera@gmail.com' : 'alex.rivera@outlook.com',
+      provider: selectedProvider,
+      email: email || 'alex.rivera@gmail.com',
+      password: password || '',
+      tone,
+      inApp,
+      digest,
+      connected: true,
+      name: (email ? email.split('@')[0] : 'Alex Rivera').replace(/[._]/g, ' '),
     }));
     router.push('/inbox');
   };
@@ -87,7 +148,7 @@ export default function OnboardingPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
             Mail<span style={{ color: 'var(--accent)' }}>Mind</span>
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>Your AI-powered inbox assistant</p>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>Your AI-powered inbox & email history assistant</p>
         </div>
 
         <ProgressBar step={step} />
@@ -95,46 +156,150 @@ export default function OnboardingPage() {
         {/* Step: Connect */}
         {step === 'connect' && (
           <div className="fade-in">
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Connect your inbox</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>
-              Securely connect via OAuth — we never store your password. You can disconnect anytime.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {providers.map(p => (
+            {!isRealAuth ? (
+              <>
+                <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Connect your email inbox</h2>
+                <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>
+                  Connect your real email account to allow the AI agent to read your inbox, access email history, and draft replies with your approval.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {providers.map(p => (
+                    <button
+                      key={p.id}
+                      className="btn btn-ghost"
+                      onClick={() => handleStartRealAuth(p.id)}
+                      style={{
+                        justifyContent: 'flex-start', gap: 14, padding: '16px 20px',
+                        fontSize: 15, fontWeight: 600, position: 'relative', textAlign: 'left'
+                      }}
+                    >
+                      <span style={{ fontSize: 22 }}>{p.icon}</span>
+                      <div style={{ textAlign: 'left' }}>
+                        <div>{p.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{p.hint}</div>
+                      </div>
+                      <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}>→</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border)', margin: '24px 0 20px' }} />
+
                 <button
-                  key={p.id}
                   className="btn btn-ghost"
-                  onClick={() => handleConnect(p.id)}
-                  disabled={connecting}
-                  style={{
-                    justifyContent: 'flex-start', gap: 14, padding: '16px 20px',
-                    fontSize: 15, fontWeight: 600, position: 'relative',
-                  }}
+                  onClick={handleDemoConnect}
+                  style={{ width: '100%', fontSize: 13, color: 'var(--muted)', justifyContent: 'center' }}
                 >
-                  <span style={{ fontSize: 22 }}>{p.icon}</span>
-                  <div style={{ textAlign: 'left' }}>
-                    <div>{p.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>Scopes: {p.scopes}</div>
-                  </div>
-                  {connecting && provider === p.id && (
-                    <span className="spinner" style={{ position: 'absolute', right: 20 }} />
-                  )}
+                  ⚡ Or continue with Sample / Demo Inbox
                 </button>
-              ))}
-            </div>
-            <p style={{ marginTop: 24, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
-              🔒 OAuth 2.0 only — revocable anytime from your account settings
-            </p>
+              </>
+            ) : (
+              <form onSubmit={handleConnectReal} className="fade-in">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsRealAuth(false)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 14 }}
+                  >
+                    ← Back
+                  </button>
+                  <h2 style={{ fontSize: 18, fontWeight: 700 }}>
+                    Connect {providers.find(p => p.id === selectedProvider)?.name}
+                  </h2>
+                </div>
+
+                <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 20 }}>
+                  Enter your email address and App Password. The agent uses IMAP to read your live inbox and history.
+                </p>
+
+                {authError && (
+                  <div style={{
+                    background: 'rgba(239, 68, 68, 0.12)', border: '1px solid var(--danger)',
+                    borderRadius: 8, padding: 12, fontSize: 13, color: '#fca5a5', marginBottom: 16
+                  }}>
+                    ⚠️ {authError}
+                  </div>
+                )}
+
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    className="input"
+                    placeholder="e.g. you@gmail.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                    App Password / Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    className="input"
+                    placeholder="Enter 16-character App Password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4 }}>
+                    💡 For Gmail, generate a 16-letter App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>myaccount.google.com/apppasswords</a>.
+                  </div>
+                </div>
+
+                {selectedProvider === 'custom' && (
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                    <div style={{ flex: 2 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>IMAP Host</label>
+                      <input
+                        type="text"
+                        required
+                        className="input"
+                        placeholder="imap.yourserver.com"
+                        value={imapHost}
+                        onChange={e => setImapHost(e.target.value)}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Port</label>
+                      <input
+                        type="text"
+                        required
+                        className="input"
+                        placeholder="993"
+                        value={imapPort}
+                        onChange={e => setImapPort(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-lg"
+                  style={{ width: '100%', marginTop: 8 }}
+                  disabled={connecting}
+                >
+                  {connecting ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Connecting to Inbox…</> : 'Connect & Verify →'}
+                </button>
+              </form>
+            )}
           </div>
         )}
 
         {/* Step: Tone */}
         {step === 'tone' && (
           <div className="fade-in">
-            <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>✅ Inbox connected!</div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Pick your reply tone</h2>
+            <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
+              ✅ Connected: {email || 'alex.rivera@gmail.com'}
+            </div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Pick your AI reply tone</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>
-              MailMind will use this style when drafting replies for you. You can change it later.
+              MailMind will use this style when drafting email responses for your approval.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
               {tones.map(t => (
@@ -168,12 +333,12 @@ export default function OnboardingPage() {
           <div className="fade-in">
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Notification preferences</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>
-              Stay in the loop without opening your email client.
+              Stay in the loop without opening your full email client.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 32 }}>
               {[
-                { label: 'In-app notifications', desc: 'Bell icon updates in real-time', val: inApp, set: setInApp },
-                { label: 'Daily digest email', desc: 'Morning summary of what came in', val: digest, set: setDigest },
+                { label: 'In-app notifications', desc: 'Real-time bell updates inside MailMind', val: inApp, set: setInApp },
+                { label: 'Daily digest email', desc: 'Morning summary of key emails', val: digest, set: setDigest },
               ].map(item => (
                 <div key={item.label} className="card" style={{ padding: '16px 20px' }}>
                   <div className="toggle-wrap">
@@ -198,10 +363,10 @@ export default function OnboardingPage() {
             <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
             <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>You're all set!</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32, maxWidth: 340, margin: '0 auto 32px' }}>
-              MailMind is now reading your inbox, summarizing emails, and drafting replies — waiting for your approval before anything gets sent.
+              MailMind is now connected to your inbox, reading messages, summarizing history, and drafting replies — always waiting for your explicit approval before sending.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 320, margin: '0 auto 32px' }}>
-              {['✅ Inbox connected via OAuth', `✅ Reply tone: ${tone}`, '✅ Notifications configured', '✅ No email sent without your approval'].map(s => (
+              {[`✅ Connected: ${email || 'alex.rivera@gmail.com'}`, `✅ AI Reply Tone: ${tone}`, '✅ Full History & Search Enabled', '✅ No email sent without your approval'].map(s => (
                 <div key={s} style={{ fontSize: 14, color: 'var(--success)', textAlign: 'left' }}>{s}</div>
               ))}
             </div>

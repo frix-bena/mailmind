@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { mockUser } from '@/lib/mockData';
 
@@ -34,12 +34,27 @@ function Toggle({ value, onChange }) {
 }
 
 export default function SettingsPage() {
+  const [user, setUser] = useState(mockUser);
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
   const [digest, setDigest] = useState(false);
   const [pollInterval, setPollInterval] = useState('3');
   const [disconnecting, setDisconnecting] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
+      if (stored) {
+        setUser(stored);
+        if (stored.tone) setTone(stored.tone);
+        if (stored.inApp !== undefined) setInApp(stored.inApp);
+        if (stored.digest !== undefined) setDigest(stored.digest);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const tones = [
     { id: 'professional', label: '💼 Professional' },
@@ -48,23 +63,37 @@ export default function SettingsPage() {
   ];
 
   const handleSave = () => {
+    const updated = {
+      ...user,
+      tone,
+      inApp,
+      digest,
+      pollInterval
+    };
+    setUser(updated);
+    localStorage.setItem('mailmind_user', JSON.stringify(updated));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const handleDisconnect = () => {
-    if (window.confirm('Disconnect your inbox? This will stop all email monitoring.')) {
+  const handleDisconnect = async () => {
+    if (window.confirm('Disconnect your inbox? This will stop email monitoring and clear credentials.')) {
       setDisconnecting(true);
+      try {
+        await fetch('http://localhost:3002/api/auth/disconnect', { method: 'POST' });
+      } catch {
+        // ignore
+      }
+      localStorage.removeItem('mailmind_user');
       setTimeout(() => {
-        localStorage.removeItem('mailmind_user');
         window.location.href = '/onboarding';
-      }, 1000);
+      }, 500);
     }
   };
 
   return (
     <div className="app-shell">
-      <Sidebar user={mockUser} />
+      <Sidebar user={user} />
       <div className="main-area">
         <div className="topbar">
           <span className="topbar-title">⚙️ Settings</span>
@@ -75,10 +104,10 @@ export default function SettingsPage() {
         <div className="page-content">
 
           {/* Connected Account */}
-          <Section title="Connected Account">
+          <Section title="Connected Email Account">
             <Row
-              label="Google Account"
-              desc="alex.rivera@gmail.com · Connected via OAuth 2.0"
+              label={user?.email ? `Account: ${user.email}` : 'Connected Account'}
+              desc={`Provider: ${user?.provider || 'Google'} · IMAP/SMTP Access Active`}
             >
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="badge badge-low">● Connected</span>
@@ -92,17 +121,15 @@ export default function SettingsPage() {
               </div>
             </Row>
             <Row
-              label="OAuth Scopes"
-              desc="gmail.readonly · gmail.send · gmail.modify"
+              label="Terminal Agent CLI Access"
+              desc="Run 'npm run agent' in your terminal for direct CLI email history & bash execution"
             >
-              <button className="btn btn-ghost btn-sm" onClick={() => alert('Opens Google account permissions page')}>
-                Manage in Google →
-              </button>
+              <span className="chip" style={{ fontSize: 12 }}>terminal-agent.js</span>
             </Row>
           </Section>
 
           {/* Reply Preferences */}
-          <Section title="Reply Preferences">
+          <Section title="AI Reply Preferences">
             <Row label="Reply tone" desc="Applied to all AI-drafted replies">
               <div style={{ display: 'flex', gap: 8 }}>
                 {tones.map(t => (
@@ -133,7 +160,7 @@ export default function SettingsPage() {
 
           {/* Polling */}
           <Section title="Inbox Polling">
-            <Row label="Check for new emails" desc="How often MailMind polls your inbox via n8n">
+            <Row label="Check for new emails" desc="How often MailMind polls your inbox">
               <select
                 value={pollInterval}
                 onChange={e => setPollInterval(e.target.value)}
@@ -148,24 +175,6 @@ export default function SettingsPage() {
                 <option value="5">Every 5 minutes</option>
                 <option value="15">Every 15 minutes</option>
               </select>
-            </Row>
-          </Section>
-
-          {/* About n8n */}
-          <Section title="Automation Engine">
-            <Row label="n8n Workflow Status" desc="Backend automation powering inbox reads, classification, and drafts">
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span className="badge badge-low">● Running</span>
-                <button className="btn btn-ghost btn-sm" onClick={() => alert('Opens n8n dashboard')}>
-                  Open n8n →
-                </button>
-              </div>
-            </Row>
-            <Row label="AI Classification" desc="Classifies every email — needsReply, category, urgency">
-              <span className="chip" style={{ fontSize: 12 }}>GPT-4o</span>
-            </Row>
-            <Row label="AI Drafting" desc="Generates human-sounding replies in your chosen tone">
-              <span className="chip" style={{ fontSize: 12 }}>GPT-4o</span>
             </Row>
           </Section>
 

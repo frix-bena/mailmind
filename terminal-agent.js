@@ -1,0 +1,479 @@
+#!/usr/bin/env node
+const readline = require('readline');
+const { exec } = require('child_process');
+const {
+  testConnection,
+  fetchEmails,
+  fetchEmailHistory,
+  searchEmailHistory,
+  askEmailHistory,
+  sendEmailReply,
+  loadLocalConfig,
+  saveLocalConfig,
+  clearLocalConfig
+} = require('./lib/email-service');
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+const askQuestion = (query) => new Promise((resolve) => rl.question(query, resolve));
+
+// Colors for terminal output
+const c = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  bgBlue: '\x1b[44m',
+  bgMagenta: '\x1b[45m'
+};
+
+function printBanner() {
+  console.log(`\n${c.cyan}======================================================${c.reset}`);
+  console.log(`${c.bright}${c.magenta}   📧 MailMind Terminal Agent & Inbox Assistant   ${c.reset}`);
+  console.log(`${c.dim}   Permission-Based Email, History Lookback & CLI Agent${c.reset}`);
+  console.log(`${c.cyan}======================================================${c.reset}\n`);
+}
+
+async function promptForCredentials() {
+  console.log(`${c.bright}${c.yellow}🔑 Setup Email Access Credentials${c.reset}`);
+  console.log(`${c.dim}MailMind connects via secure IMAP/SMTP to read your inbox & history.${c.reset}`);
+  console.log(`${c.dim}(Tip: For Gmail, create a 16-character App Password at: https://myaccount.google.com/apppasswords)\n${c.reset}`);
+
+  const email = (await askQuestion(`${c.bright}Email address: ${c.reset}`)).trim();
+  if (!email || !email.includes('@')) {
+    console.log(`${c.red}❌ Invalid email address.${c.reset}`);
+    return null;
+  }
+
+  console.log(`\nSelect provider:`);
+  console.log(` 1) Google / Gmail (Default)`);
+  console.log(` 2) Microsoft Outlook / Office 365`);
+  console.log(` 3) Yahoo Mail`);
+  console.log(` 4) Apple iCloud`);
+  console.log(` 5) Custom IMAP Server`);
+  const provChoice = (await askQuestion(`Choice [1-5, default: 1]: `)).trim() || '1';
+
+  let provider = 'gmail';
+  let host = undefined;
+  let port = undefined;
+
+  if (provChoice === '2') provider = 'microsoft';
+  else if (provChoice === '3') provider = 'yahoo';
+  else if (provChoice === '4') provider = 'icloud';
+  else if (provChoice === '5') {
+    provider = 'custom';
+    host = (await askQuestion(`IMAP Host (e.g. imap.example.com): `)).trim();
+    port = (await askQuestion(`IMAP Port [default: 993]: `)).trim() || '993';
+  }
+
+  const password = (await askQuestion(`Password or App Password: `)).trim();
+  if (!password) {
+    console.log(`${c.red}❌ Password cannot be empty.${c.reset}`);
+    return null;
+  }
+
+  console.log(`\nPreferred AI reply tone:`);
+  console.log(` 1) 💼 Professional (Default)`);
+  console.log(` 2) 😊 Casual`);
+  console.log(` 3) ⚡ Brief`);
+  const toneChoice = (await askQuestion(`Choice [1-3, default: 1]: `)).trim() || '1';
+  let tone = 'professional';
+  if (toneChoice === '2') tone = 'casual';
+  if (toneChoice === '3') tone = 'brief';
+
+  const config = {
+    email,
+    password,
+    provider,
+    host,
+    port,
+    tone,
+    connected: true,
+    savedAt: new Date().toISOString()
+  };
+
+  process.stdout.write(`\n${c.yellow}⏳ Testing connection to ${email}... ${c.reset}`);
+  const testRes = await testConnection(config);
+
+  if (testRes.success) {
+    console.log(`${c.green}Connected successfully!${c.reset}`);
+    console.log(`${c.dim}Inbox contains ${testRes.totalMessages} total messages (${testRes.unreadMessages} new).${c.reset}\n`);
+    saveLocalConfig(config);
+    console.log(`${c.green}✔ Credentials saved to .mailmind-config.json${c.reset}\n`);
+    return config;
+  } else {
+    console.log(`${c.red}Connection failed!${c.reset}`);
+    console.log(`${c.red}Error: ${testRes.error}${c.reset}`);
+    console.log(`${c.yellow}\nTroubleshooting tips:\n• For Gmail: Enable 2-Step Verification & generate an App Password.\n• Check that IMAP is enabled in your webmail settings.\n• Verify server host & port.${c.reset}\n`);
+    const retry = (await askQuestion(`Would you like to try again? (y/n): `)).toLowerCase();
+    if (retry.startsWith('y')) {
+      return promptForCredentials();
+    }
+    return null;
+  }
+}
+
+async function viewLiveInbox(config) {
+  console.log(`\n${c.cyan}--- 📥 Live Inbox (Recent Emails) ---${c.reset}`);
+  console.log(`${c.dim}Fetching latest messages from ${config.email}...${c.reset}`);
+  
+  try {
+    const res = await fetchEmails(config, { limit: 10, tone: config.tone });
+    if (!res.success || !res.emails || res.emails.length === 0) {
+      console.log(`${c.yellow}No messages found in INBOX.${c.reset}`);
+      return;
+    }
+
+    console.log(`\n${c.green}Found ${res.emails.length} recent messages (Total in inbox: ${res.total}):${c.reset}\n`);
+
+    res.emails.forEach((e, idx) => {
+      const num = idx + 1;
+      const urgencyTag = e.urgency === 'high' ? `${c.red}[HIGH]${c.reset}` : e.urgency === 'medium' ? `${c.yellow}[MED]${c.reset}` : `${c.dim}[LOW]${c.reset}`;
+      const replyTag = e.needsReply ? `${c.magenta}💬 Needs Reply${c.reset}` : `${c.dim}FYI${c.reset}`;
+
+      console.log(`${c.bright}${num}. ${e.subject}${c.reset} ${urgencyTag} ${replyTag}`);
+      console.log(`   ${c.dim}From: ${e.sender} <${e.senderEmail}> | Date: ${new Date(e.receivedAt).toLocaleString()}${c.reset}`);
+      console.log(`   ${c.cyan}AI Summary:${c.reset} ${e.summary}`);
+      if (e.draftBody) {
+        console.log(`   ${c.yellow}Suggested Reply Draft:${c.reset} "${e.draftBody.replace(/\n/g, ' ')}"`);
+      }
+      console.log('');
+    });
+
+    const action = await askQuestion(`${c.bright}Enter email number to read full details/reply, or press Enter to return: ${c.reset}`);
+    const selectedIdx = parseInt(action, 10) - 1;
+    if (!isNaN(selectedIdx) && res.emails[selectedIdx]) {
+      await handleEmailDetail(config, res.emails[selectedIdx]);
+    }
+  } catch (err) {
+    console.log(`${c.red}Error fetching inbox: ${err.message}${c.reset}`);
+  }
+}
+
+async function viewEmailHistory(config) {
+  console.log(`\n${c.cyan}--- 📜 Email History Browser ---${c.reset}`);
+  const limitStr = (await askQuestion(`How many historical emails to fetch? [default: 30, max: 100]: `)).trim() || '30';
+  const limit = Math.min(100, Math.max(5, parseInt(limitStr, 10) || 30));
+
+  console.log(`${c.dim}Accessing past ${limit} emails from history...${c.reset}`);
+  try {
+    const res = await fetchEmailHistory(config, { limit, tone: config.tone });
+    if (!res.success || !res.emails || res.emails.length === 0) {
+      console.log(`${c.yellow}No history found.${c.reset}`);
+      return;
+    }
+
+    console.log(`\n${c.green}Retrieved ${res.emails.length} historical emails (Total: ${res.total}):${c.reset}\n`);
+
+    res.emails.forEach((e, idx) => {
+      console.log(`${c.bright}[${idx + 1}] ${e.subject}${c.reset}`);
+      console.log(`    ${c.dim}From: ${e.sender} <${e.senderEmail}> | ${new Date(e.receivedAt).toLocaleDateString()}${c.reset}`);
+      console.log(`    ${c.dim}Category: ${e.category} | ${e.summary}${c.reset}\n`);
+    });
+
+    const action = await askQuestion(`${c.bright}Enter email number to view full body, or Enter to return: ${c.reset}`);
+    const selectedIdx = parseInt(action, 10) - 1;
+    if (!isNaN(selectedIdx) && res.emails[selectedIdx]) {
+      await handleEmailDetail(config, res.emails[selectedIdx]);
+    }
+  } catch (err) {
+    console.log(`${c.red}Error loading history: ${err.message}${c.reset}`);
+  }
+}
+
+async function searchHistory(config) {
+  console.log(`\n${c.cyan}--- 🔍 Search Email History ---${c.reset}`);
+  const query = (await askQuestion(`Search query (subject, sender, or keyword): `)).trim();
+  if (!query) return;
+
+  console.log(`${c.dim}Searching history for "${query}"...${c.reset}`);
+  try {
+    const res = await searchEmailHistory(config, { query, limit: 50 });
+    if (!res.success || !res.emails || res.emails.length === 0) {
+      console.log(`${c.yellow}No emails matched "${query}".${c.reset}`);
+      return;
+    }
+
+    console.log(`\n${c.green}Found ${res.emails.length} matching emails:${c.reset}\n`);
+    res.emails.forEach((e, idx) => {
+      console.log(`${c.bright}[${idx + 1}] ${e.subject}${c.reset}`);
+      console.log(`    ${c.dim}From: ${e.sender} <${e.senderEmail}> | Date: ${new Date(e.receivedAt).toLocaleDateString()}${c.reset}`);
+      console.log(`    ${c.dim}Summary: ${e.summary}${c.reset}\n`);
+    });
+
+    const action = await askQuestion(`${c.bright}Enter email number to inspect, or Enter to return: ${c.reset}`);
+    const selectedIdx = parseInt(action, 10) - 1;
+    if (!isNaN(selectedIdx) && res.emails[selectedIdx]) {
+      await handleEmailDetail(config, res.emails[selectedIdx]);
+    }
+  } catch (err) {
+    console.log(`${c.red}Search error: ${err.message}${c.reset}`);
+  }
+}
+
+async function askAgentLookback(config) {
+  console.log(`\n${c.cyan}--- 🤖 Ask AI Agent About Email History ---${c.reset}`);
+  console.log(`${c.dim}Ask natural language questions like:
+  • "Summarize what I missed this week"
+  • "Find all invoices and receipts"
+  • "Any urgent emails from Sarah?"
+  • "Who emailed me the most?"${c.reset}\n`);
+
+  const question = (await askQuestion(`${c.bright}Your question: ${c.reset}`)).trim();
+  if (!question) return;
+
+  console.log(`\n${c.yellow}⏳ Analyzing email history...${c.reset}`);
+  try {
+    const res = await fetchEmailHistory(config, { limit: 60, tone: config.tone });
+    const answer = askEmailHistory(question, res.emails || []);
+    console.log(`\n${c.magenta}=== AI Analysis Response ===${c.reset}\n`);
+    console.log(answer);
+    console.log(`\n${c.magenta}============================${c.reset}\n`);
+  } catch (err) {
+    console.log(`${c.red}Analysis failed: ${err.message}${c.reset}`);
+  }
+}
+
+async function handleEmailDetail(config, email) {
+  console.log(`\n${c.cyan}======================================================${c.reset}`);
+  console.log(`${c.bright}Subject:${c.reset} ${email.subject}`);
+  console.log(`${c.bright}From:${c.reset}    ${email.sender} <${email.senderEmail}>`);
+  console.log(`${c.bright}Date:${c.reset}    ${new Date(email.receivedAt).toLocaleString()}`);
+  console.log(`${c.bright}Urgency:${c.reset} ${email.urgency} | ${c.bright}Category:${c.reset} ${email.category}`);
+  console.log(`${c.cyan}------------------------------------------------------${c.reset}`);
+  console.log(`${c.bright}AI Summary:${c.reset}\n${email.summary}`);
+  console.log(`${c.cyan}------------------------------------------------------${c.reset}`);
+  console.log(`${c.bright}Message Body:${c.reset}\n${email.body_plain || email.body || '(No plain text body)'}`);
+  console.log(`${c.cyan}======================================================${c.reset}\n`);
+
+  if (email.draftBody) {
+    console.log(`${c.yellow}🤖 Suggested Reply Draft (${config.tone} tone):${c.reset}`);
+    console.log(`${c.dim}------------------------------------------------------${c.reset}`);
+    console.log(email.draftBody);
+    console.log(`${c.dim}------------------------------------------------------${c.reset}\n`);
+
+    console.log(`Actions:`);
+    console.log(` 1) ✅ Send suggested reply as-is`);
+    console.log(` 2) ✏️ Edit reply before sending`);
+    console.log(` 3) ❌ Decline / Don't send`);
+    console.log(` 4) 🔙 Back to menu`);
+    const choice = (await askQuestion(`Choice [1-4]: `)).trim();
+
+    if (choice === '1') {
+      await executeSendEmail(config, email, email.draftBody);
+    } else if (choice === '2') {
+      console.log(`\n${c.dim}Enter your custom message body (press Enter when done):${c.reset}`);
+      const customBody = await askQuestion(`> `);
+      if (customBody.trim()) {
+        await executeSendEmail(config, email, customBody.trim());
+      } else {
+        console.log(`${c.yellow}Reply cancelled.${c.reset}`);
+      }
+    }
+  } else {
+    console.log(`Actions:`);
+    console.log(` 1) ✍️ Write and send a reply`);
+    console.log(` 2) 🔙 Back to menu`);
+    const choice = (await askQuestion(`Choice [1-2]: `)).trim();
+    if (choice === '1') {
+      const customBody = await askQuestion(`Enter reply body: `);
+      if (customBody.trim()) {
+        await executeSendEmail(config, email, customBody.trim());
+      }
+    }
+  }
+}
+
+async function executeSendEmail(config, originalEmail, replyBody) {
+  console.log(`\n${c.yellow}Sending reply to ${originalEmail.senderEmail}...${c.reset}`);
+  try {
+    const res = await sendEmailReply(config, {
+      to: originalEmail.senderEmail,
+      subject: originalEmail.subject,
+      body: replyBody,
+      inReplyTo: originalEmail.id
+    });
+    console.log(`${c.green}✔ Reply sent successfully! (Message-ID: ${res.messageId})${c.reset}\n`);
+  } catch (err) {
+    console.log(`${c.red}❌ Failed to send reply: ${err.message}${c.reset}`);
+  }
+}
+
+async function runTerminalExecution() {
+  console.log(`\n${c.cyan}--- 💻 Terminal Shell Mode ---${c.reset}`);
+  console.log(`${c.dim}Execute shell / bash commands directly within the agent session.${c.reset}`);
+  console.log(`${c.dim}Type any terminal command (e.g. 'git status', 'ls -la', 'ps aux', 'uptime', or 'exit'):${c.reset}\n`);
+
+  while (true) {
+    const cmd = (await askQuestion(`${c.green}terminal-agent$ ${c.reset}`)).trim();
+    if (!cmd || cmd === 'exit' || cmd === 'back' || cmd === 'q') break;
+
+    await new Promise((resolve) => {
+      exec(cmd, { cwd: process.cwd() }, (error, stdout, stderr) => {
+        if (stdout) console.log(stdout);
+        if (stderr) console.error(`${c.red}${stderr}${c.reset}`);
+        if (error) console.error(`${c.red}Command failed with code ${error.code}${c.reset}`);
+        resolve();
+      });
+    });
+  }
+}
+
+async function watchInboxLive(config) {
+  console.log(`\n${c.cyan}--- 🔄 Live Watch / Polling Mode ---${c.reset}`);
+  console.log(`${c.dim}Monitoring ${config.email} every 30 seconds. Press Ctrl+C or Enter to stop.${c.reset}\n`);
+
+  let lastChecked = new Date();
+  let keepWatching = true;
+
+  const pollInterval = setInterval(async () => {
+    try {
+      process.stdout.write(`\r${c.dim}[${new Date().toLocaleTimeString()}] Checking for new emails...${c.reset}  `);
+      const res = await fetchEmails(config, { limit: 5 });
+      if (res.success && res.emails && res.emails.length > 0) {
+        const newEmails = res.emails.filter(e => new Date(e.receivedAt) > lastChecked);
+        if (newEmails.length > 0) {
+          console.log(`\n\n${c.bright}${c.magenta}🔔 ${newEmails.length} NEW EMAIL(S) ARRIVED!${c.reset}`);
+          newEmails.forEach(e => {
+            console.log(`  • ${c.bright}${e.subject}${c.reset} from ${e.sender}`);
+            console.log(`    Summary: ${e.summary}`);
+          });
+          lastChecked = new Date();
+        }
+      }
+    } catch (e) {
+      // ignore transient poll error
+    }
+  }, 30000);
+
+  await askQuestion(`\nPress Enter at any time to return to main menu...\n`);
+  clearInterval(pollInterval);
+  console.log(`Stopped monitoring.`);
+}
+
+async function main() {
+  printBanner();
+
+  // Parse CLI argument flags if provided
+  const args = process.argv.slice(2);
+
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`Usage:
+  node terminal-agent.js               # Interactive Agent Menu
+  node terminal-agent.js --login       # Reconfigure / Login email
+  node terminal-agent.js --inbox       # Fetch live inbox directly
+  node terminal-agent.js --history 50  # Fetch history (N emails)
+  node terminal-agent.js --search "q"  # Search email history
+  node terminal-agent.js --ask "q"     # AI question over email history
+  node terminal-agent.js --exec "cmd"  # Execute terminal command
+`);
+    process.exit(0);
+  }
+
+  let config = loadLocalConfig();
+
+  if (args.includes('--login') || !config) {
+    if (!config) {
+      console.log(`${c.yellow}No configured email account found.${c.reset}\n`);
+    }
+    config = await promptForCredentials();
+    if (!config) {
+      console.log(`${c.red}Setup cancelled. Exiting.${c.reset}`);
+      process.exit(1);
+    }
+  }
+
+  // Handle direct flag calls
+  if (args.includes('--inbox')) {
+    await viewLiveInbox(config);
+    process.exit(0);
+  }
+  if (args.includes('--history')) {
+    const idx = args.indexOf('--history');
+    const lim = parseInt(args[idx + 1], 10) || 30;
+    const res = await fetchEmailHistory(config, { limit: lim });
+    console.log(JSON.stringify(res, null, 2));
+    process.exit(0);
+  }
+  if (args.includes('--search')) {
+    const idx = args.indexOf('--search');
+    const query = args[idx + 1] || '';
+    const res = await searchEmailHistory(config, { query });
+    console.log(JSON.stringify(res, null, 2));
+    process.exit(0);
+  }
+  if (args.includes('--ask')) {
+    const idx = args.indexOf('--ask');
+    const q = args[idx + 1] || '';
+    const res = await fetchEmailHistory(config, { limit: 50 });
+    const answer = askEmailHistory(q, res.emails || []);
+    console.log(answer);
+    process.exit(0);
+  }
+  if (args.includes('--exec')) {
+    const idx = args.indexOf('--exec');
+    const cmd = args[idx + 1] || '';
+    exec(cmd, (err, stdout, stderr) => {
+      if (stdout) console.log(stdout);
+      if (stderr) console.error(stderr);
+      process.exit(err ? 1 : 0);
+    });
+    return;
+  }
+
+  // Main interactive loop
+  while (true) {
+    console.log(`\n${c.cyan}======================================================${c.reset}`);
+    console.log(`${c.bright}Active Account:${c.reset} ${c.green}${config.email}${c.reset} (${config.provider}) | ${c.dim}Tone: ${config.tone}${c.reset}`);
+    console.log(`${c.cyan}------------------------------------------------------${c.reset}`);
+    console.log(` ${c.bright}[1]${c.reset} 📥 Live Inbox (Recent Emails & AI Drafts)`);
+    console.log(` ${c.bright}[2]${c.reset} 📜 Browse Email History (Deep Lookback)`);
+    console.log(` ${c.bright}[3]${c.reset} 🔍 Search Email History`);
+    console.log(` ${c.bright}[4]${c.reset} 🤖 Ask AI Agent (Natural Language Lookback)`);
+    console.log(` ${c.bright}[5]${c.reset} 💻 Terminal Shell Execution (Run System Commands)`);
+    console.log(` ${c.bright}[6]${c.reset} 🔄 Live Watch / Polling Mode`);
+    console.log(` ${c.bright}[7]${c.reset} ⚙️ Reconfigure / Switch Account`);
+    console.log(` ${c.bright}[0]${c.reset} 🚪 Exit`);
+    console.log(`${c.cyan}======================================================${c.reset}`);
+
+    const choice = (await askQuestion(`${c.bright}Select option [0-7]: ${c.reset}`)).trim();
+
+    if (choice === '1') {
+      await viewLiveInbox(config);
+    } else if (choice === '2') {
+      await viewEmailHistory(config);
+    } else if (choice === '3') {
+      await searchHistory(config);
+    } else if (choice === '4') {
+      await askAgentLookback(config);
+    } else if (choice === '5') {
+      await runTerminalExecution();
+    } else if (choice === '6') {
+      await watchInboxLive(config);
+    } else if (choice === '7') {
+      const newConfig = await promptForCredentials();
+      if (newConfig) config = newConfig;
+    } else if (choice === '0' || choice.toLowerCase() === 'exit' || choice.toLowerCase() === 'q') {
+      console.log(`\n${c.green}Goodbye! MailMind Agent session ended.${c.reset}\n`);
+      break;
+    } else {
+      console.log(`${c.red}Invalid option. Please choose from 0 to 7.${c.reset}`);
+    }
+  }
+
+  rl.close();
+}
+
+main().catch(err => {
+  console.error(`Fatal error:`, err);
+  process.exit(1);
+});

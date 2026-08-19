@@ -14,6 +14,7 @@ export default function Sidebar({ user }) {
   const nav = [
     { href: '/inbox',    icon: '📥', label: 'Inbox',    badge: 3 },
     { href: '/search',   icon: '🔍', label: 'Ask Inbox', badge: null },
+    { href: '/terminal', icon: '💻', label: 'Terminal',  badge: null },
     { href: '/settings', icon: '⚙️',  label: 'Settings',  badge: null },
   ];
 

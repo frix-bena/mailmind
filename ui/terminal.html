@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MailMind — Terminal Agent</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.terminal-window{
+  background:#0d1117;border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;font-family:monospace;min-height:70vh;display:flex;flex-direction:column;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.5);
+}
+.term-output{flex:1;overflow-y:auto;margin-bottom:16px;font-size:13px;line-height:1.6}
+.term-line{margin-bottom:8px;white-space:pre-wrap}
+.term-input-line{display:flex;gap:10px;align-items:center;border-top:1px solid #30363d;padding-top:12px}
+.term-prompt{color:#58a6ff;font-weight:700}
+.term-input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-family:monospace;font-size:14px;padding:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-root"></div>
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">💻 Terminal &amp; CLI Agent</span>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="chip" style="font-size:12px">🟢 Agent Bridge Online</span>
+        <code style="font-size:12px;background:var(--surface2);padding:4px 8px;border-radius:4px">npm run agent</code>
+      </div>
+    </div>
+    <div class="content">
+      <div class="terminal-window">
+        <div class="term-output" id="term-log">
+          <div class="term-line" style="color:#8b949e">📧 MailMind Terminal Agent Shell Initialized.</div>
+          <div class="term-line" style="color:#8b949e">Type "help" for commands, or run any bash command (e.g. "git status", "ls -la", "uptime").</div>
+          <div class="term-line" style="color:#8b949e">You can also run the full CLI agent directly in your system terminal with: npm run agent</div>
+        </div>
+        <form class="term-input-line" onsubmit="runCmd(event)">
+          <span class="term-prompt">mailmind-agent$</span>
+          <input class="term-input" id="cmd-in" autofocus placeholder="Type command (e.g. 'help', 'status', 'fetch-inbox', 'git status')...">
+          <button type="submit" class="btn btn-primary btn-sm">Run ↵</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+document.body.insertAdjacentHTML('afterbegin', renderSidebar('terminal'));
+initSidebar();
+
+const logEl = document.getElementById('term-log');
+const inEl = document.getElementById('cmd-in');
+const user = getUser();
+
+function appendLog(text, color='#c9d1d9') {
+  const div = document.createElement('div');
+  div.className = 'term-line';
+  div.style.color = color;
+  div.textContent = text;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function runCmd(e) {
+  e.preventDefault();
+  const cmd = inEl.value.trim();
+  if (!cmd) return;
+  inEl.value = '';
+
+  appendLog('$ ' + cmd, '#58a6ff');
+
+  if (cmd === 'clear' || cmd === 'cls') {
+    logEl.innerHTML = '';
+    return;
+  }
+
+  if (cmd === 'help') {
+    appendLog(`Available Commands:
+  • help                   - Show this guide
+  • clear                  - Clear terminal screen
+  • status                 - Show connected email account & settings
+  • fetch-inbox            - Fetch recent emails from IMAP inbox
+  • fetch-history [limit]  - Browse past email history
+  • ask <question>         - Ask AI questions over email history
+  • cli-guide              - How to run terminal CLI agent
+  • <any bash command>     - Execute system commands (git, ls, ps, uptime, etc.)`, '#8b949e');
+    return;
+  }
+
+  if (cmd === 'cli-guide') {
+    appendLog(`To run in system terminal:
+  $ npm run agent
+  Or:
+  $ node terminal-agent.js
+  
+Direct CLI flags:
+  $ node terminal-agent.js --inbox
+  $ node terminal-agent.js --history 50
+  $ node terminal-agent.js --search "invoice"
+  $ node terminal-agent.js --ask "Summarize this week"`, '#8b949e');
+    return;
+  }
+
+  if (cmd === 'status') {
+    appendLog(`Connected Account: ${user.email} (${user.provider || 'gmail'})\nAI Reply Tone: ${user.tone || 'professional'}\nBridge API: http://localhost:3002`, '#22c55e');
+    return;
+  }
+
+  if (cmd === 'fetch-inbox') {
+    appendLog('Fetching recent inbox emails via IMAP...', '#d29922');
+    try {
+      const res = await fetch('http://localhost:3002/api/fetch-emails', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider, limit: 5 })
+      });
+      const data = await res.json();
+      if (data.emails) {
+        const list = data.emails.map((m, i) => `[${i+1}] ${m.subject} (From: ${m.sender})\n    Summary: ${m.summary}`).join('\n\n');
+        appendLog(`Fetched ${data.emails.length} emails:\n\n` + list, '#c9d1d9');
+      } else {
+        appendLog(data.error || 'Failed to fetch emails', '#f85149');
+      }
+    } catch (err) {
+      appendLog('Bridge error: ' + err.message, '#f85149');
+    }
+    return;
+  }
+
+  if (cmd.startsWith('ask ')) {
+    const question = cmd.replace('ask ', '').trim();
+    appendLog('Analyzing email history...', '#d29922');
+    try {
+      const res = await fetch('http://localhost:3002/api/ask-inbox', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider, question })
+      });
+      const data = await res.json();
+      appendLog(`🤖 AI Response:\n\n${data.answer || data.error}`, '#a78bfa');
+    } catch (err) {
+      appendLog('Error: ' + err.message, '#f85149');
+    }
+    return;
+  }
+
+  // General bash exec via bridge API
+  try {
+    const res = await fetch('http://localhost:3002/api/terminal/exec', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ command: cmd })
+    });
+    const data = await res.json();
+    if (data.stdout) appendLog(data.stdout.trim(), '#c9d1d9');
+    if (data.stderr) appendLog(data.stderr.trim(), '#f85149');
+    if (!data.stdout && !data.stderr && data.error) appendLog(data.error, '#f85149');
+  } catch (err) {
+    appendLog('Failed to execute command: ' + err.message, '#f85149');
+  }
+}
+</script>
+</body>
+</html>

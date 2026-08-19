@@ -1,120 +1,226 @@
 const express = require('express');
 const cors = require('cors');
-const imaps = require('imap-simple');
-const simpleParser = require('mailparser').simpleParser;
+const { exec } = require('child_process');
+const {
+  testConnection,
+  fetchEmails,
+  fetchEmailHistory,
+  searchEmailHistory,
+  askEmailHistory,
+  sendEmailReply,
+  loadLocalConfig,
+  saveLocalConfig,
+  clearLocalConfig
+} = require('./lib/email-service');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Fake AI categorization based on keywords to simulate n8n for the UI
-function categorizeEmail(subject, text) {
-  const content = (subject + ' ' + text).toLowerCase();
-  
-  if (content.includes('invoice') || content.includes('receipt') || content.includes('payment') || content.includes('paid')) {
-    return { category: 'receipt', needsReply: false, urgency: 'low', summary: 'Billing/Receipt notification. No action needed.' };
+// Helper to get credentials from request body or fallback to local config
+function resolveCredentials(req) {
+  const { email, password, provider, host, port, tone } = req.body || {};
+  if (email && password) {
+    return { email, password, provider: provider || 'gmail', host, port, tone: tone || 'professional' };
   }
-  if (content.includes('newsletter') || content.includes('unsubscribe') || content.includes('digest')) {
-    return { category: 'newsletter', needsReply: false, urgency: 'low', summary: 'Automated newsletter or digest.' };
+  const saved = loadLocalConfig();
+  if (saved && saved.email && saved.password) {
+    return {
+      ...saved,
+      tone: tone || saved.tone || 'professional'
+    };
   }
-  if (content.includes('security') || content.includes('alert') || content.includes('password') || content.includes('sign in')) {
-    return { category: 'notification', needsReply: false, urgency: 'high', summary: 'Security alert or automated notification.' };
-  }
-  
-  // Default to important/needs reply
-  return { 
-    category: 'direct_message', 
-    needsReply: true, 
-    urgency: content.includes('urgent') || content.includes('asap') || content.includes('today') ? 'high' : 'medium',
-    summary: 'Direct email requiring your attention.' 
-  };
+  return null;
 }
 
-app.post('/api/fetch-emails', async (req, res) => {
-  const { email, password, provider } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Missing email or password' });
+// ── Auth & Status Endpoints ──────────────────────────────────────────
 
-  const host = provider === 'microsoft' ? 'outlook.office365.com' : 'imap.gmail.com';
+app.get('/api/auth/status', (req, res) => {
+  const config = loadLocalConfig();
+  if (config && config.email) {
+    return res.json({
+      connected: true,
+      email: config.email,
+      provider: config.provider || 'gmail',
+      tone: config.tone || 'professional',
+      savedAt: config.savedAt
+    });
+  }
+  res.json({ connected: false });
+});
 
-  const config = {
-    imap: {
-      user: email,
-      password: password,
-      host: host,
-      port: 993,
-      tls: true,
-      tlsOptions: { rejectUnauthorized: false },
-      authTimeout: 10000
-    }
+app.post('/api/auth/connect', async (req, res) => {
+  const { email, password, provider, host, port, tone } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password/App Password are required.' });
+  }
+
+  const credentials = {
+    email,
+    password,
+    provider: provider || 'gmail',
+    host,
+    port,
+    tone: tone || 'professional',
+    connected: true,
+    savedAt: new Date().toISOString()
   };
 
+  const testResult = await testConnection(credentials);
+  if (!testResult.success) {
+    return res.status(401).json({
+      error: testResult.error || 'Failed to authenticate with email server.',
+      hint: 'For Gmail, make sure 2-Step Verification is on and you are using a 16-character App Password.'
+    });
+  }
+
+  saveLocalConfig(credentials);
+  res.json({
+    success: true,
+    connected: true,
+    email: credentials.email,
+    provider: credentials.provider,
+    totalMessages: testResult.totalMessages,
+    unreadMessages: testResult.unreadMessages
+  });
+});
+
+app.post('/api/auth/disconnect', (req, res) => {
+  clearLocalConfig();
+  res.json({ success: true, connected: false });
+});
+
+// ── Email Fetch & History Endpoints ─────────────────────────────────
+
+app.post('/api/fetch-emails', async (req, res) => {
+  const credentials = resolveCredentials(req);
+  if (!credentials) {
+    return res.status(400).json({ error: 'No email credentials provided or saved.' });
+  }
+
+  const limit = req.body.limit ? parseInt(req.body.limit, 10) : 15;
+  const tone = req.body.tone || credentials.tone || 'professional';
+
   try {
-    const connection = await imaps.connect(config);
-    await connection.openBox('INBOX');
-
-    // Fetch the 15 most recent emails
-    const searchCriteria = ['ALL'];
-    const fetchOptions = {
-      bodies: ['HEADER', 'TEXT', ''],
-      struct: true,
-      markSeen: false
-    };
-
-    // Grab the total count to just get the latest 15
-    const box = await connection.openBox('INBOX');
-    const total = box.messages.total;
-    const fromSeq = Math.max(1, total - 14);
-    const results = await connection.seq.search([`${fromSeq}:*`], fetchOptions);
-
-    const emails = [];
-    
-    for (const item of results) {
-      const allParts = item.parts.find(part => part.which === '');
-      const id = item.attributes.uid;
-      
-      const parsed = await simpleParser(allParts.body);
-      
-      const subject = parsed.subject || 'No Subject';
-      const sender = parsed.from && parsed.from.value[0] ? parsed.from.value[0].name || parsed.from.value[0].address : 'Unknown';
-      const senderEmail = parsed.from && parsed.from.value[0] ? parsed.from.value[0].address : 'unknown@domain.com';
-      const date = parsed.date || new Date();
-      const bodyText = parsed.text || '';
-      const bodyHtml = parsed.html || parsed.textAsHtml || parsed.text || '';
-
-      const { category, needsReply, urgency, summary } = categorizeEmail(subject, bodyText);
-      
-      // Auto-generate a dummy draft if it needs a reply
-      const draft = needsReply ? `Hi ${sender.split(' ')[0]},\n\nThanks for reaching out! I've received your email regarding "${subject}".\n\nI'll review this and get back to you shortly.\n\nBest,\n${email.split('@')[0]}` : null;
-
-      emails.push({
-        id: id.toString(),
-        sender,
-        senderEmail,
-        subject,
-        receivedAt: date.toISOString(),
-        body: bodyHtml,
-        category,
-        needsReply,
-        urgency,
-        summary,
-        draft,
-        draftStatus: needsReply ? 'pending' : null
-      });
-    }
-
-    connection.end();
-    
-    // Sort newest first
-    emails.sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt));
-    
-    res.json({ success: true, emails });
+    const result = await fetchEmails(credentials, { limit, tone });
+    res.json(result);
   } catch (error) {
-    console.error('IMAP Error:', error);
-    res.status(500).json({ error: 'Failed to connect to email server. Make sure you are using an App Password if using Gmail.' });
+    console.error('Fetch emails error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to connect to email server.',
+      hint: 'Check your App Password and IMAP settings.'
+    });
   }
 });
 
-const PORT = 3002;
+app.post('/api/fetch-history', async (req, res) => {
+  const credentials = resolveCredentials(req);
+  if (!credentials) {
+    return res.status(400).json({ error: 'No email credentials provided or saved.' });
+  }
+
+  const limit = req.body.limit ? parseInt(req.body.limit, 10) : 50;
+  const offset = req.body.offset ? parseInt(req.body.offset, 10) : 0;
+  const folder = req.body.folder || 'INBOX';
+  const since = req.body.since || null;
+  const tone = req.body.tone || credentials.tone || 'professional';
+
+  try {
+    const result = await fetchEmailHistory(credentials, { limit, offset, folder, since, tone });
+    res.json(result);
+  } catch (error) {
+    console.error('Fetch history error:', error);
+    res.status(500).json({ error: error.message || 'Failed to retrieve email history.' });
+  }
+});
+
+app.post('/api/search-history', async (req, res) => {
+  const credentials = resolveCredentials(req);
+  if (!credentials) {
+    return res.status(400).json({ error: 'No email credentials provided or saved.' });
+  }
+
+  const { query, sender, subject, limit } = req.body;
+
+  try {
+    const result = await searchEmailHistory(credentials, {
+      query,
+      sender,
+      subject,
+      limit: limit ? parseInt(limit, 10) : 50
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Search history error:', error);
+    res.status(500).json({ error: error.message || 'Search in email history failed.' });
+  }
+});
+
+app.post('/api/ask-inbox', async (req, res) => {
+  const credentials = resolveCredentials(req);
+  const { question, emails } = req.body;
+
+  if (!question) {
+    return res.status(400).json({ error: 'Question is required.' });
+  }
+
+  try {
+    let emailData = emails;
+    if (!emailData || emailData.length === 0) {
+      if (credentials) {
+        const hist = await fetchEmailHistory(credentials, { limit: 50 });
+        emailData = hist.emails || [];
+      }
+    }
+
+    const answer = askEmailHistory(question, emailData || []);
+    res.json({ success: true, question, answer });
+  } catch (error) {
+    console.error('Ask inbox error:', error);
+    res.status(500).json({ error: error.message || 'AI analysis over history failed.' });
+  }
+});
+
+app.post('/api/send-email', async (req, res) => {
+  const credentials = resolveCredentials(req);
+  if (!credentials) {
+    return res.status(400).json({ error: 'No email credentials provided or saved.' });
+  }
+
+  const { to, subject, body, inReplyTo, references } = req.body;
+  if (!to || !body) {
+    return res.status(400).json({ error: 'Recipient "to" and message "body" are required.' });
+  }
+
+  try {
+    const result = await sendEmailReply(credentials, { to, subject, body, inReplyTo, references });
+    res.json(result);
+  } catch (error) {
+    console.error('Send email error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send email via SMTP.' });
+  }
+});
+
+// ── Terminal Execution Endpoint ─────────────────────────────────────
+
+app.post('/api/terminal/exec', (req, res) => {
+  const { command } = req.body;
+  if (!command) {
+    return res.status(400).json({ error: 'Command string is required.' });
+  }
+
+  exec(command, { cwd: process.cwd(), maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
+    res.json({
+      success: !error,
+      exitCode: error ? error.code || 1 : 0,
+      stdout: stdout || '',
+      stderr: stderr || '',
+      error: error ? error.message : null
+    });
+  });
+});
+
+const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
-  console.log(`Email bridge API running on http://localhost:${PORT}`);
+  console.log(`\n📧 MailMind Email & Terminal Bridge API running on http://localhost:${PORT}`);
 });
