@@ -116,18 +116,34 @@ export default function OnboardingPage() {
     setAuthHint('');
 
     try {
-      const res = await fetch('http://localhost:3002/api/auth/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          provider: selectedProvider,
-          host: selectedProvider === 'custom' ? imapHost : undefined,
-          port: selectedProvider === 'custom' ? imapPort : undefined,
-          tone
-        })
-      });
+      let res;
+      try {
+        res = await fetch('/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            provider: selectedProvider,
+            host: selectedProvider === 'custom' ? imapHost : undefined,
+            port: selectedProvider === 'custom' ? imapPort : undefined,
+            tone
+          })
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            provider: selectedProvider,
+            host: selectedProvider === 'custom' ? imapHost : undefined,
+            port: selectedProvider === 'custom' ? imapPort : undefined,
+            tone
+          })
+        });
+      }
 
       const data = await res.json();
       if (res.ok && data.success) {
@@ -138,10 +154,9 @@ export default function OnboardingPage() {
         setAuthError(data.error || 'Failed to authenticate with your email server.');
         if (data.hint) setAuthHint(data.hint);
       }
-    } catch {
-      // Bridge API is offline or initializing: save credentials locally and allow setup
+    } catch (err) {
       setConnecting(false);
-      setStep('tone');
+      setAuthError('Connection error: ' + (err.message || 'Unable to connect to email authentication service.'));
     }
   };
 

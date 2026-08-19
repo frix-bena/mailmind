@@ -100,11 +100,21 @@ Direct CLI flags:
     if (cmd === 'fetch-inbox') {
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:3002/api/fetch-emails', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user?.email, password: user?.password, provider: user?.provider, limit: 5 })
-        });
+        let res;
+        const reqBody = JSON.stringify({ email: user?.email, password: user?.password, provider: user?.provider, limit: 5 });
+        try {
+          res = await fetch('/api/fetch-emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+          });
+        } catch {
+          res = await fetch('http://localhost:3002/api/fetch-emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+          });
+        }
         const data = await res.json();
         if (data.emails) {
           const list = data.emails.map((m, i) => `[${i + 1}] ${m.subject} (From: ${m.sender || m.sender_name})\n    Summary: ${m.summary || m.ai_summary}`).join('\n\n');
@@ -113,7 +123,7 @@ Direct CLI flags:
           setHistory([...newHistory, { type: 'error', text: data.error || 'Failed to fetch emails.' }]);
         }
       } catch (err) {
-        setHistory([...newHistory, { type: 'error', text: `Bridge error: ${err.message}` }]);
+        setHistory([...newHistory, { type: 'error', text: `Error: ${err.message}` }]);
       } finally {
         setLoading(false);
       }
@@ -124,11 +134,21 @@ Direct CLI flags:
       const question = cmd.replace('ask ', '').trim();
       setLoading(true);
       try {
-        const res = await fetch('http://localhost:3002/api/ask-inbox', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user?.email, password: user?.password, provider: user?.provider, question })
-        });
+        let res;
+        const reqBody = JSON.stringify({ email: user?.email, password: user?.password, provider: user?.provider, question });
+        try {
+          res = await fetch('/api/ask-inbox', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+          });
+        } catch {
+          res = await fetch('http://localhost:3002/api/ask-inbox', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+          });
+        }
         const data = await res.json();
         setHistory([...newHistory, { type: 'output', text: `🤖 AI Response:\n\n${data.answer || data.error}` }]);
       } catch (err) {
@@ -142,11 +162,21 @@ Direct CLI flags:
     // Default: execute as bash / system command via bridge API
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3002/api/terminal/exec', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd })
-      });
+      let res;
+      const reqBody = JSON.stringify({ command: cmd });
+      try {
+        res = await fetch('/api/terminal/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/terminal/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      }
       const data = await res.json();
       if (data.stdout) {
         setHistory([...newHistory, { type: 'output', text: data.stdout.trim() }]);

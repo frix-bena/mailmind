@@ -38,17 +38,28 @@ export default function InboxPage() {
     setErrorMessage('');
 
     try {
-      const res = await fetch('http://localhost:3002/api/fetch-emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: storedUser.email,
-          password: storedUser.password,
-          provider: storedUser.provider,
-          tone: storedUser.tone,
-          limit: customLimit
-        })
+      let res;
+      const reqBody = JSON.stringify({
+        email: storedUser.email,
+        password: storedUser.password,
+        provider: storedUser.provider,
+        tone: storedUser.tone,
+        limit: customLimit
       });
+
+      try {
+        res = await fetch('/api/fetch-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/fetch-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      }
 
       const data = await res.json();
       if (res.ok && data.success) {
@@ -62,7 +73,7 @@ export default function InboxPage() {
       }
     } catch {
       setIsLive(false);
-      setPollingBadge('Bridge Offline');
+      setPollingBadge('Sync Offline');
     } finally {
       setLoading(false);
     }
@@ -79,17 +90,29 @@ export default function InboxPage() {
     setLoadingHistory(true);
 
     try {
-      const res = await fetch('http://localhost:3002/api/fetch-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.email,
-          password: user.password,
-          provider: user.provider,
-          tone: user.tone,
-          limit: nextLimit
-        })
+      let res;
+      const reqBody = JSON.stringify({
+        email: user.email,
+        password: user.password,
+        provider: user.provider,
+        tone: user.tone,
+        limit: nextLimit
       });
+
+      try {
+        res = await fetch('/api/fetch-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/fetch-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      }
+
       const data = await res.json();
       if (res.ok && data.success && data.emails) {
         setEmails(data.emails);
@@ -106,19 +129,29 @@ export default function InboxPage() {
     
     if (action === 'sent' && targetEmail && user) {
       try {
-        await fetch('http://localhost:3002/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            password: user.password,
-            provider: user.provider,
-            to: targetEmail.sender_email || targetEmail.senderEmail,
-            subject: targetEmail.subject,
-            body: replyBody || targetEmail.draft?.body || targetEmail.draftBody,
-            inReplyTo: targetEmail.id
-          })
+        const sendBody = JSON.stringify({
+          email: user.email,
+          password: user.password,
+          provider: user.provider,
+          to: targetEmail.sender_email || targetEmail.senderEmail,
+          subject: targetEmail.subject,
+          body: replyBody || targetEmail.draft?.body || targetEmail.draftBody,
+          inReplyTo: targetEmail.id
         });
+
+        try {
+          await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: sendBody
+          });
+        } catch {
+          await fetch('http://localhost:3002/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: sendBody
+          });
+        }
       } catch {
         // ignore
       }

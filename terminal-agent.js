@@ -44,8 +44,8 @@ function printBanner() {
 }
 
 async function promptForCredentials() {
-  console.log(`${c.bright}${c.yellow}🔑 Setup Email Access Credentials${c.reset}`);
-  console.log(`${c.dim}MailMind connects via secure IMAP/SMTP to read your inbox & history.${c.reset}`);
+  console.log(`${c.bright}${c.yellow}🔑 Setup Real Email Account Access${c.reset}`);
+  console.log(`${c.dim}MailMind connects via secure IMAP/SMTP to monitor your inbox & draft replies with permission.${c.reset}`);
   console.log(`${c.dim}(Tip: For Gmail, create a 16-character App Password at: https://myaccount.google.com/apppasswords)\n${c.reset}`);
 
   const email = (await askQuestion(`${c.bright}Email address: ${c.reset}`)).trim();
@@ -54,13 +54,26 @@ async function promptForCredentials() {
     return null;
   }
 
-  console.log(`\nSelect provider:`);
-  console.log(` 1) Google / Gmail (Default)`);
+  // Auto-detect provider default from email domain
+  const domain = (email.split('@')[1] || '').toLowerCase();
+  let defaultChoice = '1';
+  if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live') || domain.includes('office365')) {
+    defaultChoice = '2';
+  } else if (domain.includes('yahoo') || domain.includes('aol')) {
+    defaultChoice = '3';
+  } else if (domain.includes('icloud') || domain.includes('me.com') || domain.includes('mac.com')) {
+    defaultChoice = '4';
+  } else if (!domain.includes('gmail') && !domain.includes('googlemail')) {
+    defaultChoice = '5';
+  }
+
+  console.log(`\nSelect email provider:`);
+  console.log(` 1) Google / Gmail (App Password recommended)`);
   console.log(` 2) Microsoft Outlook / Office 365`);
   console.log(` 3) Yahoo Mail`);
   console.log(` 4) Apple iCloud`);
-  console.log(` 5) Custom IMAP Server`);
-  const provChoice = (await askQuestion(`Choice [1-5, default: 1]: `)).trim() || '1';
+  console.log(` 5) Custom IMAP / Other Provider`);
+  const provChoice = (await askQuestion(`Choice [1-5, default: ${defaultChoice}]: `)).trim() || defaultChoice;
 
   let provider = 'gmail';
   let host = undefined;
@@ -71,11 +84,22 @@ async function promptForCredentials() {
   else if (provChoice === '4') provider = 'icloud';
   else if (provChoice === '5') {
     provider = 'custom';
-    host = (await askQuestion(`IMAP Host (e.g. imap.example.com): `)).trim();
+    host = (await askQuestion(`IMAP Host (e.g. imap.${domain} or mail.example.com): `)).trim();
     port = (await askQuestion(`IMAP Port [default: 993]: `)).trim() || '993';
   }
 
-  const password = (await askQuestion(`Password or App Password: `)).trim();
+  console.log(`\n${c.dim}Enter password or App Password:`);
+  if (provider === 'gmail') {
+    console.log(`(Generate 16-character App Password at: https://myaccount.google.com/apppasswords)${c.reset}`);
+  } else if (provider === 'icloud') {
+    console.log(`(Generate App-Specific Password at: https://appleid.apple.com)${c.reset}`);
+  } else if (provider === 'yahoo') {
+    console.log(`(Generate App Password at: https://login.yahoo.com/account/security)${c.reset}`);
+  } else {
+    console.log(`(Account password or App Password)${c.reset}`);
+  }
+
+  const password = (await askQuestion(`${c.bright}Password / App Password: ${c.reset}`)).trim();
   if (!password) {
     console.log(`${c.red}❌ Password cannot be empty.${c.reset}`);
     return null;
@@ -106,14 +130,14 @@ async function promptForCredentials() {
 
   if (testRes.success) {
     console.log(`${c.green}Connected successfully!${c.reset}`);
-    console.log(`${c.dim}Inbox contains ${testRes.totalMessages} total messages (${testRes.unreadMessages} new).${c.reset}\n`);
+    console.log(`${c.dim}Inbox contains ${testRes.totalMessages} total messages (${testRes.unreadMessages} unread).${c.reset}\n`);
     saveLocalConfig(config);
-    console.log(`${c.green}✔ Credentials saved to .mailmind-config.json${c.reset}\n`);
+    console.log(`${c.green}✔ Account ${email} logged in & saved to .mailmind-config.json${c.reset}\n`);
     return config;
   } else {
     console.log(`${c.red}Connection failed!${c.reset}`);
     console.log(`${c.red}Error: ${testRes.error}${c.reset}`);
-    console.log(`${c.yellow}\nTroubleshooting tips:\n• For Gmail: Enable 2-Step Verification & generate an App Password.\n• Check that IMAP is enabled in your webmail settings.\n• Verify server host & port.${c.reset}\n`);
+    console.log(`${c.yellow}\nTroubleshooting tips:\n• For Gmail: Make sure 2-Step Verification is active & generate a 16-character App Password.\n• Check that IMAP access is enabled in your webmail settings.\n• Verify email address, server host & port.${c.reset}\n`);
     const retry = (await askQuestion(`Would you like to try again? (y/n): `)).toLowerCase();
     if (retry.startsWith('y')) {
       return promptForCredentials();
@@ -369,7 +393,9 @@ async function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`Usage:
   node terminal-agent.js               # Interactive Agent Menu
-  node terminal-agent.js --login       # Reconfigure / Login email
+  node terminal-agent.js --login       # Connect / Log in real email
+  node terminal-agent.js --logout      # Disconnect active email
+  node terminal-agent.js --status      # Check current connection status
   node terminal-agent.js --inbox       # Fetch live inbox directly
   node terminal-agent.js --history 50  # Fetch history (N emails)
   node terminal-agent.js --search "q"  # Search email history
@@ -379,11 +405,53 @@ async function main() {
     process.exit(0);
   }
 
+  if (args.includes('--logout')) {
+    clearLocalConfig();
+    console.log(`${c.green}✔ Successfully logged out. Credentials removed.${c.reset}`);
+    process.exit(0);
+  }
+
   let config = loadLocalConfig();
+
+  if (args.includes('--status')) {
+    if (config && config.email) {
+      console.log(`${c.green}● Connected Account:${c.reset} ${config.email}`);
+      console.log(`  Provider: ${config.provider || 'gmail'}`);
+      console.log(`  Tone: ${config.tone || 'professional'}`);
+      console.log(`  Saved At: ${config.savedAt || 'N/A'}`);
+    } else {
+      console.log(`${c.yellow}○ No email account connected. Run 'node terminal-agent.js --login' to connect.${c.reset}`);
+    }
+    process.exit(0);
+  }
+
+  // Support direct CLI credential pass: --email <email> --password <pass> [--provider <p>]
+  if (args.includes('--email')) {
+    const eIdx = args.indexOf('--email');
+    const pIdx = args.indexOf('--password');
+    const email = args[eIdx + 1];
+    const password = pIdx !== -1 ? args[pIdx + 1] : '';
+    if (email && password) {
+      const provIdx = args.indexOf('--provider');
+      const provider = provIdx !== -1 ? args[provIdx + 1] : 'gmail';
+      const toneIdx = args.indexOf('--tone');
+      const tone = toneIdx !== -1 ? args[toneIdx + 1] : 'professional';
+      const cliConfig = { email, password, provider, tone, connected: true, savedAt: new Date().toISOString() };
+      const testRes = await testConnection(cliConfig);
+      if (testRes.success) {
+        saveLocalConfig(cliConfig);
+        config = cliConfig;
+        console.log(`${c.green}✔ Logged in as ${email}${c.reset}`);
+      } else {
+        console.log(`${c.red}❌ Login failed: ${testRes.error}${c.reset}`);
+        process.exit(1);
+      }
+    }
+  }
 
   if (args.includes('--login') || !config) {
     if (!config) {
-      console.log(`${c.yellow}No configured email account found.${c.reset}\n`);
+      console.log(`${c.yellow}No configured email account found. Let's log you in with your real email.${c.reset}\n`);
     }
     config = await promptForCredentials();
     if (!config) {
@@ -442,10 +510,11 @@ async function main() {
     console.log(` ${c.bright}[5]${c.reset} 💻 Terminal Shell Execution (Run System Commands)`);
     console.log(` ${c.bright}[6]${c.reset} 🔄 Live Watch / Polling Mode`);
     console.log(` ${c.bright}[7]${c.reset} ⚙️ Reconfigure / Switch Account`);
+    console.log(` ${c.bright}[8]${c.reset} 🚪 Log out / Disconnect Account`);
     console.log(` ${c.bright}[0]${c.reset} 🚪 Exit`);
     console.log(`${c.cyan}======================================================${c.reset}`);
 
-    const choice = (await askQuestion(`${c.bright}Select option [0-7]: ${c.reset}`)).trim();
+    const choice = (await askQuestion(`${c.bright}Select option [0-8]: ${c.reset}`)).trim();
 
     if (choice === '1') {
       await viewLiveInbox(config);
@@ -462,11 +531,22 @@ async function main() {
     } else if (choice === '7') {
       const newConfig = await promptForCredentials();
       if (newConfig) config = newConfig;
+    } else if (choice === '8') {
+      clearLocalConfig();
+      console.log(`\n${c.yellow}Logged out of ${config.email}.${c.reset}`);
+      const reLogin = (await askQuestion(`Log in with a new email account now? (y/n): `)).toLowerCase();
+      if (reLogin.startsWith('y')) {
+        const newConfig = await promptForCredentials();
+        if (newConfig) config = newConfig;
+      } else {
+        console.log(`${c.green}Goodbye!${c.reset}\n`);
+        break;
+      }
     } else if (choice === '0' || choice.toLowerCase() === 'exit' || choice.toLowerCase() === 'q') {
       console.log(`\n${c.green}Goodbye! MailMind Agent session ended.${c.reset}\n`);
       break;
     } else {
-      console.log(`${c.red}Invalid option. Please choose from 0 to 7.${c.reset}`);
+      console.log(`${c.red}Invalid option. Please choose from 0 to 8.${c.reset}`);
     }
   }
 

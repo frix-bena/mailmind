@@ -83,11 +83,12 @@
 
     <div class="content">
       <!-- Banner -->
-      <div class="banner" id="banner">
+      <div class="banner" id="banner" style="display:none">
         <span style="font-size:20px">📬</span>
-        <div class="banner-text"><strong>6 new emails</strong> arrived. 2 need your reply — drafts are ready below.</div>
+        <div class="banner-text" id="banner-text">Loading inbox...</div>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('banner').remove()">Dismiss</button>
       </div>
+
 
       <!-- Search -->
       <div class="search-wrap">
@@ -253,19 +254,40 @@ function buildCard(e) {
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── Actions ────────────────────────────────────────────────────────────────
-function sendDraft(id) {
+async function sendDraft(id) {
   const card = document.getElementById('card-'+id);
   const btn  = card.querySelector('.btn-success');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner" style="width:13px;height:13px"></span> Sending…';
-  setTimeout(() => {
-    emails.find(e => e.id === id).draftStatus = 'sent';
-    renderEmails();
-  }, 900);
+
+  const targetEmail = emails.find(e => e.id === id);
+  if (targetEmail && user) {
+    try {
+      await fetch('http://localhost:3002/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          password: user.password,
+          provider: user.provider,
+          to: targetEmail.senderEmail || targetEmail.sender_email,
+          subject: targetEmail.subject,
+          body: targetEmail.draft,
+          inReplyTo: targetEmail.id
+        })
+      });
+    } catch (err) {
+      console.error('Failed to send reply:', err);
+    }
+  }
+
+  if (targetEmail) targetEmail.draftStatus = 'sent';
+  renderEmails();
 }
 
 function declineDraft(id) {
-  emails.find(e => e.id === id).draftStatus = 'declined';
+  const targetEmail = emails.find(e => e.id === id);
+  if (targetEmail) targetEmail.draftStatus = 'declined';
   renderEmails();
 }
 
@@ -276,9 +298,10 @@ function dismissEmail(id) {
 
 function viewOrig(id) {
   const e = emails.find(e => e.id === id);
+  if (!e) return;
   document.getElementById('orig-subject').textContent = '📧 ' + e.subject;
-  document.getElementById('orig-from').textContent    = `From: ${e.sender} <${e.senderEmail}>`;
-  document.getElementById('orig-body').innerHTML      = e.body;
+  document.getElementById('orig-from').textContent    = `From: ${e.sender} <${e.senderEmail || e.sender_email || ''}>`;
+  document.getElementById('orig-body').innerHTML      = e.body || e.body_plain || '(Empty body)';
   document.getElementById('orig-modal').style.display = 'flex';
 }
 function closeOrig(ev) { if(ev.target===ev.currentTarget) ev.target.style.display='none'; }
@@ -286,13 +309,36 @@ function closeOrig(ev) { if(ev.target===ev.currentTarget) ev.target.style.displa
 function openEdit(id) {
   editingEmailId = id;
   const e = emails.find(e => e.id === id);
+  if (!e) return;
   document.getElementById('edit-title').textContent = `✏️ Edit reply to ${e.sender}`;
-  document.getElementById('edit-textarea').value = e.draft;
+  document.getElementById('edit-textarea').value = e.draft || '';
   document.getElementById('edit-modal').style.display = 'flex';
 }
 function closeEdit(ev) { if(ev.target===ev.currentTarget) ev.target.style.display='none'; }
-function sendEdited() {
-  emails.find(e => e.id === editingEmailId).draftStatus = 'sent';
+async function sendEdited() {
+  const targetEmail = emails.find(e => e.id === editingEmailId);
+  const newBody = document.getElementById('edit-textarea').value;
+  if (targetEmail && user) {
+    try {
+      await fetch('http://localhost:3002/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          password: user.password,
+          provider: user.provider,
+          to: targetEmail.senderEmail || targetEmail.sender_email,
+          subject: targetEmail.subject,
+          body: newBody,
+          inReplyTo: targetEmail.id
+        })
+      });
+    } catch (err) {
+      console.error('Failed to send edited reply:', err);
+    }
+    targetEmail.draft = newBody;
+    targetEmail.draftStatus = 'sent';
+  }
   document.getElementById('edit-modal').style.display = 'none';
   renderEmails();
 }
@@ -319,6 +365,13 @@ async function initInbox() {
     const data = await res.json();
     if (data.success && data.emails) {
       emails = data.emails;
+      const banner = document.getElementById('banner');
+      const bannerText = document.getElementById('banner-text');
+      const pendingCount = emails.filter(e => e.needsReply && e.draftStatus === 'pending').length;
+      if (banner && bannerText) {
+        banner.style.display = 'flex';
+        bannerText.innerHTML = `Connected to <strong>${user.email}</strong>. Found <strong>${emails.length}</strong> recent messages (${pendingCount} awaiting your approval).`;
+      }
     } else {
       emails = [];
     }
@@ -331,6 +384,7 @@ async function initInbox() {
 }
 
 initInbox();
+
 </script>
 </body>
 </html>

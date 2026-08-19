@@ -5,71 +5,8 @@ function getUser() {
   catch { return null; }
 }
 
-const MOCK_EMAILS = [
-  {
-    id:'em_001', sender:'Sarah Chen', senderEmail:'sarah.chen@designco.com',
-    subject:'Q3 mockups ready for your review',
-    receivedAt: new Date(Date.now()-8*60000).toISOString(),
-    needsReply:true, category:'action_request', urgency:'high',
-    summary:"Sarah's asking you to review the Q3 design mockups and share feedback before this Friday's team meeting.",
-    senderType:'colleague',
-    body:`Hi Alex,<br><br>The Q3 mockups are finally done and uploaded to Figma. Could you take a look before Friday? We need your sign-off before the team meeting.<br><br>Here's a quick preview:<br><img src="https://images.unsplash.com/photo-1618761714954-0b8cd0026356?auto=format&fit=crop&w=600&q=80" style="max-width:100%; border-radius:8px; margin:12px 0; display:block;" alt="Design Mockup"><br>Let me know if you have any questions!<br><br>Best,<br>Sarah`,
-    draft:`Hi Sarah,\n\nThanks for sending these over — I'll take a look at the Q3 mockups in Figma and get you my feedback before Friday.\n\nIf anything stands out that needs a quick call to discuss, I'll ping you.\n\nBest,\nAlex`,
-    draftStatus:'pending',
-  },
-  {
-    id:'em_002', sender:'Mark Johnson', senderEmail:'mark.johnson@clientcorp.com',
-    subject:'Re: Johnson Contract — final terms',
-    receivedAt: new Date(Date.now()-35*60000).toISOString(),
-    needsReply:true, category:'direct_question', urgency:'high',
-    summary:"Mark is following up on the contract final terms and asking if you can hop on a call this week to align before signing.",
-    senderType:'client',
-    body:`Alex,<br><br>Following up on the contract we discussed. We've reviewed the updated terms and we're mostly aligned. Can we set up a 30-min call this week to go over the last two points before we sign?<br><br>Works best for me: Wednesday or Thursday afternoon.<br><br>Regards,<br>Mark`,
-    draft:`Hi Mark,\n\nGreat to hear the terms are mostly aligned — we're getting close! Thursday afternoon works well for me. How does 2:00 PM sound? I'll send a calendar invite.\n\nLooking forward to wrapping this up.\n\nBest,\nAlex`,
-    draftStatus:'pending',
-  },
-  {
-    id:'em_003', sender:'Stripe', senderEmail:'receipts@stripe.com',
-    subject:'Your July invoice is ready — $49.00',
-    receivedAt: new Date(Date.now()-2*3600000).toISOString(),
-    needsReply:false, category:'receipt', urgency:'low',
-    summary:"Your Stripe subscription invoice for $49 in July has been processed. No action needed.",
-    senderType:'automated',
-    body:`Invoice #INV-2026-0742<br>Amount: $49.00<br>Status: Paid<br>Date: July 27, 2026`,
-    draft:null, draftStatus:null,
-  },
-  {
-    id:'em_004', sender:'Priya Mehta', senderEmail:'p.mehta@startup.io',
-    subject:'Quick question about the API integration',
-    receivedAt: new Date(Date.now()-4*3600000).toISOString(),
-    needsReply:true, category:'direct_question', urgency:'medium',
-    summary:"Priya has a quick question about authenticating with your API — she's getting a 401 error and wants to know if there's a step she's missing.",
-    senderType:'colleague',
-    body:`Hey Alex,<br><br>I'm trying to connect to the API using the token you shared last week, but I keep getting a 401 Unauthorized. Am I missing an additional header or scope?<br><br>Thanks,<br>Priya`,
-    draft:`Hey Priya,\n\nThe 401 usually means the Authorization header format is off. Make sure you're sending it as:\nAuthorization: Bearer <your-token>\n\nAlso double-check that the token hasn't expired — they rotate every 24 hours. If you're still stuck, share the request headers and I can take a look.\n\nAlex`,
-    draftStatus:'pending',
-  },
-  {
-    id:'em_005', sender:'GitHub', senderEmail:'noreply@github.com',
-    subject:'[GitHub] A new device signed in to your account',
-    receivedAt: new Date(Date.now()-6*3600000).toISOString(),
-    needsReply:false, category:'notification', urgency:'low',
-    summary:"GitHub let you know a new device signed into your account. Likely you — but worth checking if it wasn't.",
-    senderType:'automated',
-    body:`A new device signed in to your GitHub account at 08:14 UTC.<br>Device: Chrome on Linux<br><br>If this was you, no action is needed. If not, secure your account immediately.`,
-    draft:null, draftStatus:null,
-  },
-  {
-    id:'em_006', sender:'TechCrunch Daily', senderEmail:'newsletter@techcrunch.com',
-    subject:"Today's top stories: AI funding rounds hit record highs",
-    receivedAt: new Date(Date.now()-8*3600000).toISOString(),
-    needsReply:false, category:'newsletter', urgency:'low',
-    summary:"TechCrunch's daily digest. AI startup funding hit a new quarterly record of $40B. No action needed.",
-    senderType:'automated',
-    body:`Today's headlines from TechCrunch.<br><br>• AI funding rounds reach $40B this quarter<br>• OpenAI announces new enterprise features<br>• 5 startups to watch this week`,
-    draft:null, draftStatus:null,
-  },
-];
+const MOCK_EMAILS = [];
+
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -162,10 +99,10 @@ function renderSidebar(activePage) {
 }
 
 const NOTIFS = [
-  {icon:'📩',text:'New email from Sarah Chen',time:'8m ago',read:false},
-  {icon:'📩',text:'Mark Johnson replied about the contract',time:'35m ago',read:false},
-  {icon:'✅',text:'Reply sent to Priya Mehta',time:'2h ago',read:true},
+  {icon:'📩',text:'Email inbox monitoring active',time:'Just now',read:false},
+  {icon:'🛡️',text:'Permission-first reply protection enabled',time:'Just now',read:false},
 ];
+
 
 function initSidebar() {
   document.getElementById('notif-toggle').addEventListener('click', () => {

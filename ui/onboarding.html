@@ -351,38 +351,58 @@ function closePicker(id) {
   document.getElementById(id).style.display = 'none';
 }
 
-function submitActualEmail(e, provider) {
+async function submitActualEmail(e, provider) {
   e.preventDefault();
   const inputId = provider === 'google' ? 'google-actual-email' : 'ms-actual-email';
   const passId  = provider === 'google' ? 'google-actual-password' : 'ms-actual-password';
-  const email = document.getElementById(inputId).value;
-  const password = document.getElementById(passId).value;
+  const email = document.getElementById(inputId).value.trim();
+  const password = document.getElementById(passId).value.trim();
   
   selectedEmail = email;
-  selectedName = email.split('@')[0]; // simple fallback name
+  selectedName = email.split('@')[0];
   window.selectedPassword = password;
 
   if (provider === 'google') {
     document.getElementById('google-picker-accounts').style.display = 'none';
     const conn = document.getElementById('google-connecting');
     conn.classList.add('visible');
-    document.getElementById('google-connecting-msg').textContent = 'Signing in as ' + email + '…';
-    setTimeout(() => {
-      closePicker('google-picker');
-      conn.classList.remove('visible');
-      document.getElementById('google-picker-accounts').style.display = '';
-      goStep('tone');
-      document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
-    }, 1800);
+    document.getElementById('google-connecting-msg').textContent = 'Connecting to ' + email + '…';
+
+    try {
+      const res = await fetch('http://localhost:3002/api/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, provider: 'google', tone: selectedTone })
+      });
+      const data = await res.json();
+      if (!res.ok && data.error) {
+        // show error
+      }
+    } catch {
+      // offline fallback
+    }
+
+    closePicker('google-picker');
+    conn.classList.remove('visible');
+    document.getElementById('google-picker-accounts').style.display = '';
+    goStep('tone');
+    document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
   } else {
     closePicker('ms-picker');
     const arrow = document.getElementById('arrow-microsoft');
     arrow.innerHTML = '<span class="spinner" style="width:16px;height:16px"></span>';
-    setTimeout(() => {
-      arrow.innerHTML = '→';
-      goStep('tone');
-      document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
-    }, 1200);
+    try {
+      await fetch('http://localhost:3002/api/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, provider: 'microsoft', tone: selectedTone })
+      });
+    } catch {
+      // offline fallback
+    }
+    arrow.innerHTML = '→';
+    goStep('tone');
+    document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
   }
 }
 

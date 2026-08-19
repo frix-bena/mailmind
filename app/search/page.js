@@ -52,16 +52,27 @@ export default function SearchPage() {
     setAnswer(null);
 
     try {
-      const res = await fetch('http://localhost:3002/api/ask-inbox', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user?.email,
-          password: user?.password,
-          provider: user?.provider,
-          question: finalQ
-        })
+      let res;
+      const reqBody = JSON.stringify({
+        email: user?.email,
+        password: user?.password,
+        provider: user?.provider,
+        question: finalQ
       });
+
+      try {
+        res = await fetch('/api/ask-inbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/ask-inbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      }
 
       const data = await res.json();
       if (res.ok && data.success && data.answer) {
@@ -70,7 +81,7 @@ export default function SearchPage() {
         setAnswer(data.error || `No emails found in history matching "${finalQ}". Ensure your email account is connected and synced.`);
       }
     } catch {
-      setAnswer(`Unable to reach the email bridge API. Ensure the bridge is running ('npm run api' or 'npm run agent') to query your email history for "${finalQ}".`);
+      setAnswer(`Unable to query email history. Ensure your email account is connected and credentials are valid.`);
     } finally {
       setLoading(false);
     }

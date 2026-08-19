@@ -85,7 +85,11 @@ export default function SettingsPage() {
     if (window.confirm('Disconnect your email account? This will log you out, stop email monitoring, and clear saved credentials.')) {
       setDisconnecting(true);
       try {
-        await fetch('http://localhost:3002/api/auth/disconnect', { method: 'POST' });
+        try {
+          await fetch('/api/auth/disconnect', { method: 'POST' });
+        } catch {
+          await fetch('http://localhost:3002/api/auth/disconnect', { method: 'POST' });
+        }
       } catch {
         // ignore
       }
