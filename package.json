@@ -14,6 +14,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "imap-simple": "^5.1.0",
+    "imapflow": "^1.7.1",
     "mailparser": "^3.9.14",
     "next": "16.2.12",
     "nodemailer": "^9.0.5",

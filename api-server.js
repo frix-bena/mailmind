@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
 const {
+  getMailClient,
+  parseEmailItem,
   testConnection,
   fetchEmails,
   fetchEmailHistory,
@@ -140,33 +142,82 @@ app.post('/api/fetch-emails', async (req, res) => {
 });
 
 app.post('/api/sync-inbox', async (req, res) => {
-  const credentials = resolveCredentials(req);
-  if (!credentials) {
-    return res.status(400).json({ error: 'No email credentials provided or saved.' });
-  }
-
-  const { search, searchCriteria, folder, limit, tone, markSeen } = req.body || {};
-
+  let client;
   try {
-    const result = await syncInbox(credentials, {
-      search: search || searchCriteria || ['UNSEEN'],
-      folder: folder || 'INBOX',
-      limit: limit ? parseInt(limit, 10) : 25,
-      tone: tone || credentials.tone || 'professional',
-      markSeen: markSeen ?? false
-    });
-    if (!result.success) {
-      return res.status(500).json(result);
+    const credentials = resolveCredentials(req) || loadLocalConfig() || {};
+    client = await getMailClient(credentials);
+    const folder = req.body?.folder || 'INBOX';
+    const limit = req.body?.limit ? parseInt(req.body.limit, 10) : 25;
+    const tone = req.body?.tone || credentials.tone || 'professional';
+    const userEmail = credentials.email || credentials.user || process.env.EMAIL_USER || process.env.GMAIL_USER || '';
+
+    let lock = await client.getMailboxLock(folder);
+    const emails = [];
+    try {
+      const totalMessages = client.mailbox ? client.mailbox.exists || 0 : 0;
+      if (totalMessages > 0) {
+        let searchQuery = { seen: false };
+        const searchCriteria = req.body?.search || req.body?.searchCriteria || ['UNSEEN'];
+        if (Array.isArray(searchCriteria)) {
+          if (searchCriteria.includes('UNSEEN') || searchCriteria.includes('unseen')) {
+            searchQuery = { seen: false };
+          } else if (searchCriteria.includes('ALL') || searchCriteria.includes('all')) {
+            searchQuery = { all: true };
+          }
+        } else if (typeof searchCriteria === 'object' && searchCriteria !== null) {
+          searchQuery = searchCriteria;
+        }
+
+        let messageUids = [];
+        try {
+          messageUids = await client.search(searchQuery, { uid: true });
+        } catch (_) {
+          messageUids = [];
+        }
+
+        if ((!messageUids || messageUids.length === 0) && !req.body?.strictUnseen) {
+          const fetchCount = Math.min(totalMessages, limit);
+          const fromSeq = Math.max(1, totalMessages - fetchCount + 1);
+          for await (let msg of client.fetch(`${fromSeq}:*`, { source: true, flags: true, envelope: true, uid: true, internalDate: true })) {
+            try {
+              const parsed = await parseEmailItem(msg, userEmail, tone);
+              if (parsed) emails.push(parsed);
+            } catch (pErr) {
+              console.warn('[sync-inbox] Error parsing message:', pErr.message);
+            }
+          }
+        } else if (Array.isArray(messageUids) && messageUids.length > 0) {
+          const uidsToFetch = messageUids.slice(-limit);
+          for await (let msg of client.fetch(uidsToFetch.join(','), { source: true, flags: true, envelope: true, uid: true, internalDate: true }, { uid: true })) {
+            try {
+              const parsed = await parseEmailItem(msg, userEmail, tone);
+              if (parsed) emails.push(parsed);
+            } catch (pErr) {
+              console.warn('[sync-inbox] Error parsing message:', pErr.message);
+            }
+          }
+        }
+      }
+    } finally {
+      lock.release();
     }
-    res.json(result);
-  } catch (error) {
-    console.error('Sync inbox error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Email inbox synchronization failed.',
-      emails: [],
-      total: 0
+
+    emails.sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt));
+
+    return res.json({
+      success: true,
+      emails,
+      total: emails.length
     });
+  } catch (error) {
+    console.error('Sync failed:', error.message);
+    return res.status(500).json({ success: false, message: error.message, error: error.message });
+  } finally {
+    if (client) {
+      try {
+        await client.logout();
+      } catch (_) {}
+    }
   }
 });
 
