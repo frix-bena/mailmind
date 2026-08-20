@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import EmailAvatar from '@/components/EmailAvatar';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -29,19 +30,6 @@ function CategoryChip({ category }) {
     other:           '📌 Other',
   };
   return <span className="chip">{labels[category] || category || '📌 Email'}</span>;
-}
-
-function SenderAvatar({ name }) {
-  const colors = ['#6c63ff','#a78bfa','#f59e0b','#22c55e','#ef4444','#3b82f6','#ec4899'];
-  const safeName = name || 'User';
-  const idx = safeName.charCodeAt(0) % colors.length;
-  return (
-    <div style={{
-      width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-      background: colors[idx], display: 'flex', alignItems: 'center',
-      justifyContent: 'center', fontWeight: 700, fontSize: 15, color: '#fff',
-    }}>{safeName[0]}</div>
-  );
 }
 
 function EditModal({ email, onClose, onSend }) {
@@ -149,7 +137,7 @@ export default function EmailCard({ email, onAction }) {
       >
         {/* Header row */}
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <SenderAvatar name={senderName} email={senderEmail} />
+          <EmailAvatar name={senderName} email={senderEmail} size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>{senderName}</span>

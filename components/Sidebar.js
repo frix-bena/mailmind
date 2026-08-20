@@ -1,6 +1,7 @@
 'use client';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import EmailAvatar from '@/components/EmailAvatar';
 
 export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
@@ -109,7 +110,7 @@ export default function Sidebar({ user: propUser }) {
 
           {user && user.email && (
             <div className="user-chip" onClick={() => router.push('/settings')}>
-              <div className="user-avatar">{initial}</div>
+              <EmailAvatar email={user.email} name={displayName} size={32} />
               <div className="user-info">
                 <div className="user-name">{displayName}</div>
                 <div className="user-email">{user.email}</div>
