@@ -35,6 +35,12 @@ export async function POST(request) {
     const tone = body.tone || credentials.tone || 'professional';
 
     const result = await fetchEmailHistory(credentials, { limit, offset, folder, since, tone });
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to retrieve email history.' },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(result);
   } catch (err) {
     console.error('Fetch history route error:', err);

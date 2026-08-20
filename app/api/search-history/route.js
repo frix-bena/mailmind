@@ -28,13 +28,20 @@ export async function POST(request) {
       );
     }
 
-    const { query, sender, subject, limit } = body;
+    const { query = '', sender = '', subject = '', limit = 50 } = body;
     const result = await searchEmailHistory(credentials, {
-      query,
-      sender,
-      subject,
+      query: query || '',
+      sender: sender || '',
+      subject: subject || '',
       limit: limit ? parseInt(limit, 10) : 50
     });
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Search in email history failed.' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(result);
   } catch (err) {

@@ -5,12 +5,16 @@ const {
   testConnection,
   fetchEmails,
   fetchEmailHistory,
+  syncInbox,
   searchEmailHistory,
   askEmailHistory,
   sendEmailReply,
   loadLocalConfig,
   saveLocalConfig,
-  clearLocalConfig
+  clearLocalConfig,
+  safeSearch,
+  safeIncludes,
+  safeMatch
 } = require('./lib/email-service');
 
 const app = express();
@@ -36,61 +40,76 @@ function resolveCredentials(req) {
 // ── Auth & Status Endpoints ──────────────────────────────────────────
 
 app.get('/api/auth/status', (req, res) => {
-  const config = loadLocalConfig();
-  if (config && config.email) {
-    return res.json({
-      connected: true,
-      email: config.email,
-      provider: config.provider || 'gmail',
-      tone: config.tone || 'professional',
-      savedAt: config.savedAt
-    });
+  try {
+    const config = loadLocalConfig();
+    if (config && config.email) {
+      return res.json({
+        connected: true,
+        email: config.email,
+        provider: config.provider || 'gmail',
+        tone: config.tone || 'professional',
+        savedAt: config.savedAt
+      });
+    }
+    res.json({ connected: false });
+  } catch (err) {
+    res.status(500).json({ connected: false, error: err.message || 'Status check failed.' });
   }
-  res.json({ connected: false });
 });
 
 app.post('/api/auth/connect', async (req, res) => {
-  const { email, password, provider, host, port, tone } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password/App Password are required.' });
-  }
+  try {
+    const { email, password, provider, host, port, tone } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password/App Password are required.' });
+    }
 
-  const credentials = {
-    email,
-    password,
-    provider: provider || 'gmail',
-    host,
-    port,
-    tone: tone || 'professional',
-    connected: true,
-    savedAt: new Date().toISOString()
-  };
+    const credentials = {
+      email,
+      password,
+      provider: provider || 'gmail',
+      host,
+      port,
+      tone: tone || 'professional',
+      connected: true,
+      savedAt: new Date().toISOString()
+    };
 
-  const testResult = await testConnection(credentials);
-  if (!testResult.success) {
-    return res.status(401).json({
-      error: testResult.error || 'Failed to authenticate with email server.',
-      hint: 'For Gmail, make sure 2-Step Verification is on and you are using a 16-character App Password.'
+    const testResult = await testConnection(credentials);
+    if (!testResult.success) {
+      return res.status(401).json({
+        error: testResult.error || 'Failed to authenticate with email server.',
+        hint: 'For Gmail, make sure 2-Step Verification is on and you are using a 16-character App Password.'
+      });
+    }
+
+    saveLocalConfig(credentials);
+    res.json({
+      success: true,
+      connected: true,
+      email: credentials.email,
+      provider: credentials.provider,
+      totalMessages: testResult.totalMessages,
+      unreadMessages: testResult.unreadMessages
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message || 'Authentication error.',
+      hint: 'Verify your email settings.'
     });
   }
-
-  saveLocalConfig(credentials);
-  res.json({
-    success: true,
-    connected: true,
-    email: credentials.email,
-    provider: credentials.provider,
-    totalMessages: testResult.totalMessages,
-    unreadMessages: testResult.unreadMessages
-  });
 });
 
 app.post('/api/auth/disconnect', (req, res) => {
-  clearLocalConfig();
-  res.json({ success: true, connected: false });
+  try {
+    clearLocalConfig();
+    res.json({ success: true, connected: false });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-// ── Email Fetch & History Endpoints ─────────────────────────────────
+// ── Email Fetch, Sync & History Endpoints ─────────────────────────────
 
 app.post('/api/fetch-emails', async (req, res) => {
   const credentials = resolveCredentials(req);
@@ -98,11 +117,18 @@ app.post('/api/fetch-emails', async (req, res) => {
     return res.status(400).json({ error: 'No email credentials provided or saved.' });
   }
 
-  const limit = req.body.limit ? parseInt(req.body.limit, 10) : 15;
-  const tone = req.body.tone || credentials.tone || 'professional';
+  const limit = req.body?.limit ? parseInt(req.body.limit, 10) : 15;
+  const tone = req.body?.tone || credentials.tone || 'professional';
+  const folder = req.body?.folder || 'INBOX';
 
   try {
-    const result = await fetchEmails(credentials, { limit, tone });
+    const result = await fetchEmails(credentials, { limit, tone, folder });
+    if (!result.success) {
+      return res.status(500).json({
+        error: result.error || 'Failed to connect to email server.',
+        hint: 'Check your App Password and IMAP settings.'
+      });
+    }
     res.json(result);
   } catch (error) {
     console.error('Fetch emails error:', error);
@@ -113,20 +139,54 @@ app.post('/api/fetch-emails', async (req, res) => {
   }
 });
 
+app.post('/api/sync-inbox', async (req, res) => {
+  const credentials = resolveCredentials(req);
+  if (!credentials) {
+    return res.status(400).json({ error: 'No email credentials provided or saved.' });
+  }
+
+  const { search, searchCriteria, folder, limit, tone, markSeen } = req.body || {};
+
+  try {
+    const result = await syncInbox(credentials, {
+      search: search || searchCriteria || ['UNSEEN'],
+      folder: folder || 'INBOX',
+      limit: limit ? parseInt(limit, 10) : 25,
+      tone: tone || credentials.tone || 'professional',
+      markSeen: markSeen ?? false
+    });
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Sync inbox error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Email inbox synchronization failed.',
+      emails: [],
+      total: 0
+    });
+  }
+});
+
 app.post('/api/fetch-history', async (req, res) => {
   const credentials = resolveCredentials(req);
   if (!credentials) {
     return res.status(400).json({ error: 'No email credentials provided or saved.' });
   }
 
-  const limit = req.body.limit ? parseInt(req.body.limit, 10) : 50;
-  const offset = req.body.offset ? parseInt(req.body.offset, 10) : 0;
-  const folder = req.body.folder || 'INBOX';
-  const since = req.body.since || null;
-  const tone = req.body.tone || credentials.tone || 'professional';
+  const limit = req.body?.limit ? parseInt(req.body.limit, 10) : 50;
+  const offset = req.body?.offset ? parseInt(req.body.offset, 10) : 0;
+  const folder = req.body?.folder || 'INBOX';
+  const since = req.body?.since || null;
+  const tone = req.body?.tone || credentials.tone || 'professional';
 
   try {
     const result = await fetchEmailHistory(credentials, { limit, offset, folder, since, tone });
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'Failed to retrieve email history.' });
+    }
     res.json(result);
   } catch (error) {
     console.error('Fetch history error:', error);
@@ -140,15 +200,18 @@ app.post('/api/search-history', async (req, res) => {
     return res.status(400).json({ error: 'No email credentials provided or saved.' });
   }
 
-  const { query, sender, subject, limit } = req.body;
+  const { query, sender, subject, limit } = req.body || {};
 
   try {
     const result = await searchEmailHistory(credentials, {
-      query,
-      sender,
-      subject,
+      query: query || '',
+      sender: sender || '',
+      subject: subject || '',
       limit: limit ? parseInt(limit, 10) : 50
     });
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'Search in email history failed.' });
+    }
     res.json(result);
   } catch (error) {
     console.error('Search history error:', error);
@@ -158,7 +221,7 @@ app.post('/api/search-history', async (req, res) => {
 
 app.post('/api/ask-inbox', async (req, res) => {
   const credentials = resolveCredentials(req);
-  const { question, emails } = req.body;
+  const { question, emails } = req.body || {};
 
   if (!question) {
     return res.status(400).json({ error: 'Question is required.' });
@@ -169,7 +232,7 @@ app.post('/api/ask-inbox', async (req, res) => {
     if (!emailData || emailData.length === 0) {
       if (credentials) {
         const hist = await fetchEmailHistory(credentials, { limit: 50 });
-        emailData = hist.emails || [];
+        emailData = hist?.emails || [];
       }
     }
 
@@ -187,13 +250,13 @@ app.post('/api/send-email', async (req, res) => {
     return res.status(400).json({ error: 'No email credentials provided or saved.' });
   }
 
-  const { to, subject, body, inReplyTo, references } = req.body;
+  const { to, subject, body, inReplyTo, references } = req.body || {};
   if (!to || !body) {
     return res.status(400).json({ error: 'Recipient "to" and message "body" are required.' });
   }
 
   try {
-    const result = await sendEmailReply(credentials, { to, subject, body, inReplyTo, references });
+    const result = await sendEmailReply(credentials, { to, subject: subject || 'No Subject', body, inReplyTo, references });
     res.json(result);
   } catch (error) {
     console.error('Send email error:', error);
@@ -204,7 +267,7 @@ app.post('/api/send-email', async (req, res) => {
 // ── Terminal Execution Endpoint ─────────────────────────────────────
 
 app.post('/api/terminal/exec', (req, res) => {
-  const { command } = req.body;
+  const { command } = req.body || {};
   if (!command) {
     return res.status(400).json({ error: 'Command string is required.' });
   }

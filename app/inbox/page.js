@@ -168,15 +168,17 @@ export default function InboxPage() {
     ));
   };
 
-  const filtered = emails.filter(e => {
-    const sender = e.sender_name || e.sender || '';
-    const summary = e.ai_summary || e.summary || '';
-    const matchSearch = !search || [e.subject, sender, summary].some(s => s.toLowerCase().includes(search.toLowerCase()));
+  const filtered = (emails || []).filter(e => {
+    if (!e) return false;
+    const subject = e?.subject ?? '';
+    const sender = e?.sender_name || e?.sender || '';
+    const summary = e?.ai_summary || e?.summary || '';
+    const matchSearch = !search || [subject, sender, summary].some(s => typeof s === 'string' && s.toLowerCase().includes(search.toLowerCase()));
     if (!matchSearch) return false;
 
-    const needsReply = e.needs_reply || e.needsReply;
-    const isPending = e.draft?.status === 'pending_approval' || e.draftStatus === 'pending';
-    const isSent = e.draft?.status === 'sent' || e.draftStatus === 'sent';
+    const needsReply = e?.needs_reply !== undefined ? e.needs_reply : (e?.needsReply || false);
+    const isPending = e?.draft?.status === 'pending_approval' || e?.draftStatus === 'pending';
+    const isSent = e?.draft?.status === 'sent' || e?.draftStatus === 'sent';
 
     if (filter === 'Needs Reply') return needsReply && isPending;
     if (filter === 'No Reply Needed') return !needsReply;
@@ -184,7 +186,7 @@ export default function InboxPage() {
     return true;
   });
 
-  const pending = emails.filter(e => (e.needs_reply || e.needsReply) && (e.draft?.status === 'pending_approval' || e.draftStatus === 'pending')).length;
+  const pending = (emails || []).filter(e => e && (e.needs_reply || e.needsReply) && (e.draft?.status === 'pending_approval' || e.draftStatus === 'pending')).length;
 
   return (
     <div className="app-shell">

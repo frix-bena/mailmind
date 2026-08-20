@@ -164,17 +164,25 @@ function setFilter(el) {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 function renderEmails() {
-  const q = document.getElementById('search-input').value.toLowerCase();
-  const filtered = emails.filter(e => {
-    const matchQ = !q || [e.subject, e.sender, e.summary].some(s => s.toLowerCase().includes(q));
+  const searchEl = document.getElementById('search-input');
+  const q = searchEl ? (searchEl.value || '').toLowerCase().trim() : '';
+  const filtered = (emails || []).filter(e => {
+    if (!e) return false;
+    const subject = e?.subject ?? '';
+    const sender = e?.sender || e?.sender_name || '';
+    const summary = e?.summary || e?.ai_summary || '';
+    const matchQ = !q || [subject, sender, summary].some(s => typeof s === 'string' && s.toLowerCase().includes(q));
     if (!matchQ) return false;
-    if (activeFilter === 'needs-reply') return e.needsReply && e.draftStatus === 'pending';
-    if (activeFilter === 'no-reply')    return !e.needsReply;
-    if (activeFilter === 'replied')     return e.draftStatus === 'sent';
+    const needsReply = e?.needsReply || e?.needs_reply;
+    const isPending = e?.draftStatus === 'pending' || e?.draft?.status === 'pending_approval';
+    const isSent = e?.draftStatus === 'sent' || e?.draft?.status === 'sent';
+    if (activeFilter === 'needs-reply') return needsReply && isPending;
+    if (activeFilter === 'no-reply')    return !needsReply;
+    if (activeFilter === 'replied')     return isSent;
     return true;
   });
 
-  const pending = emails.filter(e => e.needsReply && e.draftStatus === 'pending').length;
+  const pending = (emails || []).filter(e => e && (e.needsReply || e.needs_reply) && (e.draftStatus === 'pending' || e?.draft?.status === 'pending_approval')).length;
   const pb = document.getElementById('pending-badge');
   pb.textContent = pending + ' awaiting approval';
   pb.style.display = pending ? '' : 'none';

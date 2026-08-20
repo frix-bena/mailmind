@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchEmails, loadLocalConfig } from '@/lib/email-service';
+import { syncInbox, loadLocalConfig } from '@/lib/email-service';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
@@ -28,26 +28,36 @@ export async function POST(request) {
       );
     }
 
-    const limit = body.limit ? parseInt(body.limit, 10) : 15;
-    const tone = body.tone || credentials.tone || 'professional';
+    const searchCriteria = body.search || body.searchCriteria || ['UNSEEN'];
     const folder = body.folder || 'INBOX';
+    const limit = body.limit ? parseInt(body.limit, 10) : 25;
+    const tone = body.tone || credentials.tone || 'professional';
+    const markSeen = body.markSeen ?? false;
 
-    const result = await fetchEmails(credentials, { limit, tone, folder });
+    const result = await syncInbox(credentials, {
+      search: searchCriteria,
+      folder,
+      limit,
+      tone,
+      markSeen
+    });
+
     if (!result.success) {
       return NextResponse.json(
         {
-          error: result.error || 'Failed to connect to email server.',
-          hint: 'Check your App Password and IMAP settings.'
+          error: result.error || 'Failed to synchronize email inbox.',
+          hint: 'Check your mail credentials and connection settings.'
         },
         { status: 500 }
       );
     }
+
     return NextResponse.json(result);
   } catch (err) {
-    console.error('Fetch emails route error:', err);
+    console.error('Sync inbox route error:', err);
     return NextResponse.json(
       {
-        error: err.message || 'Failed to connect to email server.',
+        error: err.message || 'Email inbox synchronization failed.',
         hint: 'Check your App Password and IMAP settings.'
       },
       { status: 500 }

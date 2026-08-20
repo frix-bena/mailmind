@@ -5,6 +5,7 @@ const {
   testConnection,
   fetchEmails,
   fetchEmailHistory,
+  syncInbox,
   searchEmailHistory,
   askEmailHistory,
   sendEmailReply,
@@ -148,27 +149,35 @@ async function promptForCredentials() {
 
 async function viewLiveInbox(config) {
   console.log(`\n${c.cyan}--- 📥 Live Inbox (Recent Emails) ---${c.reset}`);
-  console.log(`${c.dim}Fetching latest messages from ${config.email}...${c.reset}`);
+  console.log(`${c.dim}Fetching latest messages from ${config?.email}...${c.reset}`);
   
   try {
-    const res = await fetchEmails(config, { limit: 10, tone: config.tone });
-    if (!res.success || !res.emails || res.emails.length === 0) {
-      console.log(`${c.yellow}No messages found in INBOX.${c.reset}`);
+    const res = await fetchEmails(config, { limit: 10, tone: config?.tone || 'professional' });
+    if (!res || !res.success || !Array.isArray(res.emails) || res.emails.length === 0) {
+      console.log(`${c.yellow}${res?.error || 'No messages found in INBOX.'}${c.reset}`);
       return;
     }
 
-    console.log(`\n${c.green}Found ${res.emails.length} recent messages (Total in inbox: ${res.total}):${c.reset}\n`);
+    console.log(`\n${c.green}Found ${res.emails.length} recent messages (Total in inbox: ${res.total || res.emails.length}):${c.reset}\n`);
 
     res.emails.forEach((e, idx) => {
       const num = idx + 1;
-      const urgencyTag = e.urgency === 'high' ? `${c.red}[HIGH]${c.reset}` : e.urgency === 'medium' ? `${c.yellow}[MED]${c.reset}` : `${c.dim}[LOW]${c.reset}`;
-      const replyTag = e.needsReply ? `${c.magenta}💬 Needs Reply${c.reset}` : `${c.dim}FYI${c.reset}`;
+      const urgency = e?.urgency || 'low';
+      const urgencyTag = urgency === 'high' ? `${c.red}[HIGH]${c.reset}` : urgency === 'medium' ? `${c.yellow}[MED]${c.reset}` : `${c.dim}[LOW]${c.reset}`;
+      const needsReply = e?.needsReply || e?.needs_reply;
+      const replyTag = needsReply ? `${c.magenta}💬 Needs Reply${c.reset}` : `${c.dim}FYI${c.reset}`;
+      const subject = e?.subject ?? 'No Subject';
+      const sender = e?.sender || e?.sender_name || 'Unknown';
+      const senderEmail = e?.senderEmail || e?.sender_email || 'unknown';
+      const dateStr = e?.receivedAt || e?.received_at ? new Date(e.receivedAt || e.received_at).toLocaleString() : 'Recent';
+      const summary = e?.summary || e?.ai_summary || '';
+      const draft = e?.draftBody || e?.draft?.body;
 
-      console.log(`${c.bright}${num}. ${e.subject}${c.reset} ${urgencyTag} ${replyTag}`);
-      console.log(`   ${c.dim}From: ${e.sender} <${e.senderEmail}> | Date: ${new Date(e.receivedAt).toLocaleString()}${c.reset}`);
-      console.log(`   ${c.cyan}AI Summary:${c.reset} ${e.summary}`);
-      if (e.draftBody) {
-        console.log(`   ${c.yellow}Suggested Reply Draft:${c.reset} "${e.draftBody.replace(/\n/g, ' ')}"`);
+      console.log(`${c.bright}${num}. ${subject}${c.reset} ${urgencyTag} ${replyTag}`);
+      console.log(`   ${c.dim}From: ${sender} <${senderEmail}> | Date: ${dateStr}${c.reset}`);
+      console.log(`   ${c.cyan}AI Summary:${c.reset} ${summary}`);
+      if (draft) {
+        console.log(`   ${c.yellow}Suggested Reply Draft:${c.reset} "${draft.replace(/\n/g, ' ')}"`);
       }
       console.log('');
     });
@@ -190,18 +199,25 @@ async function viewEmailHistory(config) {
 
   console.log(`${c.dim}Accessing past ${limit} emails from history...${c.reset}`);
   try {
-    const res = await fetchEmailHistory(config, { limit, tone: config.tone });
-    if (!res.success || !res.emails || res.emails.length === 0) {
-      console.log(`${c.yellow}No history found.${c.reset}`);
+    const res = await fetchEmailHistory(config, { limit, tone: config?.tone || 'professional' });
+    if (!res || !res.success || !Array.isArray(res.emails) || res.emails.length === 0) {
+      console.log(`${c.yellow}${res?.error || 'No history found.'}${c.reset}`);
       return;
     }
 
-    console.log(`\n${c.green}Retrieved ${res.emails.length} historical emails (Total: ${res.total}):${c.reset}\n`);
+    console.log(`\n${c.green}Retrieved ${res.emails.length} historical emails (Total: ${res.total || res.emails.length}):${c.reset}\n`);
 
     res.emails.forEach((e, idx) => {
-      console.log(`${c.bright}[${idx + 1}] ${e.subject}${c.reset}`);
-      console.log(`    ${c.dim}From: ${e.sender} <${e.senderEmail}> | ${new Date(e.receivedAt).toLocaleDateString()}${c.reset}`);
-      console.log(`    ${c.dim}Category: ${e.category} | ${e.summary}${c.reset}\n`);
+      const subject = e?.subject ?? 'No Subject';
+      const sender = e?.sender || e?.sender_name || 'Unknown';
+      const senderEmail = e?.senderEmail || e?.sender_email || 'unknown';
+      const dateStr = e?.receivedAt || e?.received_at ? new Date(e.receivedAt || e.received_at).toLocaleDateString() : 'Recent';
+      const category = e?.category || 'general';
+      const summary = e?.summary || e?.ai_summary || '';
+
+      console.log(`${c.bright}[${idx + 1}] ${subject}${c.reset}`);
+      console.log(`    ${c.dim}From: ${sender} <${senderEmail}> | ${dateStr}${c.reset}`);
+      console.log(`    ${c.dim}Category: ${category} | ${summary}${c.reset}\n`);
     });
 
     const action = await askQuestion(`${c.bright}Enter email number to view full body, or Enter to return: ${c.reset}`);
@@ -222,16 +238,22 @@ async function searchHistory(config) {
   console.log(`${c.dim}Searching history for "${query}"...${c.reset}`);
   try {
     const res = await searchEmailHistory(config, { query, limit: 50 });
-    if (!res.success || !res.emails || res.emails.length === 0) {
+    if (!res || !res.success || !Array.isArray(res.emails) || res.emails.length === 0) {
       console.log(`${c.yellow}No emails matched "${query}".${c.reset}`);
       return;
     }
 
     console.log(`\n${c.green}Found ${res.emails.length} matching emails:${c.reset}\n`);
     res.emails.forEach((e, idx) => {
-      console.log(`${c.bright}[${idx + 1}] ${e.subject}${c.reset}`);
-      console.log(`    ${c.dim}From: ${e.sender} <${e.senderEmail}> | Date: ${new Date(e.receivedAt).toLocaleDateString()}${c.reset}`);
-      console.log(`    ${c.dim}Summary: ${e.summary}${c.reset}\n`);
+      const subject = e?.subject ?? 'No Subject';
+      const sender = e?.sender || e?.sender_name || 'Unknown';
+      const senderEmail = e?.senderEmail || e?.sender_email || 'unknown';
+      const dateStr = e?.receivedAt || e?.received_at ? new Date(e.receivedAt || e.received_at).toLocaleDateString() : 'Recent';
+      const summary = e?.summary || e?.ai_summary || '';
+
+      console.log(`${c.bright}[${idx + 1}] ${subject}${c.reset}`);
+      console.log(`    ${c.dim}From: ${sender} <${senderEmail}> | Date: ${dateStr}${c.reset}`);
+      console.log(`    ${c.dim}Summary: ${summary}${c.reset}\n`);
     });
 
     const action = await askQuestion(`${c.bright}Enter email number to inspect, or Enter to return: ${c.reset}`);
@@ -257,8 +279,8 @@ async function askAgentLookback(config) {
 
   console.log(`\n${c.yellow}⏳ Analyzing email history...${c.reset}`);
   try {
-    const res = await fetchEmailHistory(config, { limit: 60, tone: config.tone });
-    const answer = askEmailHistory(question, res.emails || []);
+    const res = await fetchEmailHistory(config, { limit: 60, tone: config?.tone || 'professional' });
+    const answer = askEmailHistory(question, res?.emails || []);
     console.log(`\n${c.magenta}=== AI Analysis Response ===${c.reset}\n`);
     console.log(answer);
     console.log(`\n${c.magenta}============================${c.reset}\n`);
@@ -268,21 +290,32 @@ async function askAgentLookback(config) {
 }
 
 async function handleEmailDetail(config, email) {
+  if (!email) return;
+  const subject = email?.subject ?? 'No Subject';
+  const sender = email?.sender || email?.sender_name || 'Unknown';
+  const senderEmail = email?.senderEmail || email?.sender_email || 'unknown';
+  const dateStr = email?.receivedAt || email?.received_at ? new Date(email.receivedAt || email.received_at).toLocaleString() : 'Recent';
+  const urgency = email?.urgency || 'low';
+  const category = email?.category || 'general';
+  const summary = email?.summary || email?.ai_summary || '';
+  const bodyText = email?.body_plain || email?.body || '(No plain text body)';
+  const draftBody = email?.draftBody || email?.draft?.body;
+
   console.log(`\n${c.cyan}======================================================${c.reset}`);
-  console.log(`${c.bright}Subject:${c.reset} ${email.subject}`);
-  console.log(`${c.bright}From:${c.reset}    ${email.sender} <${email.senderEmail}>`);
-  console.log(`${c.bright}Date:${c.reset}    ${new Date(email.receivedAt).toLocaleString()}`);
-  console.log(`${c.bright}Urgency:${c.reset} ${email.urgency} | ${c.bright}Category:${c.reset} ${email.category}`);
+  console.log(`${c.bright}Subject:${c.reset} ${subject}`);
+  console.log(`${c.bright}From:${c.reset}    ${sender} <${senderEmail}>`);
+  console.log(`${c.bright}Date:${c.reset}    ${dateStr}`);
+  console.log(`${c.bright}Urgency:${c.reset} ${urgency} | ${c.bright}Category:${c.reset} ${category}`);
   console.log(`${c.cyan}------------------------------------------------------${c.reset}`);
-  console.log(`${c.bright}AI Summary:${c.reset}\n${email.summary}`);
+  console.log(`${c.bright}AI Summary:${c.reset}\n${summary}`);
   console.log(`${c.cyan}------------------------------------------------------${c.reset}`);
-  console.log(`${c.bright}Message Body:${c.reset}\n${email.body_plain || email.body || '(No plain text body)'}`);
+  console.log(`${c.bright}Message Body:${c.reset}\n${bodyText}`);
   console.log(`${c.cyan}======================================================${c.reset}\n`);
 
-  if (email.draftBody) {
-    console.log(`${c.yellow}🤖 Suggested Reply Draft (${config.tone} tone):${c.reset}`);
+  if (draftBody) {
+    console.log(`${c.yellow}🤖 Suggested Reply Draft (${config?.tone || 'professional'} tone):${c.reset}`);
     console.log(`${c.dim}------------------------------------------------------${c.reset}`);
-    console.log(email.draftBody);
+    console.log(draftBody);
     console.log(`${c.dim}------------------------------------------------------${c.reset}\n`);
 
     console.log(`Actions:`);
@@ -293,7 +326,7 @@ async function handleEmailDetail(config, email) {
     const choice = (await askQuestion(`Choice [1-4]: `)).trim();
 
     if (choice === '1') {
-      await executeSendEmail(config, email, email.draftBody);
+      await executeSendEmail(config, email, draftBody);
     } else if (choice === '2') {
       console.log(`\n${c.dim}Enter your custom message body (press Enter when done):${c.reset}`);
       const customBody = await askQuestion(`> `);
@@ -318,13 +351,15 @@ async function handleEmailDetail(config, email) {
 }
 
 async function executeSendEmail(config, originalEmail, replyBody) {
-  console.log(`\n${c.yellow}Sending reply to ${originalEmail.senderEmail}...${c.reset}`);
+  const targetEmail = originalEmail?.senderEmail || originalEmail?.sender_email;
+  const subject = originalEmail?.subject ?? 'No Subject';
+  console.log(`\n${c.yellow}Sending reply to ${targetEmail}...${c.reset}`);
   try {
     const res = await sendEmailReply(config, {
-      to: originalEmail.senderEmail,
-      subject: originalEmail.subject,
+      to: targetEmail,
+      subject: subject,
       body: replyBody,
-      inReplyTo: originalEmail.id
+      inReplyTo: originalEmail?.id
     });
     console.log(`${c.green}✔ Reply sent successfully! (Message-ID: ${res.messageId})${c.reset}\n`);
   } catch (err) {
@@ -354,28 +389,35 @@ async function runTerminalExecution() {
 
 async function watchInboxLive(config) {
   console.log(`\n${c.cyan}--- 🔄 Live Watch / Polling Mode ---${c.reset}`);
-  console.log(`${c.dim}Monitoring ${config.email} every 30 seconds. Press Ctrl+C or Enter to stop.${c.reset}\n`);
+  console.log(`${c.dim}Monitoring ${config?.email} every 30 seconds. Press Enter to stop.${c.reset}\n`);
 
   let lastChecked = new Date();
-  let keepWatching = true;
 
+  // Robust monitoring interval with error recovery
   const pollInterval = setInterval(async () => {
     try {
       process.stdout.write(`\r${c.dim}[${new Date().toLocaleTimeString()}] Checking for new emails...${c.reset}  `);
-      const res = await fetchEmails(config, { limit: 5 });
-      if (res.success && res.emails && res.emails.length > 0) {
-        const newEmails = res.emails.filter(e => new Date(e.receivedAt) > lastChecked);
+      const res = await fetchEmails(config, { limit: 5, tone: config?.tone || 'professional' });
+      if (res && res.success && Array.isArray(res.emails) && res.emails.length > 0) {
+        const newEmails = res.emails.filter(e => {
+          const rawDate = e?.receivedAt || e?.received_at;
+          return rawDate && new Date(rawDate) > lastChecked;
+        });
         if (newEmails.length > 0) {
           console.log(`\n\n${c.bright}${c.magenta}🔔 ${newEmails.length} NEW EMAIL(S) ARRIVED!${c.reset}`);
           newEmails.forEach(e => {
-            console.log(`  • ${c.bright}${e.subject}${c.reset} from ${e.sender}`);
-            console.log(`    Summary: ${e.summary}`);
+            const subj = e?.subject ?? 'No Subject';
+            const sender = e?.sender || e?.sender_name || 'Unknown';
+            const sum = e?.summary || e?.ai_summary || '';
+            console.log(`  • ${c.bright}${subj}${c.reset} from ${sender}`);
+            if (sum) console.log(`    Summary: ${sum}`);
           });
           lastChecked = new Date();
         }
       }
     } catch (e) {
-      // ignore transient poll error
+      // Gracefully handle transient connection issues in polling loop
+      process.stdout.write(`\r${c.yellow}[${new Date().toLocaleTimeString()}] Notice: ${e.message || 'Transient sync pause, retrying...'}${c.reset}  `);
     }
   }, 30000);
 
@@ -483,7 +525,7 @@ async function main() {
     const idx = args.indexOf('--ask');
     const q = args[idx + 1] || '';
     const res = await fetchEmailHistory(config, { limit: 50 });
-    const answer = askEmailHistory(q, res.emails || []);
+    const answer = askEmailHistory(q, res?.emails || []);
     console.log(answer);
     process.exit(0);
   }
