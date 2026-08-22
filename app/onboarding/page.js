@@ -389,9 +389,14 @@ export default function OnboardingPage() {
                 </div>
               ))}
             </div>
-            <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => setStep('notifications')}>
-              Continue →
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost btn-lg" style={{ flex: 1 }} onClick={() => setStep('connect')}>
+                ← Back
+              </button>
+              <button className="btn btn-primary btn-lg" style={{ flex: 2 }} onClick={() => setStep('notifications')}>
+                Continue →
+              </button>
+            </div>
           </div>
         )}
 
@@ -418,9 +423,14 @@ export default function OnboardingPage() {
                 </div>
               ))}
             </div>
-            <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => setStep('done')}>
-              Save & continue →
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost btn-lg" style={{ flex: 1 }} onClick={() => setStep('tone')}>
+                ← Back
+              </button>
+              <button className="btn btn-primary btn-lg" style={{ flex: 2 }} onClick={() => setStep('done')}>
+                Save & continue →
+              </button>
+            </div>
           </div>
         )}
 

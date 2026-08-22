@@ -113,6 +113,7 @@ export default function EmailAvatar({
         backgroundColor: color.hex,
         borderRadius: '50%',
         lineHeight: 1,
+        cursor: onClick ? 'pointer' : 'inherit',
         ...style,
       }}
       {...rest}
@@ -173,9 +174,18 @@ export {
   md5,
   getGravatarUrl,
   getClearbitLogoUrl,
+  getUnavatarUrl,
+  getGoogleProfileUrl,
   getSenderInitial,
   getSenderColor,
   getAvatarSources,
+  getSenderProfile,
+  extractCleanEmail,
+  extractDomain,
+  extractDisplayName,
+  extractOrganization,
   isFreeEmailProvider,
   GMAIL_AVATAR_PALETTE,
+  BRAND_DOMAINS,
 } from '@/lib/avatar-utils';
+

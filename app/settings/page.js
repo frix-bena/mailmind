@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import EmailAvatar from '@/components/EmailAvatar';
+import { extractDisplayName } from '@/lib/avatar-utils';
 
 function Section({ title, children }) {
   return (
@@ -19,8 +21,9 @@ function Row({ label, desc, children, danger }) {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
       padding: '18px 24px', borderBottom: '1px solid var(--border)',
+      flexWrap: 'wrap'
     }}>
-      <div>
+      <div style={{ flex: 1, minWidth: 200 }}>
         <div style={{ fontWeight: 600, fontSize: 14, color: danger ? 'var(--danger)' : 'var(--text)' }}>{label}</div>
         {desc && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{desc}</div>}
       </div>
@@ -41,6 +44,8 @@ export default function SettingsPage() {
   const [digest, setDigest] = useState(false);
   const [pollInterval, setPollInterval] = useState('3');
   const [disconnecting, setDisconnecting] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -81,6 +86,47 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 2500);
   };
 
+  const handleTestConnection = async () => {
+    if (!user) return;
+    setTestingConnection(true);
+    setTestResult(null);
+
+    try {
+      let res;
+      const reqBody = JSON.stringify({
+        email: user.email,
+        password: user.password,
+        provider: user.provider,
+        limit: 1
+      });
+
+      try {
+        res = await fetch('/api/fetch-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/fetch-emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: reqBody
+        });
+      }
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestResult({ success: true, message: `Connected! Server responded with ${data.total || 0} total messages.` });
+      } else {
+        setTestResult({ success: false, message: data.error || 'Connection check failed.' });
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: 'Connection test failed: ' + err.message });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const handleDisconnect = async () => {
     if (window.confirm('Disconnect your email account? This will log you out, stop email monitoring, and clear saved credentials.')) {
       setDisconnecting(true);
@@ -108,6 +154,8 @@ export default function SettingsPage() {
     custom: 'Custom IMAP'
   };
 
+  const displayName = extractDisplayName(user?.name, user?.email);
+
   return (
     <div className="app-shell">
       <Sidebar user={user} />
@@ -119,6 +167,45 @@ export default function SettingsPage() {
           )}
         </div>
         <div className="page-content">
+
+          {/* User Profile Card */}
+          {user && (
+            <div className="card fade-in" style={{ padding: 24, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+              <EmailAvatar email={user.email} name={displayName} size={64} style={{ border: '2px solid var(--accent)' }} />
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{displayName}</h1>
+                <div style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'monospace', marginTop: 2 }}>{user.email}</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <span className="badge badge-low">● IMAP / SMTP Active</span>
+                  <span className="badge badge-purple">{providerLabels[user.provider] || user.provider || 'Email'}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                >
+                  {testingConnection ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Testing…</> : '⚡ Test Connection'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {testResult && (
+            <div className="fade-in" style={{
+              background: testResult.success ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              border: `1px solid ${testResult.success ? 'var(--success)' : 'var(--danger)'}`,
+              borderRadius: 8,
+              padding: '12px 16px',
+              fontSize: 13.5,
+              color: testResult.success ? '#86efac' : '#fca5a5',
+              marginBottom: 24
+            }}>
+              {testResult.success ? '✅' : '⚠️'} {testResult.message}
+            </div>
+          )}
 
           {/* Connected Account */}
           <Section title="Connected Email Account">
@@ -141,7 +228,13 @@ export default function SettingsPage() {
               label="Terminal Agent CLI Access"
               desc="Run 'npm run agent' in your terminal for direct CLI email history & bash execution"
             >
-              <span className="chip" style={{ fontSize: 12 }}>terminal-agent.js</span>
+              <button
+                className="chip"
+                onClick={() => router.push('/terminal')}
+                style={{ fontSize: 12, cursor: 'pointer' }}
+              >
+                💻 Open Terminal Agent →
+              </button>
             </Row>
           </Section>
 

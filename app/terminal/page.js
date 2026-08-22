@@ -3,16 +3,26 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 
+const QUICK_COMMANDS = [
+  'status',
+  'fetch-inbox',
+  'ask Summarize this week',
+  'help',
+  'cli-guide',
+  'clear'
+];
+
 export default function TerminalPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([
     { type: 'system', text: '📧 MailMind Terminal Agent Shell Initialized.' },
-    { type: 'system', text: 'Type "help" for commands, or run any bash command (e.g. "git status", "ls -la", "uptime").' },
+    { type: 'system', text: 'Type "help" for commands, or click any quick command chip below.' },
     { type: 'system', text: 'You can also run the full CLI agent directly in your system terminal using: npm run agent' }
   ]);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const terminalEndRef = useRef(null);
 
   useEffect(() => {
@@ -32,9 +42,8 @@ export default function TerminalPage() {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history]);
 
-  const handleCommand = async (e) => {
-    e.preventDefault();
-    const cmd = input.trim();
+  const executeCmd = async (commandToRun) => {
+    const cmd = commandToRun.trim();
     if (!cmd) return;
 
     const newHistory = [...history, { type: 'input', text: `$ ${cmd}` }];
@@ -194,6 +203,18 @@ Direct CLI flags:
     }
   };
 
+  const handleCommand = (e) => {
+    e.preventDefault();
+    executeCmd(input);
+  };
+
+  const handleCopyLog = () => {
+    const text = history.map(h => h.text).join('\n');
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="app-shell">
       <Sidebar user={user} />
@@ -204,20 +225,54 @@ Direct CLI flags:
             <span className="chip" style={{ fontSize: 12 }}>
               🟢 Agent Online
             </span>
-            <code style={{ fontSize: 12, background: 'var(--surface2)', padding: '4px 8px', borderRadius: 4 }}>
-              npm run agent
-            </code>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleCopyLog}
+              style={{ fontSize: 12, padding: '4px 10px' }}
+              title="Copy terminal session log"
+            >
+              {copied ? '✅ Copied' : '📋 Copy Log'}
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setHistory([])}
+              style={{ fontSize: 12, padding: '4px 10px' }}
+              title="Clear terminal screen"
+            >
+              🧹 Clear
+            </button>
           </div>
         </div>
 
         <div className="page-content">
+          {/* Quick Command Chips */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Quick Run:</span>
+            {QUICK_COMMANDS.map(qc => (
+              <button
+                key={qc}
+                onClick={() => executeCmd(qc)}
+                className="chip"
+                style={{
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  background: 'var(--surface2)',
+                  borderColor: 'var(--border2)'
+                }}
+              >
+                ${qc}
+              </button>
+            ))}
+          </div>
+
           <div style={{
             background: '#0d1117',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: 20,
             fontFamily: 'monospace',
-            minHeight: '70vh',
+            minHeight: '65vh',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'

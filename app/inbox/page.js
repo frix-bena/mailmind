@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import EmailCard from '@/components/EmailCard';
+import ComposeModal from '@/components/ComposeModal';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
 
@@ -19,6 +20,13 @@ export default function InboxPage() {
   const [isLive, setIsLive] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [historyLimit, setHistoryLimit] = useState(15);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
   const loadEmails = useCallback(async (customLimit = 15) => {
     let storedUser = null;
@@ -116,6 +124,7 @@ export default function InboxPage() {
       const data = await res.json();
       if (res.ok && data.success && data.emails) {
         setEmails(data.emails);
+        showToast(`Loaded ${data.emails.length} emails from history`);
       }
     } catch {
       // ignore
@@ -152,9 +161,14 @@ export default function InboxPage() {
             body: sendBody
           });
         }
+        showToast('✅ Reply sent successfully via SMTP');
       } catch {
-        // ignore
+        showToast('⚠️ Error sending reply');
       }
+    } else if (action === 'declined') {
+      showToast('Draft declined');
+    } else if (action === 'dismissed') {
+      showToast('Email dismissed');
     }
 
     setEmails(prev => prev.map(e =>
@@ -172,8 +186,14 @@ export default function InboxPage() {
     if (!e) return false;
     const subject = e?.subject ?? '';
     const sender = e?.sender_name || e?.sender || '';
+    const senderEmail = e?.sender_email || e?.senderEmail || '';
     const summary = e?.ai_summary || e?.summary || '';
-    const matchSearch = !search || [subject, sender, summary].some(s => typeof s === 'string' && s.toLowerCase().includes(search.toLowerCase()));
+    const category = e?.category || '';
+    const urgency = e?.urgency || '';
+
+    const matchSearch = !search || [subject, sender, senderEmail, summary, category, urgency].some(s =>
+      typeof s === 'string' && s.toLowerCase().includes(search.toLowerCase())
+    );
     if (!matchSearch) return false;
 
     const needsReply = e?.needs_reply !== undefined ? e.needs_reply : (e?.needsReply || false);
@@ -199,24 +219,61 @@ export default function InboxPage() {
               <span className={`notif-dot ${isLive ? 'notif-dot-green' : ''}`} style={{ width: 6, height: 6 }} />
               {pollingBadge}
             </span>
+
+            {/* Compose Button */}
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setComposeOpen(true)}
+              style={{ fontSize: 12 }}
+            >
+              ✏️ Compose
+            </button>
+
+            {/* Refresh Button */}
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => loadEmails(historyLimit)}
               disabled={loading}
               style={{ fontSize: 12 }}
-              title="Refresh inbox"
+              title="Refresh inbox messages"
             >
-              🔄 Refresh
+              {loading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Refreshing…</> : '🔄 Refresh'}
             </button>
+
             {pending > 0 && (
-              <span className="badge badge-purple">
+              <button
+                className="badge badge-purple"
+                onClick={() => setFilter('Needs Reply')}
+                style={{ cursor: 'pointer', border: 'none' }}
+                title="Filter emails needing your review"
+              >
                 {pending} awaiting approval
-              </span>
+              </button>
             )}
           </div>
         </div>
 
         <div className="page-content">
+          {/* Toast notification */}
+          {toastMessage && (
+            <div className="fade-in" style={{
+              position: 'fixed',
+              top: 70,
+              right: 24,
+              zIndex: 300,
+              background: 'var(--surface)',
+              border: '1px solid var(--accent)',
+              borderRadius: 8,
+              padding: '10px 18px',
+              fontSize: 13.5,
+              fontWeight: 600,
+              boxShadow: 'var(--shadow-lg)',
+              color: 'var(--text)'
+            }}>
+              {toastMessage}
+            </div>
+          )}
+
           {/* Email banner */}
           {newBanner && user?.email && (
             <div className="fade-in" style={{
@@ -238,28 +295,58 @@ export default function InboxPage() {
             <div className="fade-in" style={{
               background: 'rgba(239, 68, 68, 0.12)', border: '1px solid var(--danger)',
               borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
-              color: '#fca5a5', fontSize: 13.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              color: '#fca5a5', fontSize: 13.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              gap: 12, flexWrap: 'wrap'
             }}>
               <div>
                 <strong>⚠️ Sync Issue:</strong> {errorMessage}
               </div>
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => router.push('/settings')}
-              >
-                Check Settings
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => loadEmails(historyLimit)}
+                >
+                  🔄 Retry
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => router.push('/settings')}
+                >
+                  Check Settings
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Search bar */}
-          <input
-            className="input"
-            placeholder='🔍  Search emails, sender, or summary…'
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ marginBottom: 16 }}
-          />
+          {/* Search bar with clear button */}
+          <div style={{ position: 'relative', marginBottom: 16 }}>
+            <input
+              className="input"
+              placeholder='🔍  Search emails, sender name, email address, or summary…'
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ paddingRight: search ? 36 : 14 }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--muted)',
+                  cursor: 'pointer',
+                  fontSize: 14
+                }}
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
           {/* Filter chips */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -279,8 +366,19 @@ export default function InboxPage() {
               ))}
             </div>
 
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              Showing {filtered.length} of {emails.length} emails
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 11, padding: '2px 8px' }}
+                >
+                  Clear filter
+                </button>
+              )}
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Showing {filtered.length} of {emails.length} emails
+              </div>
             </div>
           </div>
 
@@ -295,20 +393,33 @@ export default function InboxPage() {
               <div className="empty-state-icon">📭</div>
               <h3>{emails.length === 0 ? 'Your inbox is clear' : 'No emails match this filter'}</h3>
               <p>{emails.length === 0 ? 'No messages found in your inbox. Click Refresh to check for new emails.' : 'Try a different filter or search query.'}</p>
-              {emails.length === 0 && (
+              <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => loadEmails(historyLimit)}
-                  style={{ marginTop: 8 }}
                 >
                   🔄 Check for New Emails
                 </button>
-              )}
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setComposeOpen(true)}
+                >
+                  ✏️ Compose New Email
+                </button>
+              </div>
             </div>
           ) : (
             <>
               {filtered.map(email => (
-                <EmailCard key={email.id} email={email} onAction={handleAction} />
+                <EmailCard
+                  key={email.id}
+                  email={email}
+                  onAction={handleAction}
+                  onFilterTag={(tag) => setSearch(tag)}
+                  onAskAI={(sender) => {
+                    router.push(`/search?q=${encodeURIComponent(sender)}`);
+                  }}
+                />
               ))}
 
               {/* Load more history button */}
@@ -326,6 +437,17 @@ export default function InboxPage() {
           )}
         </div>
       </div>
+
+      {composeOpen && (
+        <ComposeModal
+          user={user}
+          onClose={() => setComposeOpen(false)}
+          onSent={() => {
+            showToast('✅ New email sent successfully');
+            loadEmails(historyLimit);
+          }}
+        />
+      )}
     </div>
   );
 }

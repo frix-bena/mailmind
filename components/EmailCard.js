@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
+import SenderProfileModal from '@/components/SenderProfileModal';
+import { extractDisplayName, extractCleanEmail, extractOrganization } from '@/lib/avatar-utils';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -13,12 +15,21 @@ function timeAgo(iso) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function UrgencyBadge({ urgency }) {
+function UrgencyBadge({ urgency, onClick }) {
   const map = { high: 'badge-high', medium: 'badge-medium', low: 'badge-low' };
-  return <span className={`badge ${map[urgency] || 'badge-low'}`}>● {urgency || 'normal'}</span>;
+  return (
+    <button
+      onClick={onClick}
+      className={`badge ${map[urgency] || 'badge-low'}`}
+      style={{ cursor: onClick ? 'pointer' : 'default', border: 'none' }}
+      title={`Urgency: ${urgency || 'normal'}`}
+    >
+      ● {urgency || 'normal'}
+    </button>
+  );
 }
 
-function CategoryChip({ category }) {
+function CategoryChip({ category, onClick }) {
   const labels = {
     direct_question: '❓ Question',
     action_request:  '⚡ Action',
@@ -29,7 +40,16 @@ function CategoryChip({ category }) {
     social:          '👥 Social',
     other:           '📌 Other',
   };
-  return <span className="chip">{labels[category] || category || '📌 Email'}</span>;
+  return (
+    <button
+      onClick={onClick}
+      className="chip"
+      style={{ cursor: onClick ? 'pointer' : 'default', background: 'var(--surface2)' }}
+      title={`Category: ${category || 'Email'}`}
+    >
+      {labels[category] || category || '📌 Email'}
+    </button>
+  );
 }
 
 function EditModal({ email, onClose, onSend }) {
@@ -41,15 +61,48 @@ function EditModal({ email, onClose, onSend }) {
     onClose();
   };
 
-  const senderName = email.sender_name || email.sender || 'Sender';
+  const senderName = extractDisplayName(email.sender_name || email.sender, email.sender_email || email.senderEmail);
+
+  const insertClosing = () => {
+    setBody(prev => `${prev.trim()}\n\nBest regards,\nMe`);
+  };
+
+  const insertGreeting = () => {
+    const firstName = senderName.split(' ')[0] || 'there';
+    setBody(prev => `Hi ${firstName},\n\n${prev.replace(/^Hi\s+[^\n]+,\n*/i, '')}`);
+  };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">✏️ Edit reply to {senderName}</div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
+      <div className="modal" style={{ maxWidth: 620 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div className="modal-header" style={{ margin: 0 }}>✏️ Edit reply to {senderName}</div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
           Re: {email.subject}
         </div>
+
+        {/* Quick Helper buttons */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ fontSize: 11, padding: '3px 8px' }}
+            onClick={insertGreeting}
+          >
+            👋 Insert Greeting
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ fontSize: 11, padding: '3px 8px' }}
+            onClick={insertClosing}
+          >
+            ✍️ Insert Closing
+          </button>
+        </div>
+
         <textarea
           className="input"
           value={body}
@@ -61,32 +114,102 @@ function EditModal({ email, onClose, onSend }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost btn-sm" onClick={onClose}>Discard</button>
-          <button className="btn btn-primary btn-sm" onClick={handleSend}>Send Reply</button>
+          <button className="btn btn-primary btn-sm" onClick={handleSend}>Send Reply 🚀</button>
         </div>
       </div>
     </div>
   );
 }
 
-function FullEmailModal({ email, onClose }) {
-  const senderName = email.sender_name || email.sender || 'Sender';
-  const senderEmail = email.sender_email || email.senderEmail || '';
+function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
+  const [copied, setCopied] = useState(false);
+  const senderEmail = extractCleanEmail(email.sender_email || email.senderEmail || '');
+  const senderName = extractDisplayName(email.sender_name || email.sender, senderEmail);
+
+  const handleCopyBody = () => {
+    const text = email.body_plain || email.body || '';
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 660 }}>
-        <div className="modal-header">📧 {email.subject}</div>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-          From: {senderName} &lt;{senderEmail}&gt;
+      <div className="modal" style={{ maxWidth: 680 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          <div className="modal-header" style={{ margin: 0, fontSize: 17, flex: 1, paddingRight: 12 }}>
+            📧 {email.subject}
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
         </div>
+
+        {/* Sender Info Bar */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+          background: 'var(--surface2)',
+          padding: '10px 14px',
+          borderRadius: 8
+        }}>
+          <div
+            onClick={onOpenProfile}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+            title="Click to view sender profile"
+          >
+            <EmailAvatar name={senderName} email={senderEmail} size={34} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                {senderName} <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 'normal' }}>(View Profile)</span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>{senderEmail}</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleCopyBody}
+              style={{ fontSize: 11, padding: '4px 8px' }}
+              title="Copy email message text"
+            >
+              {copied ? '✅ Copied' : '📋 Copy Text'}
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handlePrint}
+              style={{ fontSize: 11, padding: '4px 8px' }}
+              title="Print email"
+            >
+              🖨️ Print
+            </button>
+          </div>
+        </div>
+
+        {/* Email Body */}
         <div style={{
           background: 'var(--surface2)', borderRadius: 8, padding: 20,
           fontSize: 14, lineHeight: 1.75, whiteSpace: 'pre-wrap', color: 'var(--text)',
-          maxHeight: 450, overflowY: 'auto'
+          maxHeight: 450, overflowY: 'auto', border: '1px solid var(--border)'
         }}>
           {email.body_plain || email.body || '(No message body)'}
         </div>
-        <div className="modal-footer">
+
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              onClose();
+              onReply && onReply(email);
+            }}
+          >
+            ✉️ Reply to Sender
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
         </div>
       </div>
@@ -94,9 +217,10 @@ function FullEmailModal({ email, onClose }) {
   );
 }
 
-export default function EmailCard({ email, onAction }) {
-  const senderName = email.sender_name || email.sender || 'Unknown';
-  const senderEmail = email.sender_email || email.senderEmail || '';
+export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
+  const senderEmail = extractCleanEmail(email.sender_email || email.senderEmail || '');
+  const senderName = extractDisplayName(email.sender_name || email.sender, senderEmail);
+  const organization = extractOrganization(senderEmail, senderName);
   const receivedAt = email.received_at || email.receivedAt || new Date().toISOString();
   const summary = email.ai_summary || email.summary || 'No summary available.';
   const needsReply = email.needs_reply !== undefined ? email.needs_reply : (email.needsReply || false);
@@ -105,8 +229,11 @@ export default function EmailCard({ email, onAction }) {
   const [expanded, setExpanded] = useState(needsReply);
   const [editOpen, setEditOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [status, setStatus] = useState(email.draft?.status || email.draftStatus || null);
   const [sending, setSending] = useState(false);
+  const [starred, setStarred] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   const isDone = status === 'sent' || status === 'declined';
 
@@ -124,6 +251,13 @@ export default function EmailCard({ email, onAction }) {
     onAction && onAction(email.id, 'declined');
   };
 
+  const handleCopySummary = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(summary);
+    setCopiedSummary(true);
+    setTimeout(() => setCopiedSummary(false), 2000);
+  };
+
   return (
     <>
       <div
@@ -133,26 +267,81 @@ export default function EmailCard({ email, onAction }) {
           borderLeft: needsReply ? '3px solid var(--accent)' : '3px solid transparent',
           opacity: isDone ? 0.6 : 1,
           transition: 'all 0.3s ease',
+          position: 'relative'
         }}
       >
-        {/* Header row */}
+        {/* Header row: Real sender profile with avatar */}
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <EmailAvatar name={senderName} email={senderEmail} size={40} />
+          <div
+            onClick={() => setProfileOpen(true)}
+            style={{ cursor: 'pointer', position: 'relative' }}
+            title={`View ${senderName}'s full profile`}
+          >
+            <EmailAvatar name={senderName} email={senderEmail} size={42} showTooltip={true} />
+          </div>
+
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>{senderName}</span>
-              <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0 }}>{timeAgo(receivedAt)}</span>
+              <div
+                onClick={() => setProfileOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'pointer'
+                }}
+                title={`Click to view profile of ${senderName}`}
+              >
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                  {senderName}
+                </span>
+                {organization && (
+                  <span className="badge badge-purple" style={{ fontSize: 10, padding: '1px 6px' }}>
+                    {organization}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Star Button */}
+                <button
+                  onClick={() => setStarred(s => !s)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    color: starred ? '#f59e0b' : 'var(--muted)',
+                    padding: '2px 4px',
+                    lineHeight: 1
+                  }}
+                  title={starred ? 'Unstar email' : 'Star this email'}
+                >
+                  {starred ? '★' : '☆'}
+                </button>
+                <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0 }}>
+                  {timeAgo(receivedAt)}
+                </span>
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+
+            <div style={{
+              fontSize: 13,
+              color: 'var(--muted)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              marginTop: 2
+            }}>
               {email.subject}
             </div>
           </div>
         </div>
 
         {/* Tags row */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0 0' }}>
-          <UrgencyBadge urgency={email.urgency} />
-          <CategoryChip category={email.category} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0 0', alignItems: 'center' }}>
+          <UrgencyBadge urgency={email.urgency} onClick={() => onFilterTag && onFilterTag(email.urgency)} />
+          <CategoryChip category={email.category} onClick={() => onFilterTag && onFilterTag(email.category)} />
           {needsReply && !isDone && <span className="badge badge-purple">💬 Needs reply</span>}
           {status === 'sent' && <span className="badge badge-low">✅ Replied</span>}
           {status === 'declined' && <span className="badge badge-info">✗ Skipped</span>}
@@ -161,20 +350,66 @@ export default function EmailCard({ email, onAction }) {
         {/* Divider */}
         <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
 
-        {/* AI Summary */}
+        {/* AI Summary Section with Copy and Ask AI buttons */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>🤖</span>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>AI Summary</div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 4
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                AI Summary
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={handleCopySummary}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 10, padding: '2px 6px', height: 20 }}
+                  title="Copy summary"
+                >
+                  {copiedSummary ? '✅ Copied' : '📋 Copy'}
+                </button>
+              </div>
+            </div>
             <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--text)' }}>{summary}</p>
           </div>
         </div>
 
-        {/* View full email */}
-        <button
-          onClick={() => setViewOpen(true)}
-          style={{ background: 'none', color: 'var(--muted)', fontSize: 12, padding: '6px 0', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', marginTop: 4, display: 'block' }}
-        >View original email →</button>
+        {/* Action bar: View original email & Profile shortcuts */}
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setViewOpen(true)}
+            style={{
+              background: 'none',
+              color: 'var(--muted)',
+              fontSize: 12,
+              padding: '4px 0',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textDecorationStyle: 'dotted'
+            }}
+          >
+            View original email →
+          </button>
+
+          <button
+            onClick={() => setProfileOpen(true)}
+            style={{
+              background: 'none',
+              color: 'var(--accent)',
+              fontSize: 12,
+              padding: '4px 0',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textDecorationStyle: 'dotted'
+            }}
+          >
+            👤 Sender Profile & History →
+          </button>
+        </div>
 
         {/* Draft section */}
         {draftBody && !isDone && (
@@ -230,11 +465,24 @@ export default function EmailCard({ email, onAction }) {
         )}
       </div>
 
+      {profileOpen && (
+        <SenderProfileModal
+          email={email}
+          onClose={() => setProfileOpen(false)}
+          onReply={() => setEditOpen(true)}
+          onSearchSender={(senderTerm) => onAskAI && onAskAI(senderTerm)}
+        />
+      )}
       {editOpen && (
         <EditModal email={email} onClose={() => setEditOpen(false)} onSend={handleSend} />
       )}
       {viewOpen && (
-        <FullEmailModal email={email} onClose={() => setViewOpen(false)} />
+        <FullEmailModal
+          email={email}
+          onClose={() => setViewOpen(false)}
+          onReply={() => { setViewOpen(false); setEditOpen(true); }}
+          onOpenProfile={() => { setViewOpen(false); setProfileOpen(true); }}
+        />
       )}
     </>
   );

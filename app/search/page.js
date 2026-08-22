@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 
 const SUGGESTIONS = [
@@ -9,6 +9,14 @@ const SUGGESTIONS = [
   'Any urgent emails I haven\'t replied to?',
   'Show me all receipts from this month',
   'Who emailed me the most in my history?'
+];
+
+const CATEGORIES = [
+  { label: '📊 Weekly Summary', query: 'Summarize what I missed this week' },
+  { label: '⚡ Urgent Action Required', query: 'Any urgent emails I haven\'t replied to?' },
+  { label: '🧾 Invoices & Receipts', query: 'Find emails about invoices or receipts' },
+  { label: '👥 Top Senders', query: 'Who emailed me the most in my history?' },
+  { label: '🔍 Recent Questions', query: 'Show emails with questions for me' },
 ];
 
 function renderAnswer(text) {
@@ -22,31 +30,20 @@ function renderAnswer(text) {
   });
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [answer, setAnswer] = useState(null);
   const [lastQuery, setLastQuery] = useState('');
+  const [copied, setCopied] = useState(false);
   const [historyScope] = useState('All Email History');
-
-  useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored && stored.connected && stored.email) {
-        setUser(stored);
-      } else {
-        router.replace('/onboarding');
-      }
-    } catch {
-      router.replace('/onboarding');
-    }
-  }, [router]);
 
   const handleSearch = async (q) => {
     const finalQ = q || query;
-    if (!finalQ.trim()) return;
+    if (!finalQ || !finalQ.trim()) return;
     setLastQuery(finalQ);
     setLoading(true);
     setAnswer(null);
@@ -87,6 +84,31 @@ export default function SearchPage() {
     }
   };
 
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
+      if (stored && stored.connected && stored.email) {
+        setUser(stored);
+        const qParam = searchParams?.get('q');
+        if (qParam) {
+          setQuery(qParam);
+          handleSearch(qParam);
+        }
+      } else {
+        router.replace('/onboarding');
+      }
+    } catch {
+      router.replace('/onboarding');
+    }
+  }, [router, searchParams]);
+
+  const handleCopyAnswer = () => {
+    if (!answer) return;
+    navigator.clipboard.writeText(answer);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="app-shell">
       <Sidebar user={user} />
@@ -99,13 +121,33 @@ export default function SearchPage() {
         </div>
         <div className="page-content">
           {/* Hero */}
-          <div style={{ textAlign: 'center', paddingTop: 24, marginBottom: 36 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8 }}>
+          <div style={{ textAlign: 'center', paddingTop: 20, marginBottom: 32 }}>
+            <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8 }}>
               Ask anything about your emails & history
             </h1>
-            <p style={{ color: 'var(--muted)', fontSize: 15 }}>
+            <p style={{ color: 'var(--muted)', fontSize: 14 }}>
               Natural language queries over live messages and past email archives for {user?.email || 'your inbox'}.
             </p>
+          </div>
+
+          {/* Quick Categories Bar */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.label}
+                onClick={() => { setQuery(cat.query); handleSearch(cat.query); }}
+                className="chip"
+                style={{
+                  cursor: 'pointer',
+                  background: 'var(--surface2)',
+                  borderColor: 'var(--border2)',
+                  fontSize: 12.5,
+                  padding: '6px 14px'
+                }}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
 
           {/* Search box */}
@@ -116,8 +158,28 @@ export default function SearchPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              style={{ paddingRight: 120, fontSize: 15, padding: '14px 120px 14px 16px' }}
+              style={{ paddingRight: 130, fontSize: 15, padding: '14px 130px 14px 16px' }}
             />
+            {query && (
+              <button
+                onClick={() => { setQuery(''); setAnswer(null); }}
+                style={{
+                  position: 'absolute',
+                  right: 104,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--muted)',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  padding: 4
+                }}
+                title="Clear input"
+              >
+                ✕
+              </button>
+            )}
             <button
               className="btn btn-primary btn-sm"
               onClick={() => handleSearch()}
@@ -160,29 +222,62 @@ export default function SearchPage() {
           {/* Answer */}
           {answer && !loading && (
             <div className="fade-in">
-              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-                AI Analysis for: "{lastQuery}"
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  AI Analysis for: "{lastQuery}"
+                </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleCopyAnswer}
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  title="Copy analysis"
+                >
+                  {copied ? '✅ Copied' : '📋 Copy Analysis'}
+                </button>
               </div>
+
               <div className="card" style={{ lineHeight: 1.8, fontSize: 14 }}>
                 <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                   <span style={{ fontSize: 22 }}>🤖</span>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px', paddingTop: 4 }}>Agent Intelligence Response</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px', paddingTop: 4 }}>
+                    Agent Intelligence Response
+                  </div>
                 </div>
                 <div style={{ lineHeight: 1.9, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {renderAnswer(answer)}
                 </div>
               </div>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => { setAnswer(null); setQuery(''); }}
-                style={{ marginTop: 16 }}
-              >
-                ← Ask another question
-              </button>
+
+              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => { setAnswer(null); setQuery(''); }}
+                >
+                  ← Ask another question
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => router.push('/inbox')}
+                >
+                  📥 Go to Inbox
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 }
