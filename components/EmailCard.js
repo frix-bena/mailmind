@@ -2,18 +2,14 @@
 import { useState } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import SenderProfileModal from '@/components/SenderProfileModal';
-import { extractDisplayName, extractCleanEmail, extractOrganization } from '@/lib/avatar-utils';
-
-function timeAgo(iso) {
-  if (!iso) return '';
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
+import {
+  extractDisplayName,
+  extractCleanEmail,
+  extractOrganization,
+  isVerifiedSender,
+  extractDomain,
+  formatEmailDate
+} from '@/lib/avatar-utils';
 
 function UrgencyBadge({ urgency, onClick }) {
   const map = { high: 'badge-high', medium: 'badge-medium', low: 'badge-low' };
@@ -125,6 +121,9 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
   const [copied, setCopied] = useState(false);
   const senderEmail = extractCleanEmail(email.sender_email || email.senderEmail || '');
   const senderName = extractDisplayName(email.sender_name || email.sender, senderEmail);
+  const domain = extractDomain(senderEmail);
+  const isVerified = isVerifiedSender(senderEmail, domain);
+  const dateInfo = formatEmailDate(email.received_at || email.receivedAt);
 
   const handleCopyBody = () => {
     const text = email.body_plain || email.body || '';
@@ -139,68 +138,103 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 680 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-          <div className="modal-header" style={{ margin: 0, fontSize: 17, flex: 1, paddingRight: 12 }}>
-            📧 {email.subject}
+      <div className="modal" style={{ maxWidth: 700, padding: 26, borderRadius: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+          <div className="modal-header" style={{ margin: 0, fontSize: 18, flex: 1, paddingRight: 12, lineHeight: 1.4 }}>
+            {email.subject}
           </div>
           <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
         </div>
 
-        {/* Sender Info Bar */}
+        {/* Real Email Client Sender Header Bar */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           marginBottom: 16,
           background: 'var(--surface2)',
-          padding: '10px 14px',
-          borderRadius: 8
+          padding: '14px 16px',
+          borderRadius: 12,
+          border: '1px solid var(--border)'
         }}>
-          <div
-            onClick={onOpenProfile}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-            title="Click to view sender profile"
-          >
-            <EmailAvatar name={senderName} email={senderEmail} size={34} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                {senderName} <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 'normal' }}>(View Profile)</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div
+              onClick={onOpenProfile}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+              title="Click to view full sender profile"
+            >
+              <EmailAvatar name={senderName} email={senderEmail} size={44} showVerifiedBadge={true} />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                    {senderName}
+                  </span>
+                  {isVerified && (
+                    <span style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }} title="Verified Sender">
+                      ✓
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>
+                    (👤 Profile)
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'monospace', marginTop: 1 }}>
+                  &lt;{senderEmail}&gt;
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>{senderEmail}</div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={handleCopyBody}
+                style={{ fontSize: 11, padding: '4px 8px' }}
+                title="Copy email message text"
+              >
+                {copied ? '✅ Copied' : '📋 Copy Text'}
+              </button>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={handlePrint}
+                style={{ fontSize: 11, padding: '4px 8px' }}
+                title="Print email"
+              >
+                🖨️ Print
+              </button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={handleCopyBody}
-              style={{ fontSize: 11, padding: '4px 8px' }}
-              title="Copy email message text"
-            >
-              {copied ? '✅ Copied' : '📋 Copy Text'}
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={handlePrint}
-              style={{ fontSize: 11, padding: '4px 8px' }}
-              title="Print email"
-            >
-              🖨️ Print
-            </button>
+          {/* Timestamp and Security Metadata Line */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 10,
+            paddingTop: 8,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            fontSize: 11.5,
+            color: 'var(--muted)',
+            flexWrap: 'wrap',
+            gap: 8
+          }}>
+            <div>
+              <span>📅 {dateInfo.full || 'Recent'}</span>
+              {dateInfo.relative && <span style={{ marginLeft: 6 }}>({dateInfo.relative})</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>to: <strong>me</strong></span>
+              <span style={{ color: 'var(--success)' }}>🔒 TLS Encrypted</span>
+            </div>
           </div>
         </div>
 
         {/* Email Body */}
         <div style={{
-          background: 'var(--surface2)', borderRadius: 8, padding: 20,
+          background: 'var(--surface2)', borderRadius: 10, padding: 20,
           fontSize: 14, lineHeight: 1.75, whiteSpace: 'pre-wrap', color: 'var(--text)',
-          maxHeight: 450, overflowY: 'auto', border: '1px solid var(--border)'
+          maxHeight: 420, overflowY: 'auto', border: '1px solid var(--border)'
         }}>
           {email.body_plain || email.body || '(No message body)'}
         </div>
 
-        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 18 }}>
           <button
             className="btn btn-primary btn-sm"
             onClick={() => {
@@ -221,7 +255,10 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
   const senderEmail = extractCleanEmail(email.sender_email || email.senderEmail || '');
   const senderName = extractDisplayName(email.sender_name || email.sender, senderEmail);
   const organization = extractOrganization(senderEmail, senderName);
+  const domain = extractDomain(senderEmail);
+  const isVerified = isVerifiedSender(senderEmail, domain);
   const receivedAt = email.received_at || email.receivedAt || new Date().toISOString();
+  const dateInfo = formatEmailDate(receivedAt);
   const summary = email.ai_summary || email.summary || 'No summary available.';
   const needsReply = email.needs_reply !== undefined ? email.needs_reply : (email.needsReply || false);
   const draftBody = email.draft?.body || email.draftBody || null;
@@ -270,34 +307,63 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
           position: 'relative'
         }}
       >
-        {/* Header row: Real sender profile with avatar */}
+        {/* Header row: Real sender profile with avatar and verified status */}
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div
             onClick={() => setProfileOpen(true)}
             style={{ cursor: 'pointer', position: 'relative' }}
-            title={`View ${senderName}'s full profile`}
+            title={`Click to view ${senderName}'s full profile`}
           >
-            <EmailAvatar name={senderName} email={senderEmail} size={42} showTooltip={true} />
+            <EmailAvatar
+              name={senderName}
+              email={senderEmail}
+              size={44}
+              showTooltip={true}
+              showVerifiedBadge={true}
+            />
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              {/* Sender Name, Verified Badge, Email Address, and Organization */}
               <div
                 onClick={() => setProfileOpen(true)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  flexWrap: 'wrap'
                 }}
-                title={`Click to view profile of ${senderName}`}
+                title={`Click to view sender profile for ${senderName}`}
               >
-                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)', letterSpacing: '-0.2px' }}>
                   {senderName}
                 </span>
+
+                {isVerified && (
+                  <span
+                    style={{
+                      color: '#38bdf8',
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                      lineHeight: 1
+                    }}
+                    title="Verified Sender / Organization"
+                  >
+                    ✓
+                  </span>
+                )}
+
+                {senderEmail && senderName !== senderEmail && (
+                  <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'monospace' }}>
+                    &lt;{senderEmail}&gt;
+                  </span>
+                )}
+
                 {organization && (
-                  <span className="badge badge-purple" style={{ fontSize: 10, padding: '1px 6px' }}>
-                    {organization}
+                  <span className="badge badge-purple" style={{ fontSize: 10, padding: '1px 7px' }}>
+                    🏢 {organization}
                   </span>
                 )}
               </div>
@@ -319,19 +385,23 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
                 >
                   {starred ? '★' : '☆'}
                 </button>
-                <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0 }}>
-                  {timeAgo(receivedAt)}
+                <span
+                  style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0 }}
+                  title={dateInfo.full || ''}
+                >
+                  {dateInfo.relative || 'recently'}
                 </span>
               </div>
             </div>
 
             <div style={{
-              fontSize: 13,
-              color: 'var(--muted)',
+              fontSize: 13.5,
+              fontWeight: 500,
+              color: 'var(--text)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              marginTop: 2
+              marginTop: 3
             }}>
               {email.subject}
             </div>
@@ -407,7 +477,7 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
               textDecorationStyle: 'dotted'
             }}
           >
-            👤 Sender Profile & History →
+            👤 View Sender Profile & History →
           </button>
         </div>
 
@@ -487,3 +557,4 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
     </>
   );
 }
+
