@@ -157,10 +157,10 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div
               onClick={onOpenProfile}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flexShrink: 0 }}
               title="Click to view full sender profile"
             >
-              <EmailAvatar name={senderName} email={senderEmail} size={44} showVerifiedBadge={true} />
+              <EmailAvatar name={senderName} email={senderEmail} size={40} showVerifiedBadge={true} />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
@@ -311,13 +311,13 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div
             onClick={() => setProfileOpen(true)}
-            style={{ cursor: 'pointer', position: 'relative' }}
+            style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}
             title={`Click to view ${senderName}'s full profile`}
           >
             <EmailAvatar
               name={senderName}
               email={senderEmail}
-              size={44}
+              size={40}
               showTooltip={true}
               showVerifiedBadge={true}
             />

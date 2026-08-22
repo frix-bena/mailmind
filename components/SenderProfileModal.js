@@ -102,7 +102,7 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
         <div style={{ padding: '0 24px 24px', marginTop: -40 }}>
           {/* Avatar and Main Header */}
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, marginBottom: 16 }}>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <EmailAvatar
                 name={profile.name}
                 email={profile.email}

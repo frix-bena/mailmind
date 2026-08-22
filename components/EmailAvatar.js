@@ -18,12 +18,19 @@ import {
  * 2. Secondary: If custom/business domain, fetches Clearbit / Favicon / IconHorse
  * 3. Fallback: Native Gmail-style circular initials with deterministic color gradient
  * 
+ * Sizing & Layout Guarantee:
+ * - Strict circular geometry (aspect-ratio 1:1, border-radius 50%, overflow hidden)
+ * - All content (images, initials, icons) fits perfectly within the circle without distorting or overflowing
+ * - Images scale cleanly with object-cover and fill the space uniformly
+ * 
  * @param {Object} props
  * @param {string} [props.src] - Direct image URL if available
  * @param {string} [props.email] - The sender's email address
  * @param {string} [props.name] - The sender's display name
- * @param {number|string} [props.size=40] - Diameter in pixels (default 40)
- * @param {string} [props.className] - Additional Tailwind classes
+ * @param {number|string} [props.size=40] - Diameter in pixels (default 40px)
+ * @param {React.ReactNode} [props.icon] - Optional icon to render inside avatar
+ * @param {React.ReactNode} [props.children] - Optional custom children
+ * @param {string} [props.className] - Additional CSS classes
  * @param {Object} [props.style] - Additional inline styles
  * @param {string} [props.alt] - Accessible alt text
  * @param {boolean} [props.allowClearbit=true] - Whether to attempt domain logo fetch for custom domains
@@ -37,6 +44,8 @@ export default function EmailAvatar({
   email = '',
   name = '',
   size = 40,
+  icon,
+  children,
   className = '',
   style = {},
   alt,
@@ -47,9 +56,9 @@ export default function EmailAvatar({
   onClick,
   ...rest
 }) {
-  // Normalize size to number if numeric string is passed
-  const numericSize = typeof size === 'number' ? size : parseInt(size, 10) || 40;
-  const fontSize = Math.max(11, Math.round(numericSize * 0.42));
+  // Normalize size to number if numeric string is passed, minimum 16px
+  const numericSize = Math.max(16, (typeof size === 'number' ? size : parseInt(size, 10)) || 40);
+  const fontSize = Math.max(10, Math.round(numericSize * 0.44));
 
   // Compute deterministic initials, domain, color, and verification
   const initial = useMemo(() => getSenderInitial(name, email), [name, email]);
@@ -96,21 +105,116 @@ export default function EmailAvatar({
   const imageAlt = alt || `${displayName}'s avatar`;
 
   const badgeSize = Math.max(12, Math.round(numericSize * 0.32));
+  const badgeFontSize = Math.max(8, Math.round(badgeSize * 0.65));
+
+  // Outer container inline style ensuring strict geometry and alignment
+  const containerStyle = {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: `${numericSize}px`,
+    height: `${numericSize}px`,
+    minWidth: `${numericSize}px`,
+    minHeight: `${numericSize}px`,
+    maxWidth: `${numericSize}px`,
+    maxHeight: `${numericSize}px`,
+    aspectRatio: '1 / 1',
+    flexShrink: 0,
+    borderRadius: '50%',
+    cursor: onClick ? 'pointer' : 'inherit',
+    boxSizing: 'border-box',
+    ...style
+  };
+
+  // Inner circular mask style ensuring no overflow and crisp circular containment
+  const circleStyle = {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    maxWidth: '100%',
+    maxHeight: '100%',
+    borderRadius: '50%',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    boxSizing: 'border-box',
+    background: color.gradient || color.hex || '#1a73e8',
+    userSelect: 'none',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)'
+  };
+
+  // Centered initials text style matching Gmail's bold, clean typographic style
+  const initialsStyle = {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    color: '#ffffff',
+    fontSize: `${fontSize}px`,
+    fontWeight: 600,
+    lineHeight: 1,
+    textTransform: 'uppercase',
+    letterSpacing: '0px',
+    userSelect: 'none',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box'
+  };
+
+  // Image style guaranteeing object-cover scaling, filling the circular mask without distortion
+  const imageStyle = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    maxWidth: '100%',
+    maxHeight: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center',
+    borderRadius: '50%',
+    display: 'block',
+    opacity: imageLoaded ? 1 : 0,
+    transition: 'opacity 0.15s ease-in-out',
+    zIndex: 1,
+    boxSizing: 'border-box'
+  };
+
+  // Verified badge overlay style
+  const badgeStyle = {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: `${badgeSize}px`,
+    height: `${badgeSize}px`,
+    minWidth: `${badgeSize}px`,
+    minHeight: `${badgeSize}px`,
+    maxWidth: `${badgeSize}px`,
+    maxHeight: `${badgeSize}px`,
+    borderRadius: '50%',
+    background: '#1d9bf0',
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: `${badgeFontSize}px`,
+    fontWeight: 'bold',
+    border: '2px solid var(--surface, #1a1a24)',
+    zIndex: 2,
+    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.4)',
+    lineHeight: 1,
+    boxSizing: 'border-box',
+    pointerEvents: 'none'
+  };
 
   return (
     <div
-      style={{
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: numericSize,
-        height: numericSize,
-        minWidth: numericSize,
-        minHeight: numericSize,
-        cursor: onClick ? 'pointer' : 'inherit',
-        ...style
-      }}
+      className={`email-avatar-root ${className}`.trim()}
+      style={containerStyle}
       onClick={onClick}
       {...rest}
     >
@@ -118,30 +222,29 @@ export default function EmailAvatar({
         role="img"
         aria-label={imageAlt}
         title={tooltipText}
-        className={`relative w-full h-full rounded-full overflow-hidden shrink-0 flex items-center justify-center shadow-sm transition-transform duration-150 ${onClick ? 'hover:scale-105' : ''} ${className}`.trim()}
-        style={{
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
-        }}
+        className="email-avatar-circle"
+        style={circleStyle}
       >
         {/* 
-          VIBRANT DETERMINISTIC FALLBACK INITIALS:
-          Centers the initial letter with high-contrast font and smooth Material gradient.
+          1. CENTRALLY ALIGNED CONTENT (Initials / Icon / Custom Children):
+          Always rendered as the base layer, perfectly centered within the circle.
         */}
-        <div
-          className={`w-full h-full flex items-center justify-center text-white font-bold select-none uppercase ${color.bgClass || ''}`.trim()}
-          style={{
-            background: color.gradient || color.hex,
-            fontSize: `${fontSize}px`,
-            letterSpacing: '-0.5px',
-            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-          }}
-        >
-          {initial}
-        </div>
+        {children ? (
+          <div style={initialsStyle}>{children}</div>
+        ) : icon ? (
+          <div style={initialsStyle}>{icon}</div>
+        ) : (
+          <div
+            className="email-avatar-initials"
+            style={initialsStyle}
+          >
+            {initial}
+          </div>
+        )}
 
         {/* 
-          CONSTRAINED ABSOLUTE IMAGE LAYER:
-          Only rendered if src exists and has not thrown onError.
+          2. CONSTRAINED ABSOLUTE IMAGE LAYER:
+          Rendered over the base layer, perfectly fitted using object-fit: cover.
         */}
         {imageSrc && !imageError && (
           <img
@@ -152,40 +255,21 @@ export default function EmailAvatar({
             decoding="async"
             onLoad={() => setImageLoaded(true)}
             onError={handleImageError}
-            className="absolute inset-0 w-full h-full object-cover rounded-full z-10 transition-opacity duration-200"
-            style={{
-              opacity: imageLoaded ? 1 : 0
-            }}
+            className="email-avatar-img"
+            style={imageStyle}
           />
         )}
       </div>
 
       {/* 
-        VERIFIED BADGE OVERLAY:
-        Rendered if showVerifiedBadge is requested and sender is a verified brand/custom domain.
+        3. VERIFIED BADGE OVERLAY:
+        Rendered outside the clipped circle to maintain badge visibility without clipping.
       */}
       {(showVerifiedBadge || (showVerifiedBadge !== false && isVerified && numericSize >= 32)) && (
         <span
           title="Verified Sender / Authenticated Domain"
-          style={{
-            position: 'absolute',
-            bottom: -2,
-            right: -2,
-            width: badgeSize,
-            height: badgeSize,
-            borderRadius: '50%',
-            background: '#1d9bf0',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: Math.max(8, Math.round(badgeSize * 0.65)),
-            fontWeight: 'bold',
-            border: '2px solid var(--surface, #1a1a24)',
-            zIndex: 20,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
-            lineHeight: 1
-          }}
+          className="email-avatar-badge"
+          style={badgeStyle}
         >
           ✓
         </span>
