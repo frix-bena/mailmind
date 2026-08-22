@@ -17,13 +17,14 @@ import {
  * 3. Fallback: Native Gmail-style circular initials with deterministic color
  * 
  * Features:
- * - Flicker-free progressive loading (initials shown instantly while image loads)
- * - Zero broken image icons (onError triggers next source or initials)
- * - Fully styled with Tailwind CSS + resilient inline styles
- * - Deterministic color mapping (same sender always has same color)
+ * - Strict mask container with overflow-hidden and rounded-full
+ * - Centered fallback initial <div> with deterministic background color
+ * - Constrained absolute image layer with z-10 and object-cover
+ * - Unmounts <img> on onError to eliminate broken icons and visual overlaps
  * 
  * @param {Object} props
- * @param {string} props.email - The sender's email address
+ * @param {string} [props.src] - Direct image URL if available
+ * @param {string} [props.email] - The sender's email address
  * @param {string} [props.name] - The sender's display name
  * @param {number|string} [props.size=40] - Diameter in pixels (default 40)
  * @param {string} [props.className] - Additional Tailwind classes
@@ -35,6 +36,7 @@ import {
  * @param {Function} [props.onClick] - Optional click handler
  */
 export default function EmailAvatar({
+  src,
   email = '',
   name = '',
   size = 40,
@@ -56,35 +58,34 @@ export default function EmailAvatar({
   const color = useMemo(() => getSenderColor(email || name), [email, name]);
   const cleanEmail = useMemo(() => extractCleanEmail(email), [email]);
 
-  // Compute prioritized image sources (Gravatar -> Clearbit)
+  // Compute prioritized image sources (Direct src or Gravatar -> Clearbit etc.)
   const sources = useMemo(
-    () => getAvatarSources(cleanEmail, numericSize, allowClearbit),
-    [cleanEmail, numericSize, allowClearbit]
+    () => {
+      if (src) return [{ type: 'custom', url: src }];
+      return getAvatarSources(cleanEmail, numericSize, allowClearbit);
+    },
+    [src, cleanEmail, numericSize, allowClearbit]
   );
 
   const [sourceIndex, setSourceIndex] = useState(0);
-  const [imageStatus, setImageStatus] = useState('loading'); // 'loading' | 'loaded' | 'error'
+  const [imageError, setImageError] = useState(false);
 
-  // Reset state whenever email, size, or candidate sources change
+  // Reset state whenever email, src, size, or candidate sources change
   useEffect(() => {
     setSourceIndex(0);
-    setImageStatus(sources.length > 0 ? 'loading' : 'error');
-  }, [cleanEmail, sources.length]);
+    setImageError(false);
+  }, [src, cleanEmail, numericSize, allowClearbit]);
 
   const currentSource = sources[sourceIndex] || null;
-  const hasImageCandidate = currentSource && imageStatus !== 'error';
-
-  const handleImageLoad = () => {
-    setImageStatus('loaded');
-  };
+  const imageSrc = currentSource ? currentSource.url : null;
 
   const handleImageError = () => {
-    // If there's another fallback source (e.g. Clearbit after Gravatar 404), advance to it
-    if (sourceIndex + 1 < sources.length) {
+    // If there's another fallback source in the cascade, advance to it
+    if (!src && sourceIndex + 1 < sources.length) {
       setSourceIndex(prev => prev + 1);
-      setImageStatus('loading');
     } else {
-      setImageStatus('error');
+      // Completely unmount <img> and fall back to initials
+      setImageError(true);
     }
   };
 
@@ -92,77 +93,55 @@ export default function EmailAvatar({
   const tooltipText = showTooltip ? (name && cleanEmail ? `${name} <${cleanEmail}>` : displayName) : undefined;
   const imageAlt = alt || `${displayName}'s avatar`;
 
+  // Standard Tailwind size class for default 40px (w-10 h-10) or custom size
+  const sizeClass = numericSize === 40 ? 'w-10 h-10' : `w-[${numericSize}px] h-[${numericSize}px]`;
+
   return (
     <div
       role="img"
       aria-label={imageAlt}
       title={tooltipText}
       onClick={onClick}
-      className={`
-        relative inline-flex items-center justify-center flex-shrink-0
-        rounded-full select-none overflow-hidden font-semibold text-white
-        ${color.bgClass}
-        ${className}
-      `.trim()}
+      className={`relative ${sizeClass} rounded-full overflow-hidden shrink-0 flex items-center justify-center ${className}`.trim()}
       style={{
         width: numericSize,
         height: numericSize,
         minWidth: numericSize,
         minHeight: numericSize,
-        fontSize: `${fontSize}px`,
-        backgroundColor: color.hex,
-        borderRadius: '50%',
-        lineHeight: 1,
         cursor: onClick ? 'pointer' : 'inherit',
         ...style,
       }}
       {...rest}
     >
       {/* 
-        GMAIL-STYLE INITIALS (Crucial Fallback + Instant Placeholder):
-        Rendered immediately so there is zero UI flicker or layout jump 
-        while Gravatar / Clearbit image is loading in the background.
+        2. PERFECT CENTERING FOR FALLBACK INITIALS:
+        The fallback <div> fills the container and centers the initial letter.
+        The background color is applied directly to this layer.
       */}
-      <span
-        aria-hidden="true"
-        className="uppercase pointer-events-none select-none"
+      <div
+        className={`w-full h-full flex items-center justify-center text-white font-semibold text-lg select-none uppercase ${color.bgClass || ''}`.trim()}
         style={{
-          fontSize: `${fontSize}px`,
-          fontWeight: 600,
-          color: '#ffffff',
-          userSelect: 'none',
+          backgroundColor: color.hex,
+          fontSize: numericSize !== 40 ? `${fontSize}px` : undefined,
         }}
       >
         {initial}
-      </span>
+      </div>
 
       {/* 
-        PROGRESSIVE IMAGE (Gravatar -> Clearbit):
-        Layered on top with smooth opacity fade-in.
-        If loading fails (404), onError advances to next source or stays on initials.
+        3. CONSTRAIN THE IMAGE & 4. CONDITIONAL RENDERING:
+        Only rendered if src exists and has not thrown onError.
+        Positioned absolute inset-0 with z-10 to sit cleanly on top of fallback without overflowing.
       */}
-      {hasImageCandidate && (
+      {imageSrc && !imageError && (
         <img
-          key={currentSource.url}
-          src={currentSource.url}
+          key={imageSrc}
+          src={imageSrc}
           alt={imageAlt}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
-          onLoad={handleImageLoad}
           onError={handleImageError}
-          className={`
-            absolute inset-0 w-full h-full object-cover rounded-full
-            transition-opacity duration-200 ease-in-out
-            ${imageStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}
-          `.trim()}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderRadius: '50%',
-            opacity: imageStatus === 'loaded' ? 1 : 0,
-            transition: 'opacity 0.2s ease-in-out',
-          }}
+          className="absolute inset-0 w-full h-full object-cover rounded-full z-10"
         />
       )}
     </div>
