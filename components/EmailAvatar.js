@@ -7,21 +7,25 @@ import {
   getSenderInitial,
   extractCleanEmail,
   isVerifiedSender,
-  extractDomain
+  extractDomain,
+  BRAND_DOMAINS,
+  BRAND_ICONS,
+  getGoogleFaviconUrl
 } from '@/lib/avatar-utils';
 
 /**
  * Gmail-Style Avatar Component with Progressive Fallback Strategy & Verified Badges
  * 
  * Strategy:
- * 1. Primary: Fetches real profile photo / Gravatar / Google / Unavatar / GitHub
- * 2. Secondary: If custom/business domain, fetches Clearbit / Favicon / IconHorse
- * 3. Fallback: Native Gmail-style circular initials with deterministic color gradient
+ * 1. Primary: Direct high-res Vector Brand SVG / Google S2 Favicon CDN
+ * 2. Secondary: Real Google Profile / Unavatar / Gravatar
+ * 3. Fallback: Native Gmail-style circular initials with deterministic Material color
  * 
  * Sizing & Layout Guarantee:
  * - Strict circular geometry (aspect-ratio 1:1, border-radius 50%, overflow hidden)
- * - All content (images, initials, icons) fits perfectly within the circle without distorting or overflowing
- * - Images scale cleanly with object-cover and fill the space uniformly
+ * - Brand logos styled with clean containment on crisp contrast background matching real Gmail
+ * - Personal profile photos fill circle with object-cover
+ * - Typography and initials render with Google Sans / Roboto medium weight
  * 
  * @param {Object} props
  * @param {string} [props.src] - Direct image URL if available
@@ -58,7 +62,7 @@ export default function EmailAvatar({
 }) {
   // Normalize size to number if numeric string is passed, minimum 16px
   const numericSize = Math.max(16, (typeof size === 'number' ? size : parseInt(size, 10)) || 40);
-  const fontSize = Math.max(10, Math.round(numericSize * 0.44));
+  const fontSize = Math.max(10, Math.round(numericSize * 0.46));
 
   // Compute deterministic initials, domain, color, and verification
   const initial = useMemo(() => getSenderInitial(name, email), [name, email]);
@@ -67,11 +71,11 @@ export default function EmailAvatar({
   const domain = useMemo(() => extractDomain(cleanEmail), [cleanEmail]);
   const isVerified = useMemo(() => isVerifiedSender(cleanEmail, domain), [cleanEmail, domain]);
 
-  // Compute prioritized image sources (Direct src, Gravatar, Clearbit)
+  // Compute prioritized image sources (Direct src, Brand SVG, Google Favicon, Gravatar, Clearbit)
   const sources = useMemo(
     () => {
       const list = [];
-      if (src) list.push({ type: 'custom', url: src });
+      if (src) list.push({ type: 'custom', url: src, isBrand: false });
       const fallbackList = getAvatarSources(cleanEmail, numericSize, allowClearbit);
       return [...list, ...fallbackList];
     },
@@ -91,11 +95,13 @@ export default function EmailAvatar({
 
   const currentSource = sources[sourceIndex] || null;
   const imageSrc = currentSource ? currentSource.url : null;
+  const isBrandIcon = currentSource?.isBrand || (currentSource?.type === 'brand_svg' || currentSource?.type === 'google_fav');
 
   const handleImageError = () => {
     // If there's another fallback source in the cascade, advance to it
     if (sourceIndex + 1 < sources.length) {
       setSourceIndex(prev => prev + 1);
+      setImageLoaded(false);
     } else {
       // Completely unmount <img> and fall back to initials
       setImageError(true);
@@ -106,8 +112,7 @@ export default function EmailAvatar({
   const tooltipText = showTooltip ? (name && cleanEmail ? `${name} <${cleanEmail}>` : displayName) : undefined;
   const imageAlt = alt || `${displayName}'s avatar`;
 
-  const badgeSize = Math.max(12, Math.round(numericSize * 0.32));
-  const badgeFontSize = Math.max(8, Math.round(badgeSize * 0.65));
+  const badgeSize = Math.max(13, Math.round(numericSize * 0.34));
 
   // Outer container inline style ensuring strict geometry and alignment
   const containerStyle = {
@@ -129,7 +134,7 @@ export default function EmailAvatar({
     ...style
   };
 
-  // Inner circular mask style ensuring no overflow and crisp circular containment
+  // Inner circular mask style ensuring crisp circular containment & Gmail color
   const circleStyle = {
     position: 'relative',
     width: '100%',
@@ -143,12 +148,16 @@ export default function EmailAvatar({
     justifyContent: 'center',
     flexShrink: 0,
     boxSizing: 'border-box',
-    background: color.gradient || color.hex || '#1a73e8',
+    background: imageLoaded && isBrandIcon
+      ? '#ffffff'
+      : (color.hex || color.gradient || '#1a73e8'),
     userSelect: 'none',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)'
+    boxShadow: imageLoaded && isBrandIcon
+      ? 'inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.15)'
+      : '0 1px 3px rgba(0, 0, 0, 0.25)'
   };
 
-  // Centered initials text style matching Gmail's clean typography
+  // Centered initials text style matching Gmail's clean Google Sans / Roboto typography
   const initialsStyle = {
     width: '100%',
     height: '100%',
@@ -167,26 +176,43 @@ export default function EmailAvatar({
     boxSizing: 'border-box'
   };
 
-  // Image style guaranteeing object-cover scaling, filling the circular mask without distortion
-  const imageStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    maxWidth: '100%',
-    maxHeight: '100%',
-    objectFit: 'cover',
-    objectPosition: 'center',
-    borderRadius: '50%',
-    display: 'block',
-    opacity: imageLoaded ? 1 : 0,
-    transition: 'opacity 0.15s ease-in-out',
-    zIndex: 1,
-    boxSizing: 'border-box'
-  };
+  // Image style guaranteeing proper containment for brand marks and cover for personal photos
+  const imageStyle = isBrandIcon
+    ? {
+        position: 'absolute',
+        top: '16%',
+        left: '16%',
+        width: '68%',
+        height: '68%',
+        maxWidth: '68%',
+        maxHeight: '68%',
+        objectFit: 'contain',
+        objectPosition: 'center',
+        display: 'block',
+        opacity: imageLoaded ? 1 : 0,
+        transition: 'opacity 0.15s ease-in-out',
+        zIndex: 1,
+        boxSizing: 'border-box'
+      }
+    : {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        maxWidth: '100%',
+        maxHeight: '100%',
+        objectFit: 'cover',
+        objectPosition: 'center',
+        borderRadius: '50%',
+        display: 'block',
+        opacity: imageLoaded ? 1 : 0,
+        transition: 'opacity 0.15s ease-in-out',
+        zIndex: 1,
+        boxSizing: 'border-box'
+      };
 
-  // Verified badge overlay style
+  // Verified BIMI checkmark badge overlay style matching Gmail's official blue seal
   const badgeStyle = {
     position: 'absolute',
     bottom: -2,
@@ -198,17 +224,14 @@ export default function EmailAvatar({
     maxWidth: `${badgeSize}px`,
     maxHeight: `${badgeSize}px`,
     borderRadius: '50%',
-    background: '#1d9bf0',
+    background: '#1a73e8',
     color: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: `${badgeFontSize}px`,
-    fontWeight: 'bold',
     border: '2px solid var(--surface, #1a1a24)',
     zIndex: 2,
-    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.4)',
-    lineHeight: 1,
+    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.45)',
     boxSizing: 'border-box',
     pointerEvents: 'none'
   };
@@ -245,8 +268,8 @@ export default function EmailAvatar({
         )}
 
         {/* 
-          2. CONSTRAINED ABSOLUTE IMAGE LAYER:
-          Rendered over the base layer, perfectly fitted using object-fit: cover.
+          2. CONSTRAINED IMAGE LAYER:
+          Rendered over the base layer, perfectly fitted using object-fit contain/cover.
         */}
         {imageSrc && !imageError && (
           <img
@@ -264,16 +287,28 @@ export default function EmailAvatar({
       </div>
 
       {/* 
-        3. VERIFIED BADGE OVERLAY:
+        3. GMAIL VERIFIED BADGE OVERLAY:
         Rendered outside the clipped circle to maintain badge visibility without clipping.
       */}
-      {(showVerifiedBadge || (showVerifiedBadge !== false && isVerified && numericSize >= 32)) && (
+      {(showVerifiedBadge || (showVerifiedBadge !== false && isVerified && numericSize >= 30)) && (
         <span
-          title="Verified Sender / Authenticated Domain"
+          title="Verified Sender — Google verified domain (BIMI / DMARC Authenticated)"
           className="email-avatar-badge"
           style={badgeStyle}
         >
-          ✓
+          <svg
+            viewBox="0 0 24 24"
+            width="75%"
+            height="75%"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ display: 'block' }}
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </span>
       )}
     </div>
@@ -287,6 +322,7 @@ export {
   getClearbitLogoUrl,
   getUnavatarUrl,
   getGoogleProfileUrl,
+  getGoogleFaviconUrl,
   getSenderInitial,
   getSenderColor,
   getAvatarSources,
@@ -300,6 +336,8 @@ export {
   formatEmailDate,
   GMAIL_AVATAR_PALETTE,
   BRAND_DOMAINS,
+  BRAND_ICONS,
 } from '@/lib/avatar-utils';
+
 
 

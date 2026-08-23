@@ -200,53 +200,49 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
             </button>
           </div>
 
-          {/* Security & Authentication Trust Bar */}
+          {/* Gmail-Style Security & Message Authentication Trust Details */}
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 8,
-              marginBottom: 18,
-              fontSize: 11
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: '12px 14px',
+              marginBottom: 16,
+              fontSize: 12
             }}
           >
-            <div style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: '8px 10px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: 'var(--success)', fontWeight: 700 }}>🔒 TLS Encrypted</div>
-              <div style={{ color: 'var(--muted)', marginTop: 2, fontSize: 10 }}>Transport Security</div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: 8 }}>
+              🛡️ Message Security & Authentication
             </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted)' }}>Mailed-by:</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text)' }}>
+                  {profile.security?.mailedBy || profile.domain}
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted)' }}>Signed-by (DKIM):</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: profile.isVerified ? 'var(--info)' : 'var(--text)' }}>
+                  {profile.security?.signedBy || profile.domain} {profile.isVerified && '✓'}
+                </span>
+              </div>
 
-            <div style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: '8px 10px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: profile.isVerified ? 'var(--info)' : 'var(--muted)', fontWeight: 700 }}>
-                {profile.isVerified ? '🛡️ SPF & DKIM' : '🛡️ Standard Mail'}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted)' }}>Security:</span>
+                <span style={{ color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  🔒 TLS Encrypted
+                </span>
               </div>
-              <div style={{ color: 'var(--muted)', marginTop: 2, fontSize: 10 }}>
-                {profile.isVerified ? 'Authenticated' : 'Standard Delivery'}
-              </div>
-            </div>
 
-            <div style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              padding: '8px 10px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: 'var(--accent)', fontWeight: 700 }}>
-                {profile.isFreeProvider ? '👤 Webmail' : '🏢 Custom Domain'}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted)' }}>SPF / DMARC:</span>
+                <span style={{ color: profile.isVerified ? 'var(--success)' : 'var(--muted)', fontWeight: 600 }}>
+                  {profile.isVerified ? '● Pass (Authenticated)' : '● Standard'}
+                </span>
               </div>
-              <div style={{ color: 'var(--muted)', marginTop: 2, fontSize: 10 }}>Account Type</div>
             </div>
           </div>
 

@@ -167,8 +167,23 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
                     {senderName}
                   </span>
                   {isVerified && (
-                    <span style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }} title="Verified Sender">
-                      ✓
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 16,
+                        height: 16,
+                        borderRadius: '50%',
+                        background: '#1a73e8',
+                        color: '#ffffff',
+                        flexShrink: 0
+                      }}
+                      title="Google verified sender (BIMI / Authenticated Domain)"
+                    >
+                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     </span>
                   )}
                   <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>
@@ -344,14 +359,21 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
                 {isVerified && (
                   <span
                     style={{
-                      color: '#38bdf8',
-                      fontSize: 12,
-                      fontWeight: 'bold',
-                      lineHeight: 1
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: '#1a73e8',
+                      color: '#ffffff',
+                      flexShrink: 0
                     }}
-                    title="Verified Sender / Organization"
+                    title="Google verified sender (BIMI / Authenticated Domain)"
                   >
-                    ✓
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
                   </span>
                 )}
 

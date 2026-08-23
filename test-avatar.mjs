@@ -117,16 +117,19 @@ assert.ok(assignedColors.size >= 5, 'Colors should distribute well across sender
 console.log(`  ✓ Deterministic color mapping is stable and distributes across ${GMAIL_AVATAR_PALETTE.length} Material palette colors.\n`);
 
 // 6. Progressive Avatar Sources Cascade
-console.log('6. Testing Progressive Fallback Cascade (Gravatar -> Clearbit)...');
+console.log('6. Testing Progressive Fallback Cascade (Brand SVG -> Google Favicon -> Gravatar -> Unavatar -> Clearbit)...');
 const freeSources = getAvatarSources('john@gmail.com', 100);
-assert.equal(freeSources.length, 1, 'Free email should only have Gravatar source');
-assert.equal(freeSources[0].type, 'gravatar');
+assert.ok(freeSources.length >= 2, 'Free email should have Gravatar and Google profile sources');
+assert.ok(freeSources.some(s => s.type === 'gravatar'), 'Should have gravatar source');
+assert.ok(freeSources.some(s => s.type === 'google_profile'), 'Should have google_profile source');
 
 const businessSources = getAvatarSources('dev@stripe.com', 100);
-assert.equal(businessSources.length, 2, 'Business email should have Gravatar and Clearbit');
-assert.equal(businessSources[0].type, 'gravatar');
-assert.equal(businessSources[1].type, 'clearbit');
+assert.ok(businessSources.length >= 3, 'Business email should have Brand SVG, Google Favicon, Gravatar, Clearbit');
+assert.equal(businessSources[0].type, 'brand_svg');
+assert.equal(businessSources[1].type, 'google_fav');
+assert.ok(businessSources.some(s => s.type === 'gravatar'));
+assert.ok(businessSources.some(s => s.type === 'clearbit'));
 
-console.log('  ✓ Fallback source cascade configured correctly.\n');
+console.log('  ✓ Fallback source cascade configured correctly with brand vector SVGs and Google S2 CDN.\n');
 
 console.log('=== ALL AVATAR UNIT TESTS PASSED SUCCESSFULLY! ===');
