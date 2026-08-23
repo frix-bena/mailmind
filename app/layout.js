@@ -1,19 +1,19 @@
 import './globals.css';
 
 export const metadata = {
-  metadataBase: new URL('https://mailmind-chi.vercel.app'),
+  metadataBase: new URL('https://autoscroll-chi.vercel.app'),
   title: 'MailMind — AI Email Assistant',
   description: 'Your AI-powered inbox assistant. Read, classify, and reply to emails with permission-based AI drafts.',
   keywords: 'email assistant, AI email, inbox management, smart replies',
   openGraph: {
     title: 'MailMind — AI Email Assistant',
     description: 'Your AI-powered inbox assistant. Read, classify, and reply to emails with permission-based AI drafts.',
-    url: 'https://mailmind-chi.vercel.app',
+    url: 'https://autoscroll-chi.vercel.app',
     siteName: 'MailMind',
     type: 'website',
   },
   alternates: {
-    canonical: 'https://mailmind-chi.vercel.app',
+    canonical: 'https://autoscroll-chi.vercel.app',
   },
 };
 

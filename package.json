@@ -2,7 +2,7 @@
   "name": "autoscroll",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://mailmind-chi.vercel.app",
+  "homepage": "https://autoscroll-chi.vercel.app",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
