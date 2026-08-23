@@ -253,7 +253,7 @@ Direct CLI flags:
         <div className="page-content">
           {/* Agent Banner with background image */}
           <div style={{
-            backgroundImage: `linear-gradient(90deg, rgba(13, 17, 23, 0.45) 0%, rgba(13, 17, 23, 0.20) 50%, rgba(13, 17, 23, 0.45) 100%), url("${AGENT_IMAGE_URL}")`,
+            backgroundImage: `linear-gradient(90deg, rgba(13, 17, 23, 0.68) 0%, rgba(13, 17, 23, 0.48) 50%, rgba(13, 17, 23, 0.68) 100%), url("${AGENT_IMAGE_URL}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             border: '1px solid var(--border)',
@@ -325,7 +325,7 @@ Direct CLI flags:
           </div>
 
           <div style={{
-            backgroundImage: `linear-gradient(rgba(13, 17, 23, 0.45), rgba(13, 17, 23, 0.60)), url("${AGENT_IMAGE_URL}")`,
+            backgroundImage: `linear-gradient(rgba(13, 17, 23, 0.68), rgba(13, 17, 23, 0.78)), url("${AGENT_IMAGE_URL}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             border: '1px solid var(--border)',
