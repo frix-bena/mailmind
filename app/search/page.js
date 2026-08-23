@@ -253,7 +253,7 @@ function SearchContent() {
                     width: 36,
                     height: 36,
                     borderRadius: '50%',
-                    backgroundImage: `url("https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D")`,
+                    backgroundImage: `url("https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=1920&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D")`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     border: '1.5px solid var(--accent)',

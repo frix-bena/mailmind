@@ -14,7 +14,7 @@ const QUICK_COMMANDS = [
   'clear'
 ];
 
-const AGENT_IMAGE_URL = 'https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D';
+const AGENT_IMAGE_URL = 'https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=1920&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D';
 
 export default function TerminalPage() {
   const router = useRouter();
@@ -253,7 +253,7 @@ Direct CLI flags:
         <div className="page-content">
           {/* Agent Banner with background image */}
           <div style={{
-            backgroundImage: `linear-gradient(90deg, rgba(13, 17, 23, 0.92) 0%, rgba(13, 17, 23, 0.78) 50%, rgba(13, 17, 23, 0.92) 100%), url("${AGENT_IMAGE_URL}")`,
+            backgroundImage: `linear-gradient(90deg, rgba(13, 17, 23, 0.45) 0%, rgba(13, 17, 23, 0.20) 50%, rgba(13, 17, 23, 0.45) 100%), url("${AGENT_IMAGE_URL}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             border: '1px solid var(--border)',
@@ -325,7 +325,7 @@ Direct CLI flags:
           </div>
 
           <div style={{
-            backgroundImage: `linear-gradient(rgba(13, 17, 23, 0.88), rgba(13, 17, 23, 0.94)), url("${AGENT_IMAGE_URL}")`,
+            backgroundImage: `linear-gradient(rgba(13, 17, 23, 0.45), rgba(13, 17, 23, 0.60)), url("${AGENT_IMAGE_URL}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             border: '1px solid var(--border)',
