@@ -4,10 +4,13 @@
 
 **A permission-based email assistant that reads your inbox, keeps you informed, and only replies when you say so.**
 
+[![Live App](https://img.shields.io/badge/Live%20App-mailmind.app-4F46E5?logo=googlechrome&logoColor=white)](https://mailmind.app)
 [![n8n](https://img.shields.io/badge/Automation-n8n-EA4B71?logo=n8n&logoColor=white)](https://n8n.io/)
 [![OAuth](https://img.shields.io/badge/Auth-OAuth%202.0-4285F4?logo=google&logoColor=white)](#-authentication)
 [![License](https://img.shields.io/badge/License-Personal%20Use-lightgrey)](#-license)
 [![Status](https://img.shields.io/badge/Status-Concept%20%2F%20Planning-yellow)](#-roadmap)
+
+🌐 **Live Application:** [mailmind.app](https://mailmind.app)
 
 </div>
 

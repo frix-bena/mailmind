@@ -1,9 +1,20 @@
 import './globals.css';
 
 export const metadata = {
+  metadataBase: new URL('https://mailmind.app'),
   title: 'MailMind — AI Email Assistant',
   description: 'Your AI-powered inbox assistant. Read, classify, and reply to emails with permission-based AI drafts.',
   keywords: 'email assistant, AI email, inbox management, smart replies',
+  openGraph: {
+    title: 'MailMind — AI Email Assistant',
+    description: 'Your AI-powered inbox assistant. Read, classify, and reply to emails with permission-based AI drafts.',
+    url: 'https://mailmind.app',
+    siteName: 'MailMind',
+    type: 'website',
+  },
+  alternates: {
+    canonical: 'https://mailmind.app',
+  },
 };
 
 export default function RootLayout({ children }) {
