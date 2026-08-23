@@ -452,18 +452,6 @@ export default function SettingsPage() {
                 </button>
               </div>
             </Row>
-            <Row
-              label="Terminal Agent CLI Access"
-              desc="Run 'npm run agent' in your terminal for direct CLI email history & bash execution"
-            >
-              <button
-                className="chip"
-                onClick={() => router.push('/terminal')}
-                style={{ fontSize: 12, cursor: 'pointer' }}
-              >
-                💻 Open Terminal Agent →
-              </button>
-            </Row>
           </Section>
 
           {/* Reply Preferences */}

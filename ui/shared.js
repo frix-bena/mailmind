@@ -49,7 +49,6 @@ function renderSidebar(activePage) {
   const navItems = [
     { href:'inbox.html', icon:'📥', label:'Inbox', badge:null, id:'inbox' },
     { href:'search.html', icon:'🔍', label:'Ask Inbox', badge:null, id:'search' },
-    { href:'terminal.html', icon:'💻', label:'Terminal', badge:null, id:'terminal' },
     { href:'settings.html', icon:'⚙️', label:'Settings', badge:null, id:'settings' },
   ];
   const navHTML = navItems.map(n => `
