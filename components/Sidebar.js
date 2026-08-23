@@ -3,97 +3,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import ComposeModal from '@/components/ComposeModal';
+import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { extractDisplayName } from '@/lib/avatar-utils';
-
-function UserProfileModal({ user, onClose, onOpenCompose, onDisconnect }) {
-  const router = useRouter();
-  const displayName = extractDisplayName(user?.name, user?.email);
-  const userAvatarSrc = user?.avatar || user?.picture || user?.photoUrl || user?.image || null;
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 460, padding: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-          <EmailAvatar
-            src={userAvatarSrc}
-            email={user?.email}
-            name={displayName}
-            size={64}
-            style={{ border: '2px solid var(--accent)' }}
-          />
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{displayName}</h2>
-            <div style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'monospace' }}>{user?.email}</div>
-            <div style={{ marginTop: 4 }}>
-              <span className="badge badge-low" style={{ fontSize: 10 }}>● Connected & Active</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'var(--surface2)',
-          borderRadius: 8,
-          padding: 14,
-          marginBottom: 20,
-          fontSize: 13,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          border: '1px solid var(--border)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--muted)' }}>Email Provider:</span>
-            <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{user?.provider || 'Gmail'}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--muted)' }}>AI Reply Tone:</span>
-            <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{user?.tone || 'Professional'}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'var(--muted)' }}>Monitoring Mode:</span>
-            <span style={{ fontWeight: 600 }}>Permission-first (Human approval)</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => {
-              onClose();
-              onOpenCompose && onOpenCompose();
-            }}
-          >
-            ✉️ Compose Email
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => {
-              onClose();
-              router.push('/settings');
-            }}
-          >
-            ⚙️ Edit Settings
-          </button>
-        </div>
-
-        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 0 }}>
-          <button
-            className="btn btn-danger btn-sm"
-            onClick={() => {
-              onClose();
-              onDisconnect && onDisconnect();
-            }}
-          >
-            Log out / Disconnect
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
@@ -128,7 +39,10 @@ export default function Sidebar({ user: propUser }) {
               ...(prev || {}),
               ...data,
               name: prev?.name || data.name,
-              avatar: prev?.avatar || prev?.picture || data.avatar || data.picture
+              avatar: prev?.avatar || prev?.picture || data.avatar || data.picture,
+              picture: prev?.picture || prev?.avatar || data.picture || data.avatar,
+              avatarColor: prev?.avatarColor || prev?.color || data.avatarColor || data.color,
+              color: prev?.color || prev?.avatarColor || data.color || data.avatarColor
             }));
           }
         })
@@ -163,6 +77,8 @@ export default function Sidebar({ user: propUser }) {
   };
 
   const displayName = extractDisplayName(user?.name, user?.email);
+  const userAvatarSrc = user?.avatar || user?.picture || user?.photoUrl || user?.image || null;
+  const userAvatarColor = user?.avatarColor || user?.color || null;
 
   return (
     <>
@@ -270,16 +186,39 @@ export default function Sidebar({ user: propUser }) {
             )}
           </div>
 
-          {/* User profile clickable chip with real avatar and profile modal */}
+          {/* User profile clickable chip with real Gmail avatar and Google Account modal */}
           {user && user.email && (
             <div
               className="user-chip"
               onClick={() => setUserModalOpen(true)}
-              title="Click to view your profile and account details"
+              title="Google Account: Click to customize profile picture and view details"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 10px',
+                borderRadius: 12,
+                cursor: 'pointer',
+                transition: 'background 0.15s ease'
+              }}
             >
-              <EmailAvatar email={user.email} name={displayName} size={34} showTooltip={false} />
+              <EmailAvatar
+                src={userAvatarSrc}
+                email={user.email}
+                name={displayName}
+                size={36}
+                isUser={true}
+                color={userAvatarColor}
+                showTooltip={false}
+                style={{
+                  border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)'
+                }}
+              />
               <div className="user-info">
-                <div className="user-name">{displayName}</div>
+                <div className="user-name" style={{ fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif' }}>
+                  {displayName}
+                </div>
                 <div className="user-email">{user.email}</div>
               </div>
             </div>
@@ -288,11 +227,14 @@ export default function Sidebar({ user: propUser }) {
       </aside>
 
       {userModalOpen && (
-        <UserProfileModal
+        <GoogleAccountModal
           user={user}
           onClose={() => setUserModalOpen(false)}
           onOpenCompose={() => setComposeOpen(true)}
           onDisconnect={handleDisconnect}
+          onUserUpdate={(updatedUser) => {
+            setUser(updatedUser);
+          }}
         />
       )}
 

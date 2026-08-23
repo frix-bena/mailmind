@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import EmailAvatar from '@/components/EmailAvatar';
+import { extractDisplayName } from '@/lib/avatar-utils';
 
 const STEPS = ['connect', 'tone', 'notifications', 'done'];
 
@@ -437,13 +439,26 @@ export default function OnboardingPage() {
         {/* Step: Done */}
         {step === 'done' && (
           <div className="fade-in" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>🎉</div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>You're all set!</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28, maxWidth: 360, margin: '0 auto 28px' }}>
+            <div style={{ display: 'inline-block', marginBottom: 14 }}>
+              <EmailAvatar
+                email={email}
+                name={extractDisplayName('', email)}
+                size={72}
+                isUser={true}
+                style={{
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 4px 20px rgba(108, 99, 255, 0.35)'
+                }}
+              />
+            </div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif' }}>
+              You're all set!
+            </h2>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>
               MailMind is now connected to your inbox, reading incoming messages, summarizing email history, and drafting replies — always waiting for your approval before sending.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 340, margin: '0 auto 32px', textAlign: 'left' }}>
-              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Connected: <strong>{email}</strong></div>
+              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Google / Gmail Account: <strong>{email}</strong></div>
               <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ AI Reply Tone: {tone}</div>
               <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Full History &amp; Search Enabled</div>
               <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Permission-first: No replies sent without your approval</div>

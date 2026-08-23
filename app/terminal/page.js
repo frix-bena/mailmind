@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import TopbarUserButton from '@/components/TopbarUserButton';
+import GoogleAccountModal from '@/components/GoogleAccountModal';
 
 const QUICK_COMMANDS = [
   'status',
@@ -15,6 +17,7 @@ const QUICK_COMMANDS = [
 export default function TerminalPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [userModalOpen, setUserModalOpen] = useState(false);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState([
     { type: 'system', text: '📧 MailMind Terminal Agent Shell Initialized.' },
@@ -241,6 +244,7 @@ Direct CLI flags:
             >
               🧹 Clear
             </button>
+            <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
           </div>
         </div>
 
@@ -324,6 +328,22 @@ Direct CLI flags:
           </div>
         </div>
       </div>
+
+      {userModalOpen && (
+        <GoogleAccountModal
+          user={user}
+          onClose={() => setUserModalOpen(false)}
+          onOpenCompose={() => router.push('/inbox')}
+          onDisconnect={async () => {
+            try {
+              await fetch('/api/auth/disconnect', { method: 'POST' });
+            } catch {}
+            localStorage.removeItem('mailmind_user');
+            router.replace('/onboarding');
+          }}
+          onUserUpdate={(updated) => setUser(updated)}
+        />
+      )}
     </div>
   );
 }

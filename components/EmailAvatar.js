@@ -49,6 +49,11 @@ export default function EmailAvatar({
   name = '',
   size = 40,
   icon,
+  color: customColor,
+  isUser = false,
+  ring = false,
+  showCameraBadge = false,
+  onCameraClick,
   children,
   className = '',
   style = {},
@@ -66,20 +71,20 @@ export default function EmailAvatar({
 
   // Compute deterministic initials, domain, color, and verification
   const initial = useMemo(() => getSenderInitial(name, email), [name, email]);
-  const color = useMemo(() => getSenderColor(email || name), [email, name]);
+  const color = useMemo(() => getSenderColor(email || name, customColor), [email, name, customColor]);
   const cleanEmail = useMemo(() => extractCleanEmail(email), [email]);
   const domain = useMemo(() => extractDomain(cleanEmail), [cleanEmail]);
   const isVerified = useMemo(() => isVerifiedSender(cleanEmail, domain), [cleanEmail, domain]);
 
-  // Compute prioritized image sources (Direct src, Brand SVG, Google Favicon, Gravatar, Clearbit)
+  // Compute prioritized image sources (Direct src, Google Profile, Gravatar, Brand SVG, Clearbit)
   const sources = useMemo(
     () => {
       const list = [];
       if (src) list.push({ type: 'custom', url: src, isBrand: false });
-      const fallbackList = getAvatarSources(cleanEmail, numericSize, allowClearbit);
+      const fallbackList = getAvatarSources(cleanEmail, numericSize, allowClearbit, isUser);
       return [...list, ...fallbackList];
     },
-    [src, cleanEmail, numericSize, allowClearbit]
+    [src, cleanEmail, numericSize, allowClearbit, isUser]
   );
 
   const [sourceIndex, setSourceIndex] = useState(0);
@@ -91,11 +96,11 @@ export default function EmailAvatar({
     setSourceIndex(0);
     setImageError(false);
     setImageLoaded(false);
-  }, [src, cleanEmail, numericSize, allowClearbit]);
+  }, [src, cleanEmail, numericSize, allowClearbit, isUser]);
 
   const currentSource = sources[sourceIndex] || null;
   const imageSrc = currentSource ? currentSource.url : null;
-  const isBrandIcon = currentSource?.isBrand || (currentSource?.type === 'brand_svg' || currentSource?.type === 'google_fav');
+  const isBrandIcon = !isUser && (currentSource?.isBrand || (currentSource?.type === 'brand_svg' || currentSource?.type === 'google_fav'));
 
   const handleImageError = () => {
     // If there's another fallback source in the cascade, advance to it
@@ -113,6 +118,7 @@ export default function EmailAvatar({
   const imageAlt = alt || `${displayName}'s avatar`;
 
   const badgeSize = Math.max(13, Math.round(numericSize * 0.34));
+  const cameraBadgeSize = Math.max(18, Math.round(numericSize * 0.36));
 
   // Outer container inline style ensuring strict geometry and alignment
   const containerStyle = {
@@ -131,6 +137,8 @@ export default function EmailAvatar({
     borderRadius: '50%',
     cursor: onClick ? 'pointer' : 'inherit',
     boxSizing: 'border-box',
+    outline: ring ? '2px solid var(--accent, #6c63ff)' : 'none',
+    outlineOffset: '2px',
     ...style
   };
 
@@ -154,7 +162,7 @@ export default function EmailAvatar({
     userSelect: 'none',
     boxShadow: imageLoaded && isBrandIcon
       ? 'inset 0 0 0 1px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.15)'
-      : '0 1px 3px rgba(0, 0, 0, 0.25)'
+      : 'inset 0 0 0 1px rgba(255, 255, 255, 0.15), 0 1px 3px rgba(0, 0, 0, 0.25)'
   };
 
   // Centered initials text style matching Gmail's clean Google Sans / Roboto typography
@@ -290,7 +298,7 @@ export default function EmailAvatar({
         3. GMAIL VERIFIED BADGE OVERLAY:
         Rendered outside the clipped circle to maintain badge visibility without clipping.
       */}
-      {(showVerifiedBadge || (showVerifiedBadge !== false && isVerified && numericSize >= 30)) && (
+      {!showCameraBadge && (showVerifiedBadge || (showVerifiedBadge !== false && isVerified && numericSize >= 30)) && (
         <span
           title="Verified Sender — Google verified domain (BIMI / DMARC Authenticated)"
           className="email-avatar-badge"
@@ -310,6 +318,59 @@ export default function EmailAvatar({
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </span>
+      )}
+
+      {/*
+        4. GOOGLE ACCOUNT CAMERA / EDIT BADGE:
+        Rendered on user avatar when editing/managing profile picture in Google Account modal or Settings.
+      */}
+      {showCameraBadge && (
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            if (onCameraClick) onCameraClick();
+          }}
+          title="Change profile picture"
+          aria-label="Change profile picture"
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            width: `${cameraBadgeSize}px`,
+            height: `${cameraBadgeSize}px`,
+            minWidth: `${cameraBadgeSize}px`,
+            minHeight: `${cameraBadgeSize}px`,
+            borderRadius: '50%',
+            background: 'var(--surface2, #242436)',
+            color: 'var(--text, #ffffff)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '2px solid var(--surface, #151520)',
+            cursor: 'pointer',
+            padding: 0,
+            zIndex: 3,
+            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
+            transition: 'transform 0.15s ease, background 0.15s ease'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = 'var(--accent, #6c63ff)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'var(--surface2, #242436)'; }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="60%"
+            height="60%"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+        </button>
       )}
     </div>
   );

@@ -11,6 +11,8 @@ export async function GET() {
         name: config.name || null,
         avatar: config.avatar || config.picture || config.photoUrl || null,
         picture: config.picture || config.avatar || config.photoUrl || null,
+        avatarColor: config.avatarColor || config.color || null,
+        color: config.color || config.avatarColor || null,
         provider: config.provider || 'gmail',
         tone: config.tone || 'professional',
         savedAt: config.savedAt

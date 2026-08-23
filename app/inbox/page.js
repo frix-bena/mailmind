@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import EmailCard from '@/components/EmailCard';
 import ComposeModal from '@/components/ComposeModal';
+import TopbarUserButton from '@/components/TopbarUserButton';
+import GoogleAccountModal from '@/components/GoogleAccountModal';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
 
@@ -21,6 +23,7 @@ export default function InboxPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [historyLimit, setHistoryLimit] = useState(15);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [userModalOpen, setUserModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
   const showToast = (msg) => {
@@ -250,6 +253,8 @@ export default function InboxPage() {
                 {pending} awaiting approval
               </button>
             )}
+
+            <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
           </div>
         </div>
 
@@ -446,6 +451,22 @@ export default function InboxPage() {
             showToast('✅ New email sent successfully');
             loadEmails(historyLimit);
           }}
+        />
+      )}
+
+      {userModalOpen && (
+        <GoogleAccountModal
+          user={user}
+          onClose={() => setUserModalOpen(false)}
+          onOpenCompose={() => setComposeOpen(true)}
+          onDisconnect={async () => {
+            try {
+              await fetch('/api/auth/disconnect', { method: 'POST' });
+            } catch {}
+            localStorage.removeItem('mailmind_user');
+            router.replace('/onboarding');
+          }}
+          onUserUpdate={(updated) => setUser(updated)}
         />
       )}
     </div>

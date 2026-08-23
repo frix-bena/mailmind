@@ -51,6 +51,8 @@ app.get('/api/auth/status', (req, res) => {
         name: config.name || null,
         avatar: config.avatar || config.picture || config.photoUrl || null,
         picture: config.picture || config.avatar || config.photoUrl || null,
+        avatarColor: config.avatarColor || config.color || null,
+        color: config.color || config.avatarColor || null,
         provider: config.provider || 'gmail',
         tone: config.tone || 'professional',
         savedAt: config.savedAt
@@ -59,6 +61,35 @@ app.get('/api/auth/status', (req, res) => {
     res.json({ connected: false });
   } catch (err) {
     res.status(500).json({ connected: false, error: err.message || 'Status check failed.' });
+  }
+});
+
+app.post('/api/auth/profile', (req, res) => {
+  try {
+    const { name, avatar, picture, avatarColor, color, tone } = req.body || {};
+    const existing = loadLocalConfig() || {};
+    const updated = {
+      ...existing,
+      name: name !== undefined ? name : existing.name,
+      avatar: avatar !== undefined ? avatar : existing.avatar,
+      picture: picture !== undefined ? picture : existing.picture,
+      avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
+      color: color !== undefined ? color : existing.color,
+      tone: tone !== undefined ? tone : existing.tone,
+      updatedAt: new Date().toISOString()
+    };
+    saveLocalConfig(updated);
+    res.json({
+      success: true,
+      email: updated.email,
+      name: updated.name,
+      avatar: updated.avatar,
+      picture: updated.picture,
+      avatarColor: updated.avatarColor,
+      color: updated.color
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
