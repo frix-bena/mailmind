@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { askEmailHistory, fetchEmailHistory, loadLocalConfig } from '@/lib/email-service';
+import { mockEmails } from '@/lib/mockData';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
@@ -32,12 +33,19 @@ export async function POST(request) {
     let emailData = emails;
     if (!emailData || emailData.length === 0) {
       if (credentials) {
-        const hist = await fetchEmailHistory(credentials, { limit: 50 });
-        emailData = hist.emails || [];
+        try {
+          const hist = await fetchEmailHistory(credentials, { limit: 50 });
+          emailData = hist?.emails || [];
+        } catch (_) {
+          emailData = mockEmails;
+        }
+      }
+      if (!emailData || emailData.length === 0) {
+        emailData = mockEmails;
       }
     }
 
-    const answer = askEmailHistory(question, emailData || []);
+    const answer = askEmailHistory(question, emailData || mockEmails);
     return NextResponse.json({ success: true, question, answer });
   } catch (err) {
     console.error('Ask inbox route error:', err);

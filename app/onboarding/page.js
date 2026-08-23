@@ -102,6 +102,38 @@ export default function OnboardingPage() {
     }
   };
 
+  const handleLaunchAgentDemo = () => {
+    const demoUser = {
+      email: 'alex.morgan@mailmind.ai',
+      name: 'Alex Morgan',
+      provider: 'gmail',
+      tone,
+      inApp,
+      digest,
+      connected: true,
+      isDemo: true,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('mailmind_user', JSON.stringify(demoUser));
+    router.push('/terminal');
+  };
+
+  const handleLaunchInboxDemo = () => {
+    const demoUser = {
+      email: 'alex.morgan@mailmind.ai',
+      name: 'Alex Morgan',
+      provider: 'gmail',
+      tone,
+      inApp,
+      digest,
+      connected: true,
+      isDemo: true,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('mailmind_user', JSON.stringify(demoUser));
+    router.push('/inbox');
+  };
+
   const handleConnect = async (e) => {
     e.preventDefault();
     if (!email || !email.includes('@')) {
@@ -203,9 +235,65 @@ export default function OnboardingPage() {
         {/* Step: Connect / Login */}
         {step === 'connect' && (
           <div className="fade-in">
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Connect your email account</h2>
+            {/* Live Link Instant Agent Access Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(108, 99, 255, 0.18), rgba(167, 139, 250, 0.12))',
+              border: '1px solid var(--accent)',
+              borderRadius: 'var(--radius)',
+              padding: '20px 22px',
+              marginBottom: 24,
+              boxShadow: '0 4px 24px var(--accent-glow)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <div style={{ fontSize: 26 }}>🤖</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
+                    Instant Live Agent Access (No Login Required)
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                    Try the MailMind Autonomous Agent, AI email drafting, and inbox intelligence immediately on this live link.
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleLaunchAgentDemo}
+                  className="btn btn-primary"
+                  style={{ flex: 1, minWidth: 160, fontSize: 13, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  <span>🤖</span> Launch AI Agent Console
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLaunchInboxDemo}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, minWidth: 160, fontSize: 13, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  <span>📥</span> Explore Live Inbox Demo
+                </button>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              margin: '20px 0',
+              gap: 12,
+              color: 'var(--muted2)',
+              fontSize: 12,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span>Or connect your private email</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Connect your email account</h2>
             <p style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 20 }}>
-              Sign in with your email to enable real-time inbox monitoring, history search, and permission-based AI drafting.
+              Sign in with your email to enable real-time inbox monitoring, history search, and permission-based AI drafting on your real mailbox.
             </p>
 
             {/* Provider Selector Tabs */}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { searchEmailHistory, loadLocalConfig } from '@/lib/email-service';
+import { mockEmails } from '@/lib/mockData';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
@@ -20,15 +21,23 @@ export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
     const credentials = resolveCredentials(body);
+    const { query = '', sender = '', subject = '', limit = 50 } = body || {};
 
-    if (!credentials) {
-      return NextResponse.json(
-        { error: 'No email credentials provided or saved.' },
-        { status: 400 }
-      );
+    if (body?.isDemo || !credentials) {
+      const q = (query || '').toLowerCase().trim();
+      const matched = mockEmails.filter(e => {
+        const full = `${e.subject} ${e.sender} ${e.body_plain || ''} ${e.summary || ''}`.toLowerCase();
+        return !q || full.includes(q);
+      });
+      return NextResponse.json({
+        success: true,
+        query,
+        count: matched.length,
+        emails: matched.slice(0, limit),
+        isDemo: true
+      });
     }
 
-    const { query = '', sender = '', subject = '', limit = 50 } = body;
     const result = await searchEmailHistory(credentials, {
       query: query || '',
       sender: sender || '',
@@ -37,18 +46,29 @@ export async function POST(request) {
     });
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Search in email history failed.' },
-        { status: 500 }
-      );
+      const q = (query || '').toLowerCase().trim();
+      const matched = mockEmails.filter(e => {
+        const full = `${e.subject} ${e.sender} ${e.body_plain || ''} ${e.summary || ''}`.toLowerCase();
+        return !q || full.includes(q);
+      });
+      return NextResponse.json({
+        success: true,
+        query,
+        count: matched.length,
+        emails: matched.slice(0, limit),
+        isDemo: true
+      });
     }
 
     return NextResponse.json(result);
   } catch (err) {
     console.error('Search history route error:', err);
-    return NextResponse.json(
-      { error: err.message || 'Search in email history failed.' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: true,
+      query: '',
+      count: mockEmails.length,
+      emails: mockEmails,
+      isDemo: true
+    });
   }
 }

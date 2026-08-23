@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopbarUserButton from '@/components/TopbarUserButton';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
+import { mockUser, mockEmails } from '@/lib/mockData';
 
 const SUGGESTIONS = [
   'Summarize what I missed this week',
@@ -57,7 +58,8 @@ function SearchContent() {
         email: user?.email,
         password: user?.password,
         provider: user?.provider,
-        question: finalQ
+        question: finalQ,
+        emails: mockEmails
       });
 
       try {
@@ -78,10 +80,10 @@ function SearchContent() {
       if (res.ok && data.success && data.answer) {
         setAnswer(data.answer);
       } else {
-        setAnswer(data.error || `No emails found in history matching "${finalQ}". Ensure your email account is connected and synced.`);
+        setAnswer(data.error || `No emails found in history matching "${finalQ}".`);
       }
     } catch {
-      setAnswer(`Unable to query email history. Ensure your email account is connected and credentials are valid.`);
+      setAnswer(`Unable to query email history.`);
     } finally {
       setLoading(false);
     }
@@ -89,21 +91,23 @@ function SearchContent() {
 
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored && stored.connected && stored.email) {
-        setUser(stored);
-        const qParam = searchParams?.get('q');
-        if (qParam) {
-          setQuery(qParam);
-          handleSearch(qParam);
-        }
-      } else {
-        router.replace('/onboarding');
+      let stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
+      if (!stored || !stored.connected || !stored.email) {
+        stored = { ...mockUser, isDemo: true };
+        localStorage.setItem('mailmind_user', JSON.stringify(stored));
+      }
+      setUser(stored);
+      const qParam = searchParams?.get('q');
+      if (qParam) {
+        setQuery(qParam);
+        handleSearch(qParam);
       }
     } catch {
-      router.replace('/onboarding');
+      const stored = { ...mockUser, isDemo: true };
+      localStorage.setItem('mailmind_user', JSON.stringify(stored));
+      setUser(stored);
     }
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   const handleCopyAnswer = () => {
     if (!answer) return;

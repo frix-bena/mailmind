@@ -48,6 +48,7 @@ function renderSidebar(activePage) {
   const initial = displayName ? displayName[0].toUpperCase() : 'U';
   const navItems = [
     { href:'inbox.html', icon:'📥', label:'Inbox', badge:null, id:'inbox' },
+    { href:'terminal.html', icon:'🤖', label:'AI Agent', badge:'Live', id:'terminal' },
     { href:'search.html', icon:'🔍', label:'Ask Inbox', badge:null, id:'search' },
     { href:'settings.html', icon:'⚙️', label:'Settings', badge:null, id:'settings' },
   ];

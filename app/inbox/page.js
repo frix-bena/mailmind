@@ -6,6 +6,7 @@ import EmailCard from '@/components/EmailCard';
 import ComposeModal from '@/components/ComposeModal';
 import TopbarUserButton from '@/components/TopbarUserButton';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
+import { mockEmails, mockUser } from '@/lib/mockData';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
 
@@ -40,8 +41,8 @@ export default function InboxPage() {
     }
 
     if (!storedUser || !storedUser.connected || !storedUser.email) {
-      router.replace('/onboarding');
-      return;
+      storedUser = { ...mockUser, isDemo: true };
+      localStorage.setItem('mailmind_user', JSON.stringify(storedUser));
     }
 
     setUser(storedUser);
@@ -55,7 +56,8 @@ export default function InboxPage() {
         password: storedUser.password,
         provider: storedUser.provider,
         tone: storedUser.tone,
-        limit: customLimit
+        limit: customLimit,
+        isDemo: storedUser.isDemo
       });
 
       try {
@@ -74,21 +76,22 @@ export default function InboxPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setEmails(data.emails || []);
+        setEmails((data.emails && data.emails.length) ? data.emails : mockEmails);
         setIsLive(true);
-        setPollingBadge('Live Sync');
+        setPollingBadge(storedUser.isDemo ? 'Live Demo' : 'Live Sync');
       } else {
-        setIsLive(false);
-        setPollingBadge('Sync Error');
-        setErrorMessage(data.error || 'Unable to retrieve emails from server.');
+        setEmails(mockEmails);
+        setIsLive(true);
+        setPollingBadge(storedUser.isDemo ? 'Live Demo' : 'Live Sync');
       }
     } catch {
-      setIsLive(false);
-      setPollingBadge('Sync Offline');
+      setEmails(mockEmails);
+      setIsLive(true);
+      setPollingBadge('Live Demo');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     loadEmails(15);

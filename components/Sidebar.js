@@ -54,6 +54,7 @@ export default function Sidebar({ user: propUser }) {
 
   const nav = [
     { href: '/inbox',    icon: '📥', label: 'Inbox',     badge: null },
+    { href: '/terminal', icon: '🤖', label: 'AI Agent',  badge: 'Live' },
     { href: '/search',   icon: '🔍', label: 'Ask Inbox', badge: null },
     { href: '/settings', icon: '⚙️',  label: 'Settings',  badge: null },
   ];

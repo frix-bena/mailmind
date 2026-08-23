@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { extractDisplayName } from '@/lib/avatar-utils';
+import { mockUser } from '@/lib/mockData';
 
 function Section({ title, children }) {
   return (
@@ -57,23 +58,25 @@ export default function SettingsPage() {
 
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored && stored.connected && stored.email) {
-        setUser(stored);
-        if (stored.name) setName(stored.name);
-        if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
-        if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
-        if (stored.tone) setTone(stored.tone);
-        if (stored.inApp !== undefined) setInApp(stored.inApp);
-        if (stored.digest !== undefined) setDigest(stored.digest);
-        if (stored.pollInterval) setPollInterval(stored.pollInterval);
-      } else {
-        router.replace('/onboarding');
+      let stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
+      if (!stored || !stored.connected || !stored.email) {
+        stored = { ...mockUser, isDemo: true };
+        localStorage.setItem('mailmind_user', JSON.stringify(stored));
       }
+      setUser(stored);
+      if (stored.name) setName(stored.name);
+      if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
+      if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
+      if (stored.tone) setTone(stored.tone);
+      if (stored.inApp !== undefined) setInApp(stored.inApp);
+      if (stored.digest !== undefined) setDigest(stored.digest);
+      if (stored.pollInterval) setPollInterval(stored.pollInterval);
     } catch {
-      router.replace('/onboarding');
+      const stored = { ...mockUser, isDemo: true };
+      localStorage.setItem('mailmind_user', JSON.stringify(stored));
+      setUser(stored);
     }
-  }, [router]);
+  }, []);
 
   const tones = [
     { id: 'professional', label: '💼 Professional' },
@@ -501,6 +504,25 @@ export default function SettingsPage() {
                 <option value="5">Every 5 minutes</option>
                 <option value="15">Every 15 minutes</option>
               </select>
+            </Row>
+          </Section>
+
+          {/* Autonomous AI Agent */}
+          <Section title="Autonomous AI Agent & Terminal">
+            <Row label="Interactive Agent Terminal" desc="Access autonomous inbox intelligence, classification & terminal CLI">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => router.push('/terminal')}
+                style={{ fontSize: 13, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <span>🤖</span> Launch AI Agent Console →
+              </button>
+            </Row>
+            <Row label="System CLI Agent" desc="Run MailMind natively from your system terminal with full node execution">
+              <div style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--surface2)', padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+                $ npm run agent
+              </div>
             </Row>
           </Section>
 
