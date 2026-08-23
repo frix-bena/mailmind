@@ -121,9 +121,18 @@ function SearchContent() {
       <Sidebar user={user} />
       <div className="main-area">
         <div className="topbar">
-          <span className="topbar-title">🔍 Ask your inbox & email history</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="chip" style={{ fontSize: 12 }}>
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('mailmind:toggle-drawer'))}
+            aria-label="Toggle navigation menu"
+            title="Menu"
+          >
+            ☰
+          </button>
+          <span className="topbar-title">🔍 Ask Inbox</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span className="chip hide-on-mobile" style={{ fontSize: 11.5 }}>
               📜 {historyScope}
             </span>
             <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />

@@ -213,21 +213,29 @@ export default function OnboardingPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24,
+      minHeight: '100vh',
+      minHeight: '100dvh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 14px',
+      boxSizing: 'border-box',
+      width: '100%',
+      maxWidth: '100vw',
+      overflowX: 'hidden'
     }}>
-      <div style={{ width: '100%', maxWidth: 540 }} className="fade-in">
+      <div style={{ width: '100%', maxWidth: 540, boxSizing: 'border-box' }} className="fade-in">
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 56, height: 56, background: 'linear-gradient(135deg, var(--accent), #a78bfa)',
+            width: 52, height: 52, background: 'linear-gradient(135deg, var(--accent), #a78bfa)',
             borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, margin: '0 auto 14px', boxShadow: '0 4px 20px rgba(108,99,255,0.35)'
+            fontSize: 26, margin: '0 auto 12px', boxShadow: '0 4px 20px rgba(108,99,255,0.35)'
           }}>✉️</div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>
             Mail<span style={{ color: 'var(--accent)' }}>Mind</span>
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>Log in with your email to monitor your inbox & draft replies</p>
+          <p style={{ color: 'var(--muted)', fontSize: 13.5, marginTop: 4 }}>Log in with your email to monitor your inbox & draft replies</p>
         </div>
 
         <ProgressBar step={step} />
@@ -240,37 +248,37 @@ export default function OnboardingPage() {
               background: 'linear-gradient(135deg, rgba(108, 99, 255, 0.18), rgba(167, 139, 250, 0.12))',
               border: '1px solid var(--accent)',
               borderRadius: 'var(--radius)',
-              padding: '20px 22px',
-              marginBottom: 24,
+              padding: '18px 18px',
+              marginBottom: 20,
               boxShadow: '0 4px 24px var(--accent-glow)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 26 }}>🤖</div>
+                <div style={{ fontSize: 24, flexShrink: 0 }}>🤖</div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
-                    Instant Live Agent Access (No Login Required)
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
+                    Instant Live Agent Access
                   </div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
-                    Try the MailMind Autonomous Agent, AI email drafting, and inbox intelligence immediately on this live link.
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                    Try the Autonomous Agent, AI email drafting & inbox intelligence immediately on this live link.
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={handleLaunchAgentDemo}
                   className="btn btn-primary"
-                  style={{ flex: 1, minWidth: 160, fontSize: 13, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  style={{ flex: 1, minWidth: 140, fontSize: 12.5, padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
-                  <span>🤖</span> Launch AI Agent Console
+                  <span>🤖</span> Launch Agent Console
                 </button>
                 <button
                   type="button"
                   onClick={handleLaunchInboxDemo}
                   className="btn btn-secondary"
-                  style={{ flex: 1, minWidth: 160, fontSize: 13, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  style={{ flex: 1, minWidth: 140, fontSize: 12.5, padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
-                  <span>📥</span> Explore Live Inbox Demo
+                  <span>📥</span> Live Inbox Demo
                 </button>
               </div>
             </div>
@@ -278,10 +286,10 @@ export default function OnboardingPage() {
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              margin: '20px 0',
-              gap: 12,
+              margin: '18px 0',
+              gap: 10,
               color: 'var(--muted2)',
-              fontSize: 12,
+              fontSize: 11.5,
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: 0.5
@@ -291,13 +299,13 @@ export default function OnboardingPage() {
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
             </div>
 
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Connect your email account</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 20 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Connect your email account</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
               Sign in with your email to enable real-time inbox monitoring, history search, and permission-based AI drafting on your real mailbox.
             </p>
 
             {/* Provider Selector Tabs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 6, marginBottom: 16 }}>
               {providers.map(p => (
                 <button
                   key={p.id}
@@ -311,8 +319,8 @@ export default function OnboardingPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 6,
-                    padding: '12px 8px',
+                    gap: 4,
+                    padding: '10px 6px',
                     borderRadius: 'var(--radius-sm)',
                     background: selectedProvider === p.id ? 'var(--accent-glow)' : 'var(--surface)',
                     border: `1px solid ${selectedProvider === p.id ? 'var(--accent)' : 'var(--border)'}`,
@@ -322,8 +330,8 @@ export default function OnboardingPage() {
                     textAlign: 'center'
                   }}
                 >
-                  <span style={{ fontSize: 20 }}>{p.icon}</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 600, lineHeight: 1.2 }}>{p.name.split('/')[0].trim()}</span>
+                  <span style={{ fontSize: 18 }}>{p.icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{p.name.split('/')[0].trim()}</span>
                 </button>
               ))}
             </div>

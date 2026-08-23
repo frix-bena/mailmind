@@ -216,10 +216,19 @@ export default function SettingsPage() {
       <Sidebar user={user} />
       <div className="main-area">
         <div className="topbar">
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('mailmind:toggle-drawer'))}
+            aria-label="Toggle navigation menu"
+            title="Menu"
+          >
+            ☰
+          </button>
           <span className="topbar-title">⚙️ Settings</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {saved && (
-              <span className="badge badge-low fade-in" style={{ fontSize: 12 }}>✅ Changes Saved</span>
+              <span className="badge badge-low fade-in" style={{ fontSize: 11, padding: '3px 8px' }}>✅ Saved</span>
             )}
             {user && (
               <button

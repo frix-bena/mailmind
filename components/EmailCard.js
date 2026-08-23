@@ -138,7 +138,7 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 700, padding: 26, borderRadius: 16 }}>
+      <div className="modal" style={{ maxWidth: 700 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div className="modal-header" style={{ margin: 0, fontSize: 18, flex: 1, paddingRight: 12, lineHeight: 1.4 }}>
             {email.subject}

@@ -118,7 +118,7 @@ export default function ComposeModal({
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 640, padding: 28 }}>
+      <div className="modal" style={{ maxWidth: 640 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
             {inReplyTo ? '↩️ Reply to Email' : '✉️ Compose New Email'}

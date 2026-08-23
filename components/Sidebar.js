@@ -13,6 +13,7 @@ export default function Sidebar({ user: propUser }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 'n1', type: 'connected', text: 'Email inbox connected & monitoring', time: 'Just now', read: false },
     { id: 'n2', type: 'system', text: 'Permission-first reply protection active', time: 'Just now', read: false }
@@ -50,6 +51,28 @@ export default function Sidebar({ user: propUser }) {
     }
   }, [propUser]);
 
+  // Listen for global custom events from mobile hamburger buttons
+  useEffect(() => {
+    const handleToggle = () => setDrawerOpen(prev => !prev);
+    const handleClose = () => setDrawerOpen(false);
+    const handleOpenCompose = () => setComposeOpen(true);
+
+    window.addEventListener('mailmind:toggle-drawer', handleToggle);
+    window.addEventListener('mailmind:close-drawer', handleClose);
+    window.addEventListener('mailmind:open-compose', handleOpenCompose);
+
+    return () => {
+      window.removeEventListener('mailmind:toggle-drawer', handleToggle);
+      window.removeEventListener('mailmind:close-drawer', handleClose);
+      window.removeEventListener('mailmind:open-compose', handleOpenCompose);
+    };
+  }, []);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
   const unread = notifications.filter(n => !n.read).length;
 
   const nav = [
@@ -82,22 +105,41 @@ export default function Sidebar({ user: propUser }) {
 
   return (
     <>
-      <aside className="sidebar">
+      {/* Mobile Drawer Backdrop */}
+      {drawerOpen && (
         <div
-          className="sidebar-logo"
-          onClick={() => router.push('/inbox')}
-          style={{ cursor: 'pointer' }}
-          title="Go to Inbox"
-        >
-          <div className="sidebar-logo-icon">✉️</div>
-          <div className="sidebar-logo-text">Mail<span>Mind</span></div>
+          className="sidebar-backdrop"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Main Navigation Sidebar / Drawer */}
+      <aside className={`sidebar${drawerOpen ? ' open' : ''}`}>
+        <div className="sidebar-logo">
+          <div
+            onClick={() => { router.push('/inbox'); setDrawerOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}
+            title="Go to Inbox"
+          >
+            <div className="sidebar-logo-icon">✉️</div>
+            <div className="sidebar-logo-text">Mail<span>Mind</span></div>
+          </div>
+          {/* Mobile Close Button */}
+          <button
+            className="sidebar-close-btn"
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Close navigation drawer"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Quick Compose Action Button */}
         <div style={{ padding: '16px 12px 0' }}>
           <button
             className="btn btn-primary"
-            onClick={() => setComposeOpen(true)}
+            onClick={() => { setComposeOpen(true); setDrawerOpen(false); }}
             style={{ width: '100%', fontSize: 13, padding: '9px 14px', borderRadius: 8 }}
           >
             ✏️ New Email
@@ -110,7 +152,11 @@ export default function Sidebar({ user: propUser }) {
               key={item.href}
               className={`nav-item${pathname === item.href ? ' active' : ''}`}
               href={item.href}
-              onClick={e => { e.preventDefault(); router.push(item.href); }}
+              onClick={e => {
+                e.preventDefault();
+                setDrawerOpen(false);
+                router.push(item.href);
+              }}
             >
               <span className="nav-icon">{item.icon}</span>
               {item.label}
@@ -137,7 +183,8 @@ export default function Sidebar({ user: propUser }) {
                 background: 'var(--surface)', border: '1px solid var(--border2)',
                 borderRadius: 'var(--radius)', padding: 16,
                 boxShadow: 'var(--shadow-lg)', zIndex: 200,
-                minWidth: 280,
+                minWidth: 260,
+                maxWidth: 'calc(100vw - 32px)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <span style={{ fontWeight: 700, fontSize: 14 }}>Notifications</span>
@@ -190,7 +237,7 @@ export default function Sidebar({ user: propUser }) {
           {user && user.email && (
             <div
               className="user-chip"
-              onClick={() => setUserModalOpen(true)}
+              onClick={() => { setUserModalOpen(true); setDrawerOpen(false); }}
               title="Google Account: Click to customize profile picture and view details"
               style={{
                 display: 'flex',
@@ -225,6 +272,60 @@ export default function Sidebar({ user: propUser }) {
           )}
         </div>
       </aside>
+
+      {/* Android Mobile Bottom Navigation Bar */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <button
+          type="button"
+          className={`mobile-bottom-item${pathname === '/inbox' ? ' active' : ''}`}
+          onClick={() => router.push('/inbox')}
+          aria-label="Inbox"
+        >
+          <span className="mobile-bottom-icon">📥</span>
+          <span className="mobile-bottom-label">Inbox</span>
+          {unread > 0 && <span className="mobile-bottom-dot" />}
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-item${pathname === '/terminal' || pathname === '/agent' ? ' active' : ''}`}
+          onClick={() => router.push('/terminal')}
+          aria-label="AI Agent"
+        >
+          <span className="mobile-bottom-icon">🤖</span>
+          <span className="mobile-bottom-label">Agent</span>
+        </button>
+
+        <button
+          type="button"
+          className="mobile-bottom-compose-btn"
+          onClick={() => setComposeOpen(true)}
+          aria-label="New Email"
+          title="Compose New Email"
+        >
+          <span>✏️</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-item${pathname === '/search' ? ' active' : ''}`}
+          onClick={() => router.push('/search')}
+          aria-label="Ask Inbox"
+        >
+          <span className="mobile-bottom-icon">🔍</span>
+          <span className="mobile-bottom-label">Ask AI</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-item${pathname === '/settings' ? ' active' : ''}`}
+          onClick={() => router.push('/settings')}
+          aria-label="Settings"
+        >
+          <span className="mobile-bottom-icon">⚙️</span>
+          <span className="mobile-bottom-label">Settings</span>
+        </button>
+      </nav>
 
       {userModalOpen && (
         <GoogleAccountModal

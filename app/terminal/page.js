@@ -511,28 +511,37 @@ ${draftContent}
       <Sidebar user={user} />
       <div className="main-area">
         <div className="topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="topbar-title">🤖 AI Agent Terminal</span>
-            <span className="chip" style={{ fontSize: 11, background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', borderColor: 'rgba(34, 197, 94, 0.3)' }}>
-              🟢 Live Link Access
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('mailmind:toggle-drawer'))}
+            aria-label="Toggle navigation menu"
+            title="Menu"
+          >
+            ☰
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+            <span className="topbar-title">🤖 AI Agent</span>
+            <span className="chip hide-on-mobile" style={{ fontSize: 11, background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+              🟢 Live Link
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
             <button
               className="btn btn-ghost btn-sm"
               onClick={handleCopyLog}
-              style={{ fontSize: 12, padding: '4px 10px' }}
+              style={{ fontSize: 12, padding: '4px 8px' }}
               title="Copy terminal session log"
             >
-              {copied ? '✅ Copied' : '📋 Copy Log'}
+              {copied ? '✅' : '📋'} <span className="hide-on-mobile">{copied ? 'Copied' : 'Copy'}</span>
             </button>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setHistory([])}
-              style={{ fontSize: 12, padding: '4px 10px' }}
+              style={{ fontSize: 12, padding: '4px 8px' }}
               title="Clear terminal screen"
             >
-              🧹 Clear
+              🧹 <span className="hide-on-mobile">Clear</span>
             </button>
             <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
           </div>

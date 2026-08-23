@@ -219,41 +219,41 @@ export default function InboxPage() {
       <Sidebar user={user} />
       <div className="main-area">
         <div className="topbar">
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('mailmind:toggle-drawer'))}
+            aria-label="Toggle navigation menu"
+            title="Menu"
+          >
+            ☰
+          </button>
           <span className="topbar-title">📥 Inbox</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="chip" style={{ fontSize: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span className="chip" style={{ fontSize: 11.5, padding: '3px 8px' }}>
               <span className={`notif-dot ${isLive ? 'notif-dot-green' : ''}`} style={{ width: 6, height: 6 }} />
-              {pollingBadge}
+              <span className="hide-on-mobile">{pollingBadge}</span>
             </span>
-
-            {/* Compose Button */}
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => setComposeOpen(true)}
-              style={{ fontSize: 12 }}
-            >
-              ✏️ Compose
-            </button>
 
             {/* Refresh Button */}
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => loadEmails(historyLimit)}
               disabled={loading}
-              style={{ fontSize: 12 }}
+              style={{ fontSize: 12, padding: '6px 10px' }}
               title="Refresh inbox messages"
             >
-              {loading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Refreshing…</> : '🔄 Refresh'}
+              {loading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> <span className="hide-on-mobile">Refreshing…</span></> : <>🔄 <span className="hide-on-mobile">Refresh</span></>}
             </button>
 
             {pending > 0 && (
               <button
                 className="badge badge-purple"
                 onClick={() => setFilter('Needs Reply')}
-                style={{ cursor: 'pointer', border: 'none' }}
+                style={{ cursor: 'pointer', border: 'none', padding: '3px 8px', fontSize: 11 }}
                 title="Filter emails needing your review"
               >
-                {pending} awaiting approval
+                {pending} <span className="hide-on-mobile">awaiting approval</span>
               </button>
             )}
 
