@@ -182,8 +182,6 @@ export default function OnboardingPage() {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--bg)',
-      backgroundImage: 'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(108,99,255,0.12), transparent)',
       padding: 24,
     }}>
       <div style={{ width: '100%', maxWidth: 540 }} className="fade-in">

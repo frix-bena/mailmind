@@ -14,7 +14,7 @@ const QUICK_COMMANDS = [
   'clear'
 ];
 
-const AGENT_IMAGE_URL = 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fHRlY2h8ZW58MHx8MHx8fDA%3D';
+const AGENT_IMAGE_URL = 'https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D';
 
 export default function TerminalPage() {
   const router = useRouter();
