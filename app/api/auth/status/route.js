@@ -8,6 +8,9 @@ export async function GET() {
       return NextResponse.json({
         connected: true,
         email: config.email,
+        name: config.name || null,
+        avatar: config.avatar || config.picture || config.photoUrl || null,
+        picture: config.picture || config.avatar || config.photoUrl || null,
         provider: config.provider || 'gmail',
         tone: config.tone || 'professional',
         savedAt: config.savedAt

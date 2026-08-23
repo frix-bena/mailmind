@@ -48,6 +48,9 @@ app.get('/api/auth/status', (req, res) => {
       return res.json({
         connected: true,
         email: config.email,
+        name: config.name || null,
+        avatar: config.avatar || config.picture || config.photoUrl || null,
+        picture: config.picture || config.avatar || config.photoUrl || null,
         provider: config.provider || 'gmail',
         tone: config.tone || 'professional',
         savedAt: config.savedAt
@@ -85,11 +88,15 @@ app.post('/api/auth/connect', async (req, res) => {
       });
     }
 
+    const detectedName = testResult.detectedName || (email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    credentials.name = detectedName;
+
     saveLocalConfig(credentials);
     res.json({
       success: true,
       connected: true,
       email: credentials.email,
+      name: credentials.name,
       provider: credentials.provider,
       totalMessages: testResult.totalMessages,
       unreadMessages: testResult.unreadMessages

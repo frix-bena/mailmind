@@ -38,12 +38,16 @@ export async function POST(request) {
       );
     }
 
+    const detectedName = testResult.detectedName || (email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    credentials.name = detectedName;
+
     saveLocalConfig(credentials);
 
     return NextResponse.json({
       success: true,
       connected: true,
       email: credentials.email,
+      name: credentials.name,
       provider: credentials.provider,
       totalMessages: testResult.totalMessages,
       unreadMessages: testResult.unreadMessages

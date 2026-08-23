@@ -8,12 +8,19 @@ import { extractDisplayName } from '@/lib/avatar-utils';
 function UserProfileModal({ user, onClose, onOpenCompose, onDisconnect }) {
   const router = useRouter();
   const displayName = extractDisplayName(user?.name, user?.email);
+  const userAvatarSrc = user?.avatar || user?.picture || user?.photoUrl || user?.image || null;
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 460, padding: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-          <EmailAvatar email={user?.email} name={displayName} size={64} style={{ border: '2px solid var(--accent)' }} />
+          <EmailAvatar
+            src={userAvatarSrc}
+            email={user?.email}
+            name={displayName}
+            size={64}
+            style={{ border: '2px solid var(--accent)' }}
+          />
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{displayName}</h2>
             <div style={{ fontSize: 13, color: 'var(--muted)', fontFamily: 'monospace' }}>{user?.email}</div>
@@ -101,15 +108,31 @@ export default function Sidebar({ user: propUser }) {
   ]);
 
   useEffect(() => {
-    if (propUser) {
+    if (propUser && propUser.email) {
       setUser(propUser);
     } else {
       try {
         const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-        if (stored) setUser(stored);
+        if (stored && stored.email) {
+          setUser(stored);
+        }
       } catch {
         // ignore
       }
+
+      fetch('/api/auth/status')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.connected && data.email) {
+            setUser(prev => ({
+              ...(prev || {}),
+              ...data,
+              name: prev?.name || data.name,
+              avatar: prev?.avatar || prev?.picture || data.avatar || data.picture
+            }));
+          }
+        })
+        .catch(() => {});
     }
   }, [propUser]);
 

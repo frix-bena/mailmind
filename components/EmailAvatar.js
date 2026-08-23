@@ -67,11 +67,13 @@ export default function EmailAvatar({
   const domain = useMemo(() => extractDomain(cleanEmail), [cleanEmail]);
   const isVerified = useMemo(() => isVerifiedSender(cleanEmail, domain), [cleanEmail, domain]);
 
-  // Compute prioritized image sources (Direct src or Gravatar -> Clearbit etc.)
+  // Compute prioritized image sources (Direct src, Gravatar, Clearbit)
   const sources = useMemo(
     () => {
-      if (src) return [{ type: 'custom', url: src }];
-      return getAvatarSources(cleanEmail, numericSize, allowClearbit);
+      const list = [];
+      if (src) list.push({ type: 'custom', url: src });
+      const fallbackList = getAvatarSources(cleanEmail, numericSize, allowClearbit);
+      return [...list, ...fallbackList];
     },
     [src, cleanEmail, numericSize, allowClearbit]
   );
@@ -92,7 +94,7 @@ export default function EmailAvatar({
 
   const handleImageError = () => {
     // If there's another fallback source in the cascade, advance to it
-    if (!src && sourceIndex + 1 < sources.length) {
+    if (sourceIndex + 1 < sources.length) {
       setSourceIndex(prev => prev + 1);
     } else {
       // Completely unmount <img> and fall back to initials
@@ -146,7 +148,7 @@ export default function EmailAvatar({
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)'
   };
 
-  // Centered initials text style matching Gmail's bold, clean typographic style
+  // Centered initials text style matching Gmail's clean typography
   const initialsStyle = {
     width: '100%',
     height: '100%',
@@ -156,12 +158,12 @@ export default function EmailAvatar({
     textAlign: 'center',
     color: '#ffffff',
     fontSize: `${fontSize}px`,
-    fontWeight: 600,
+    fontWeight: 500,
     lineHeight: 1,
     textTransform: 'uppercase',
     letterSpacing: '0px',
     userSelect: 'none',
-    fontFamily: 'inherit',
+    fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, -apple-system, sans-serif',
     boxSizing: 'border-box'
   };
 
