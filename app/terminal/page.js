@@ -14,6 +14,8 @@ const QUICK_COMMANDS = [
   'clear'
 ];
 
+const AGENT_IMAGE_URL = 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fHRlY2h8ZW58MHx8MHx8fDA%3D';
+
 export default function TerminalPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -249,6 +251,58 @@ Direct CLI flags:
         </div>
 
         <div className="page-content">
+          {/* Agent Banner with background image */}
+          <div style={{
+            backgroundImage: `linear-gradient(90deg, rgba(13, 17, 23, 0.92) 0%, rgba(13, 17, 23, 0.78) 50%, rgba(13, 17, 23, 0.92) 100%), url("${AGENT_IMAGE_URL}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: '18px 22px',
+            marginBottom: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            flexWrap: 'wrap',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.35)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                backgroundImage: `url("${AGENT_IMAGE_URL}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                border: '2px solid var(--accent)',
+                boxShadow: '0 0 16px var(--accent-glow)',
+                flexShrink: 0
+              }} />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                    MailMind Autonomous Agent
+                  </h1>
+                  <span className="badge badge-low" style={{ fontSize: 11, padding: '2px 8px' }}>
+                    ● Online
+                  </span>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                  Autonomous inbox intelligence, live IMAP monitoring & interactive CLI agent
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="chip" style={{ fontSize: 11.5, background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
+                🤖 Active Agent
+              </span>
+              <span className="chip" style={{ fontSize: 11.5, background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
+                ⚡ IMAP Live
+              </span>
+            </div>
+          </div>
+
           {/* Quick Command Chips */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
             <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Quick Run:</span>
@@ -271,15 +325,18 @@ Direct CLI flags:
           </div>
 
           <div style={{
-            background: '#0d1117',
+            backgroundImage: `linear-gradient(rgba(13, 17, 23, 0.88), rgba(13, 17, 23, 0.94)), url("${AGENT_IMAGE_URL}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: 20,
             fontFamily: 'monospace',
-            minHeight: '65vh',
+            minHeight: '62vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(4px)'
           }}>
             <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>
               {history.map((item, index) => (

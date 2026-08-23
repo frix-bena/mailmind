@@ -242,11 +242,31 @@ function SearchContent() {
                 </button>
               </div>
 
-              <div className="card" style={{ lineHeight: 1.8, fontSize: 14 }}>
-                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                  <span style={{ fontSize: 22 }}>🤖</span>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px', paddingTop: 4 }}>
-                    Agent Intelligence Response
+              <div className="card agent-card-bg" style={{
+                lineHeight: 1.8,
+                fontSize: 14,
+                border: '1px solid rgba(124, 109, 250, 0.3)',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.35)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    backgroundImage: `url("https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fHRlY2h8ZW58MHx8MHx8fDA%3D")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    border: '1.5px solid var(--accent)',
+                    boxShadow: '0 0 10px var(--accent-glow)',
+                    flexShrink: 0
+                  }} />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                      Agent Intelligence Response
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      Analyzed across email history
+                    </div>
                   </div>
                 </div>
                 <div style={{ lineHeight: 1.9, display: 'flex', flexDirection: 'column', gap: 4 }}>
