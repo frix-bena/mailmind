@@ -9,8 +9,7 @@ import {
   saveStoredAccounts,
   addOrUpdateAccount,
   removeStoredAccount,
-  switchActiveAccount,
-  PRESET_DEMO_ACCOUNTS
+  switchActiveAccount
 } from '@/lib/account-manager';
 
 const PROVIDERS = [
@@ -74,12 +73,14 @@ export default function GoogleAccountModal({
 
   // Add new account form state
   const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newProvider, setNewProvider] = useState('google');
   const [newHost, setNewHost] = useState('');
   const [newPort, setNewPort] = useState('993');
   const [newTone, setNewTone] = useState('professional');
+  const [newAvatarColor, setNewAvatarColor] = useState('#1a73e8');
   const [newAccountError, setNewAccountError] = useState('');
   const [newAccountConnecting, setNewAccountConnecting] = useState(false);
 
@@ -95,7 +96,7 @@ export default function GoogleAccountModal({
       const stored = getStoredAccounts();
       setAccounts(stored);
     } catch {
-      setAccounts(PRESET_DEMO_ACCOUNTS);
+      setAccounts([]);
     }
   };
 
@@ -202,6 +203,8 @@ export default function GoogleAccountModal({
     if (window.confirm('Remove ' + emailToRemove + ' from saved accounts?')) {
       removeStoredAccount(emailToRemove);
       refreshAccounts();
+      setSuccessMsg('Removed ' + emailToRemove);
+      setTimeout(() => setSuccessMsg(''), 2500);
     }
   };
 
@@ -220,54 +223,104 @@ export default function GoogleAccountModal({
     }
   };
 
-  // Connect and switch to a new email address
-  const handleConnectNewAccount = async (e) => {
-    e.preventDefault();
+  // Helper to validate and construct new candidate account object
+  const buildCandidateAccount = () => {
     if (!newEmail || !newEmail.includes('@')) {
       setNewAccountError('Please enter a valid email address.');
+      return null;
+    }
+
+    const cleanEmail = newEmail.trim().toLowerCase();
+    const candidateName = newName.trim() || extractDisplayName('', cleanEmail);
+
+    return {
+      email: cleanEmail,
+      name: candidateName,
+      provider: newProvider,
+      password: newPassword || undefined,
+      host: newProvider === 'custom' ? (newHost.trim() || undefined) : undefined,
+      port: newProvider === 'custom' ? (newPort.trim() || '993') : undefined,
+      tone: newTone,
+      avatarColor: newAvatarColor || selectedColor || '#1a73e8',
+      connected: true,
+      isDemo: false,
+      savedAt: new Date().toISOString()
+    };
+  };
+
+  const resetAddForm = () => {
+    setShowAddForm(false);
+    setNewName('');
+    setNewEmail('');
+    setNewPassword('');
+    setNewHost('');
+    setNewPort('993');
+    setNewTone('professional');
+    setNewAvatarColor('#1a73e8');
+    setNewAccountError('');
+    setNewAccountConnecting(false);
+  };
+
+  // Save new account to list without switching immediately
+  const handleAddAccountOnly = async (e) => {
+    e.preventDefault();
+    const candidate = buildCandidateAccount();
+    if (!candidate) return;
+
+    // Check if account already exists
+    const exists = accounts.some(a => a.email.toLowerCase() === candidate.email);
+    if (exists) {
+      setNewAccountError(`An account with ${candidate.email} already exists.`);
       return;
     }
 
     setNewAccountConnecting(true);
     setNewAccountError('');
 
-    const newName = extractDisplayName('', newEmail);
-    const candidateAccount = {
-      email: newEmail.trim().toLowerCase(),
-      name: newName,
-      provider: newProvider,
-      password: newPassword,
-      host: newProvider === 'custom' ? newHost : undefined,
-      port: newProvider === 'custom' ? newPort : undefined,
-      tone: newTone,
-      connected: true,
-      isDemo: !newPassword,
-      savedAt: new Date().toISOString()
-    };
+    try {
+      addOrUpdateAccount(candidate);
+      refreshAccounts();
+      setSuccessMsg(`Account ${candidate.email} added!`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+      resetAddForm();
+    } catch (err) {
+      setNewAccountError(err.message || 'Failed to save account.');
+    } finally {
+      setNewAccountConnecting(false);
+    }
+  };
+
+  // Connect and switch to a new email address immediately
+  const handleConnectAndSwitch = async (e) => {
+    e.preventDefault();
+    const candidate = buildCandidateAccount();
+    if (!candidate) return;
+
+    setNewAccountConnecting(true);
+    setNewAccountError('');
 
     // If password provided, attempt real server connection test
-    if (newPassword) {
+    if (candidate.password) {
       try {
         const res = await fetch('/api/auth/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: candidateAccount.email,
-            password: candidateAccount.password,
-            provider: candidateAccount.provider,
-            host: candidateAccount.host,
-            port: candidateAccount.port,
-            tone: candidateAccount.tone
+            email: candidate.email,
+            password: candidate.password,
+            provider: candidate.provider,
+            host: candidate.host,
+            port: candidate.port,
+            tone: candidate.tone
           })
         });
 
         const data = await res.json();
         if (res.ok && data.success) {
-          candidateAccount.isDemo = false;
-          if (data.name) candidateAccount.name = data.name;
+          if (data.name && !newName.trim()) candidate.name = data.name;
         } else {
           const confirmAdd = window.confirm(
-            `Authentication with ${newEmail} returned: "${data.error || 'Check password'}".\n\nDo you still want to add this account profile to MailMind?`
+            `Authentication with ${candidate.email} returned: "${data.error || 'Check password'}".\n\nDo you still want to add this account profile to MailMind?`
           );
           if (!confirmAdd) {
             setNewAccountConnecting(false);
@@ -280,13 +333,10 @@ export default function GoogleAccountModal({
       }
     }
 
-    // Switch to newly added account
-    await handleSwitchAccount(candidateAccount);
-    setNewAccountConnecting(false);
-    setShowAddForm(false);
-    setNewEmail('');
-    setNewPassword('');
-    setNewAccountError('');
+    // Save and switch
+    addOrUpdateAccount(candidate);
+    await handleSwitchAccount(candidate);
+    resetAddForm();
   };
 
   const currentProviderObj = PROVIDERS.find(p => p.id === newProvider) || PROVIDERS[0];
@@ -466,7 +516,7 @@ export default function GoogleAccountModal({
                     boxShadow: '0 2px 8px rgba(108, 99, 255, 0.2)'
                   }}
                 >
-                  <span>&#8644;</span> Switch Account ({accounts.length})
+                  <span>&#8644;</span> Switch / Manage Accounts ({accounts.length})
                 </button>
 
                 <button
@@ -492,7 +542,7 @@ export default function GoogleAccountModal({
               </div>
 
               {/* Quick Google-Style Account Switcher Strip */}
-              {otherAccounts.length > 0 && (
+              {otherAccounts.length > 0 ? (
                 <div style={{
                   background: 'var(--surface2, #252538)',
                   borderRadius: 14,
@@ -508,7 +558,7 @@ export default function GoogleAccountModal({
                     marginBottom: 10
                   }}>
                     <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Other Accounts on this device
+                      Other Accounts on this device ({otherAccounts.length})
                     </span>
                     <button
                       type="button"
@@ -570,6 +620,65 @@ export default function GoogleAccountModal({
                       );
                     })}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddForm(true);
+                      setActiveTab('switch');
+                    }}
+                    style={{
+                      width: '100%',
+                      marginTop: 10,
+                      background: 'none',
+                      border: '1px dashed var(--border2)',
+                      borderRadius: 8,
+                      padding: '6px',
+                      color: 'var(--accent)',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4
+                    }}
+                  >
+                    + Add Another Account
+                  </button>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'var(--surface2, #252538)',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  marginBottom: 18,
+                  textAlign: 'left',
+                  border: '1px dashed var(--border2, #3b3b54)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12
+                }}>
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>
+                      Connect More Email Accounts
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                      Add your work, personal, or secondary email to switch between them anytime.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddForm(true);
+                      setActiveTab('switch');
+                    }}
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                  >
+                    + Add Account
+                  </button>
                 </div>
               )}
 
@@ -671,18 +780,21 @@ export default function GoogleAccountModal({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(!showAddForm)}
+                  onClick={() => {
+                    setShowAddForm(!showAddForm);
+                    setNewAccountError('');
+                  }}
                   className="btn btn-primary btn-sm"
                   style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8 }}
                 >
-                  {showAddForm ? 'Hide Form' : '+ Add Email'}
+                  {showAddForm ? 'Close Form' : '+ Add Email'}
                 </button>
               </div>
 
               {/* Add Account Inline Form */}
               {showAddForm && (
                 <form
-                  onSubmit={handleConnectNewAccount}
+                  onSubmit={handleConnectAndSwitch}
                   style={{
                     background: 'var(--surface2, #252538)',
                     borderRadius: 14,
@@ -691,8 +803,13 @@ export default function GoogleAccountModal({
                     border: '1px solid var(--accent)'
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text)' }}>
-                    Connect &amp; Switch to Another Email Address
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                      Connect &amp; Add Email Account
+                    </div>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      Supports Gmail, Outlook, Yahoo, iCloud &amp; IMAP
+                    </span>
                   </div>
 
                   {newAccountError && (
@@ -703,14 +820,14 @@ export default function GoogleAccountModal({
                       fontSize: 12,
                       padding: '8px 10px',
                       borderRadius: 8,
-                      marginBottom: 10
+                      marginBottom: 12
                     }}>
                       &#9888;&#65039; {newAccountError}
                     </div>
                   )}
 
                   {/* Provider Pills */}
-                  <div style={{ display: 'flex', gap: 4, marginBottom: 10, overflowX: 'auto', paddingBottom: 2 }}>
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 12, overflowX: 'auto', paddingBottom: 2 }}>
                     {PROVIDERS.map(p => (
                       <button
                         key={p.id}
@@ -735,9 +852,33 @@ export default function GoogleAccountModal({
                     ))}
                   </div>
 
+                  {/* Account Name / Label */}
                   <div style={{ marginBottom: 10 }}>
                     <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
-                      Email Address:
+                      Account Label / Name (Optional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Work Email, Personal Gmail, Consulting"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        padding: '8px 10px',
+                        color: 'var(--text)',
+                        fontSize: 12.5,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Email Address */}
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
+                      Email Address <span style={{ color: 'var(--danger)' }}>*</span>:
                     </label>
                     <input
                       type="email"
@@ -758,6 +899,7 @@ export default function GoogleAccountModal({
                     />
                   </div>
 
+                  {/* Password / App Password */}
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
@@ -776,7 +918,7 @@ export default function GoogleAccountModal({
                     </div>
                     <input
                       type="password"
-                      placeholder={newProvider === 'google' ? '16-char App Password (or leave empty for demo)' : 'Account password (or empty for demo)'}
+                      placeholder={newProvider === 'google' ? '16-character Google App Password (or leave empty)' : 'Account password (or leave empty)'}
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       style={{
@@ -790,8 +932,12 @@ export default function GoogleAccountModal({
                         boxSizing: 'border-box'
                       }}
                     />
+                    <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3 }}>
+                      {currentProviderObj.hint}
+                    </div>
                   </div>
 
+                  {/* Custom IMAP Host & Port */}
                   {newProvider === 'custom' && (
                     <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                       <div style={{ flex: 2 }}>
@@ -817,14 +963,84 @@ export default function GoogleAccountModal({
                     </div>
                   )}
 
+                  {/* Reply Tone Selection */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
+                      AI Reply Tone for this Account:
+                    </label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {['professional', 'casual', 'brief', 'friendly'].map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setNewTone(t)}
+                          style={{
+                            flex: 1,
+                            padding: '4px 6px',
+                            fontSize: 11,
+                            borderRadius: 6,
+                            textTransform: 'capitalize',
+                            border: '1px solid ' + (newTone === t ? 'var(--accent)' : 'var(--border)'),
+                            background: newTone === t ? 'var(--accent-glow)' : 'var(--surface)',
+                            color: newTone === t ? 'var(--text)' : 'var(--muted)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Avatar Color Choice */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>
+                      Account Avatar Color:
+                    </label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {GMAIL_AVATAR_PALETTE.slice(0, 8).map(pal => {
+                        const isChosen = newAvatarColor === pal.hex;
+                        return (
+                          <button
+                            key={pal.hex}
+                            type="button"
+                            onClick={() => setNewAvatarColor(pal.hex)}
+                            title={pal.name}
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: '50%',
+                              background: pal.hex,
+                              border: isChosen ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.2)',
+                              boxShadow: isChosen ? '0 0 0 2px var(--accent)' : 'none',
+                              cursor: 'pointer',
+                              transform: isChosen ? 'scale(1.2)' : 'scale(1)',
+                              transition: 'transform 0.15s ease'
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Form Actions */}
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
                     <button
                       type="button"
-                      onClick={() => setShowAddForm(false)}
+                      onClick={resetAddForm}
                       className="btn btn-ghost btn-sm"
                       style={{ fontSize: 11.5 }}
                     >
                       Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddAccountOnly}
+                      disabled={newAccountConnecting || !newEmail}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11.5, padding: '6px 12px' }}
+                    >
+                      Save to Accounts
                     </button>
                     <button
                       type="submit"
@@ -914,9 +1130,9 @@ export default function GoogleAccountModal({
                           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                             {accDisplayName}
                           </span>
-                          {acc.isDemo && (
-                            <span className="badge badge-purple" style={{ fontSize: 9, padding: '1px 5px' }}>
-                              Demo
+                          {acc.provider && (
+                            <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'capitalize' }}>
+                              ({acc.provider})
                             </span>
                           )}
                         </div>
@@ -956,43 +1172,33 @@ export default function GoogleAccountModal({
                     </div>
                   );
                 })}
-              </div>
 
-              {/* Fast 1-Click Demo Profiles */}
-              <div style={{
-                background: 'rgba(108, 99, 255, 0.08)',
-                border: '1px dashed var(--accent)',
-                borderRadius: 12,
-                padding: '12px 14px',
-                textAlign: 'left'
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                  &#9889; Quick Preset Accounts:
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {PRESET_DEMO_ACCOUNTS.map((preset) => {
-                    const isCur = user?.email?.toLowerCase() === preset.email.toLowerCase();
-                    return (
-                      <button
-                        key={preset.email}
-                        type="button"
-                        onClick={() => handleSwitchAccount(preset)}
-                        disabled={isCur}
-                        style={{
-                          fontSize: 11,
-                          padding: '4px 10px',
-                          borderRadius: 100,
-                          border: '1px solid ' + (isCur ? 'var(--success)' : 'var(--border)'),
-                          background: isCur ? 'rgba(34, 197, 94, 0.15)' : 'var(--surface)',
-                          color: isCur ? '#86efac' : 'var(--text)',
-                          cursor: isCur ? 'default' : 'pointer'
-                        }}
-                      >
-                        {isCur ? '✓ ' : ''}{preset.name}
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Empty State when no other accounts exist */}
+                {otherAccounts.length === 0 && !showAddForm && (
+                  <div style={{
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    background: 'var(--surface2)',
+                    borderRadius: 12,
+                    border: '1px dashed var(--border)'
+                  }}>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>📬</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                      No other accounts connected
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4, maxWidth: 300, margin: '4px auto 14px' }}>
+                      Add your personal, work, or team email accounts to switch between them with one click.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(true)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8 }}
+                    >
+                      + Add Your Email Account
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
