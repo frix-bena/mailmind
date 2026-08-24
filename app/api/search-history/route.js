@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { searchEmailHistory, loadLocalConfig } from '@/lib/email-service';
-import { mockEmails } from '@/lib/mockData';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
@@ -23,19 +22,11 @@ export async function POST(request) {
     const credentials = resolveCredentials(body);
     const { query = '', sender = '', subject = '', limit = 50 } = body || {};
 
-    if (body?.isDemo || !credentials) {
-      const q = (query || '').toLowerCase().trim();
-      const matched = mockEmails.filter(e => {
-        const full = `${e.subject} ${e.sender} ${e.body_plain || ''} ${e.summary || ''}`.toLowerCase();
-        return !q || full.includes(q);
-      });
+    if (!credentials) {
       return NextResponse.json({
-        success: true,
-        query,
-        count: matched.length,
-        emails: matched.slice(0, limit),
-        isDemo: true
-      });
+        success: false,
+        error: 'No email credentials provided.'
+      }, { status: 400 });
     }
 
     const result = await searchEmailHistory(credentials, {
@@ -46,29 +37,19 @@ export async function POST(request) {
     });
 
     if (!result.success) {
-      const q = (query || '').toLowerCase().trim();
-      const matched = mockEmails.filter(e => {
-        const full = `${e.subject} ${e.sender} ${e.body_plain || ''} ${e.summary || ''}`.toLowerCase();
-        return !q || full.includes(q);
-      });
       return NextResponse.json({
-        success: true,
-        query,
-        count: matched.length,
-        emails: matched.slice(0, limit),
-        isDemo: true
-      });
+        success: false,
+        error: result.error || 'Search failed.'
+      }, { status: 500 });
     }
 
     return NextResponse.json(result);
   } catch (err) {
     console.error('Search history route error:', err);
     return NextResponse.json({
-      success: true,
-      query: '',
-      count: mockEmails.length,
-      emails: mockEmails,
-      isDemo: true
-    });
+      success: false,
+      error: err.message || 'Failed to search email history.'
+    }, { status: 500 });
   }
 }
+

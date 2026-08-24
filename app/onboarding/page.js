@@ -103,40 +103,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleLaunchAgentDemo = () => {
-    const demoUser = {
-      email: 'alex.morgan@mailmind.ai',
-      name: 'Alex Morgan',
-      provider: 'gmail',
-      tone,
-      inApp,
-      digest,
-      connected: true,
-      isDemo: true,
-      savedAt: new Date().toISOString()
-    };
-    localStorage.setItem('mailmind_user', JSON.stringify(demoUser));
-    addOrUpdateAccount(demoUser);
-    router.push('/terminal');
-  };
-
-  const handleLaunchInboxDemo = () => {
-    const demoUser = {
-      email: 'alex.morgan@mailmind.ai',
-      name: 'Alex Morgan',
-      provider: 'gmail',
-      tone,
-      inApp,
-      digest,
-      connected: true,
-      isDemo: true,
-      savedAt: new Date().toISOString()
-    };
-    localStorage.setItem('mailmind_user', JSON.stringify(demoUser));
-    addOrUpdateAccount(demoUser);
-    router.push('/inbox');
-  };
-
   const handleConnect = async (e) => {
     e.preventDefault();
     if (!email || !email.includes('@')) {
@@ -201,12 +167,13 @@ export default function OnboardingPage() {
     const displayName = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const newUser = {
       provider: selectedProvider,
-      email: email,
+      email: email.trim().toLowerCase(),
       password: password,
       tone,
       inApp,
       digest,
       connected: true,
+      isDemo: false,
       name: displayName || 'User',
       savedAt: new Date().toISOString()
     };
@@ -249,65 +216,9 @@ export default function OnboardingPage() {
         {/* Step: Connect / Login */}
         {step === 'connect' && (
           <div className="fade-in">
-            {/* Live Link Instant Agent Access Card */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(108, 99, 255, 0.18), rgba(167, 139, 250, 0.12))',
-              border: '1px solid var(--accent)',
-              borderRadius: 'var(--radius)',
-              padding: '18px 18px',
-              marginBottom: 20,
-              boxShadow: '0 4px 24px var(--accent-glow)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 24, flexShrink: 0 }}>🤖</div>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
-                    Instant Live Agent Access
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-                    Try the Autonomous Agent, AI email drafting & inbox intelligence immediately on this live link.
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={handleLaunchAgentDemo}
-                  className="btn btn-primary"
-                  style={{ flex: 1, minWidth: 140, fontSize: 12.5, padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  <span>🤖</span> Launch Agent Console
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLaunchInboxDemo}
-                  className="btn btn-secondary"
-                  style={{ flex: 1, minWidth: 140, fontSize: 12.5, padding: '9px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  <span>📥</span> Live Inbox Demo
-                </button>
-              </div>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              margin: '18px 0',
-              gap: 10,
-              color: 'var(--muted2)',
-              fontSize: 11.5,
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5
-            }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              <span>Or connect your private email</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            </div>
-
-            <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Connect your email account</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
-              Sign in with your email to enable real-time inbox monitoring, history search, and permission-based AI drafting on your real mailbox.
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Connect your email account</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 18 }}>
+              Sign in with your email to enable real-time inbox monitoring, history search, and permission-based AI drafting on your mailbox.
             </p>
 
             {/* Provider Selector Tabs */}

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { fetchEmails, loadLocalConfig } from '@/lib/email-service';
-import { mockEmails } from '@/lib/mockData';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
@@ -23,13 +22,11 @@ export async function POST(request) {
     const credentials = resolveCredentials(body);
     const limit = body.limit ? parseInt(body.limit, 10) : 15;
 
-    if (body?.isDemo || !credentials) {
+    if (!credentials) {
       return NextResponse.json({
-        success: true,
-        emails: mockEmails.slice(0, limit),
-        total: mockEmails.length,
-        isDemo: true
-      });
+        success: false,
+        error: 'No email credentials provided or account not configured.'
+      }, { status: 400 });
     }
 
     const tone = body.tone || credentials.tone || 'professional';
@@ -38,21 +35,17 @@ export async function POST(request) {
     const result = await fetchEmails(credentials, { limit, tone, folder });
     if (!result.success) {
       return NextResponse.json({
-        success: true,
-        emails: mockEmails.slice(0, limit),
-        total: mockEmails.length,
-        isDemo: true,
-        notice: 'Displaying demo messages (IMAP server not reachable)'
-      });
+        success: false,
+        error: result.error || 'Failed to connect to email server.'
+      }, { status: 500 });
     }
     return NextResponse.json(result);
   } catch (err) {
     console.error('Fetch emails route error:', err);
     return NextResponse.json({
-      success: true,
-      emails: mockEmails,
-      total: mockEmails.length,
-      isDemo: true
-    });
+      success: false,
+      error: err.message || 'Failed to connect to email server.'
+    }, { status: 500 });
   }
 }
+

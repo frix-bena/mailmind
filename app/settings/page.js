@@ -6,7 +6,13 @@ import Sidebar from '@/components/Sidebar';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { extractDisplayName } from '@/lib/avatar-utils';
-import { mockUser } from '@/lib/mockData';
+import {
+  getActiveUser,
+  getStoredAccounts,
+  removeStoredAccount,
+  switchActiveAccount,
+  isDemoAccount
+} from '@/lib/account-manager';
 
 function Section({ title, children }) {
   return (
@@ -42,6 +48,7 @@ function Toggle({ value, onChange }) {
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [accounts, setAccounts] = useState([]);
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
   const [avatarColor, setAvatarColor] = useState('');
@@ -57,35 +64,41 @@ export default function SettingsPage() {
   const [userModalTab, setUserModalTab] = useState('overview');
   const [showCustomizer, setShowCustomizer] = useState(false);
 
-  useEffect(() => {
+  const refreshAccountsList = () => {
     try {
-      let stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (!stored || !stored.connected || !stored.email) {
-        stored = { ...mockUser, isDemo: true };
-        localStorage.setItem('mailmind_user', JSON.stringify(stored));
-      }
-      setUser(stored);
-      if (stored.name) setName(stored.name);
-      if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
-      if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
-      if (stored.tone) setTone(stored.tone);
-      if (stored.inApp !== undefined) setInApp(stored.inApp);
-      if (stored.digest !== undefined) setDigest(stored.digest);
-      if (stored.pollInterval) setPollInterval(stored.pollInterval);
+      setAccounts(getStoredAccounts());
     } catch {
-      const stored = { ...mockUser, isDemo: true };
-      localStorage.setItem('mailmind_user', JSON.stringify(stored));
-      setUser(stored);
+      setAccounts([]);
     }
+  };
+
+  useEffect(() => {
+    const stored = getActiveUser();
+    if (!stored || !stored.connected || !stored.email || isDemoAccount(stored)) {
+      router.replace('/onboarding');
+      return;
+    }
+    setUser(stored);
+    if (stored.name) setName(stored.name);
+    if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
+    if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
+    if (stored.tone) setTone(stored.tone);
+    if (stored.inApp !== undefined) setInApp(stored.inApp);
+    if (stored.digest !== undefined) setDigest(stored.digest);
+    if (stored.pollInterval) setPollInterval(stored.pollInterval);
+    refreshAccountsList();
 
     const handleAccountSwitched = (e) => {
-      if (e.detail && e.detail.email) {
+      if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
         const u = e.detail;
         setUser(u);
         if (u.name) setName(u.name);
         if (u.avatar || u.picture) setAvatar(u.avatar || u.picture || '');
         if (u.avatarColor || u.color) setAvatarColor(u.avatarColor || u.color || '');
         if (u.tone) setTone(u.tone);
+        refreshAccountsList();
+      } else {
+        router.replace('/onboarding');
       }
     };
     window.addEventListener('mailmind:account-switched', handleAccountSwitched);
@@ -93,7 +106,7 @@ export default function SettingsPage() {
     return () => {
       window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
     };
-  }, []);
+  }, [router]);
 
   const tones = [
     { id: 'professional', label: '💼 Professional' },
@@ -475,33 +488,133 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Connected Account */}
-          <Section title="Connected Email Account">
+          {/* Connected Accounts */}
+          <Section title="Connected Email Accounts">
             <Row
-              label={user?.email ? `Account: ${user.email}` : 'Connected Email'}
-              desc={`Provider: ${providerLabels[user?.provider] || user?.provider || 'Email Server'} · IMAP/SMTP Access Active`}
+              label={user?.email ? `Active: ${user.email}` : 'Active Account'}
+              desc={`Provider: ${providerLabels[user?.provider] || user?.provider || 'Email Server'} · IMAP/SMTP Active`}
             >
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="badge badge-low">● Connected</span>
+                <span className="badge badge-low">● Active</span>
                 <button
-                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  className="btn btn-primary btn-sm"
                   onClick={() => {
                     setUserModalTab('switch');
                     setUserModalOpen(true);
                   }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                 >
-                  <span>⇄</span> Switch Account
+                  <span>+</span> Add / Switch Account
                 </button>
                 <button
+                  type="button"
                   className="btn btn-danger btn-sm"
                   onClick={handleDisconnect}
                   disabled={disconnecting}
                 >
-                  {disconnecting ? 'Disconnecting…' : 'Log out / Disconnect'}
+                  {disconnecting ? 'Disconnecting…' : 'Sign out'}
                 </button>
               </div>
             </Row>
+
+            {/* List all saved accounts */}
+            {accounts.length > 0 && (
+              <div style={{ padding: '16px 24px', background: 'var(--surface2)', borderTop: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '0.5px' }}>
+                  All Saved Accounts on this Device ({accounts.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {accounts.map(acc => {
+                    const isActive = acc.email.toLowerCase() === user?.email?.toLowerCase();
+                    const accName = extractDisplayName(acc.name, acc.email);
+                    return (
+                      <div
+                        key={acc.email}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          background: isActive ? 'var(--accent-glow)' : 'var(--surface)',
+                          border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}`,
+                          gap: 12
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                          <EmailAvatar
+                            src={acc.avatar || acc.picture}
+                            email={acc.email}
+                            name={accName}
+                            size={32}
+                            color={acc.avatarColor || acc.color}
+                            isUser={true}
+                            showTooltip={false}
+                          />
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                                {accName}
+                              </span>
+                              {isActive && (
+                                <span className="badge badge-low" style={{ fontSize: 10, padding: '1px 5px' }}>
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {acc.email} ({providerLabels[acc.provider] || acc.provider || 'email'})
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {!isActive && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: 11.5, padding: '4px 10px' }}
+                              onClick={async () => {
+                                await switchActiveAccount(acc);
+                                refreshAccountsList();
+                              }}
+                            >
+                              Switch to this
+                            </button>
+                          )}
+                          {!isActive && (
+                            <button
+                              type="button"
+                              title="Remove account"
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--muted)',
+                                cursor: 'pointer',
+                                padding: '4px 8px',
+                                fontSize: 14,
+                                borderRadius: 4
+                              }}
+                              onClick={() => {
+                                if (window.confirm(`Remove ${acc.email} from saved accounts?`)) {
+                                  removeStoredAccount(acc.email);
+                                  refreshAccountsList();
+                                }
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* Reply Preferences */}

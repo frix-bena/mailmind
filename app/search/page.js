@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopbarUserButton from '@/components/TopbarUserButton';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
-import { mockUser, mockEmails } from '@/lib/mockData';
+import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 
 const SUGGESTIONS = [
   'Summarize what I missed this week',
@@ -58,8 +58,7 @@ function SearchContent() {
         email: user?.email,
         password: user?.password,
         provider: user?.provider,
-        question: finalQ,
-        emails: mockEmails
+        question: finalQ
       });
 
       try {
@@ -90,28 +89,25 @@ function SearchContent() {
   };
 
   useEffect(() => {
-    try {
-      let stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (!stored || !stored.connected || !stored.email) {
-        stored = { ...mockUser, isDemo: true };
-        localStorage.setItem('mailmind_user', JSON.stringify(stored));
-      }
+    const stored = getActiveUser();
+    if (stored && stored.connected && stored.email && !isDemoAccount(stored)) {
       setUser(stored);
       const qParam = searchParams?.get('q');
       if (qParam) {
         setQuery(qParam);
         handleSearch(qParam);
       }
-    } catch {
-      const stored = { ...mockUser, isDemo: true };
-      localStorage.setItem('mailmind_user', JSON.stringify(stored));
-      setUser(stored);
+    } else {
+      router.replace('/onboarding');
+      return;
     }
 
     const handleAccountSwitched = (e) => {
-      if (e.detail && e.detail.email) {
+      if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
         setUser(e.detail);
         setAnswer(null);
+      } else {
+        router.replace('/onboarding');
       }
     };
     window.addEventListener('mailmind:account-switched', handleAccountSwitched);
@@ -119,7 +115,7 @@ function SearchContent() {
     return () => {
       window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
     };
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const handleCopyAnswer = () => {
     if (!answer) return;

@@ -6,7 +6,7 @@ import EmailCard from '@/components/EmailCard';
 import ComposeModal from '@/components/ComposeModal';
 import TopbarUserButton from '@/components/TopbarUserButton';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
-import { mockEmails, mockUser } from '@/lib/mockData';
+import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
 
@@ -33,16 +33,11 @@ export default function InboxPage() {
   };
 
   const loadEmails = useCallback(async (customLimit = 15) => {
-    let storedUser = null;
-    try {
-      storedUser = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-    } catch {
-      // ignore
-    }
+    const storedUser = getActiveUser();
 
-    if (!storedUser || !storedUser.connected || !storedUser.email) {
-      storedUser = { ...mockUser, isDemo: true };
-      localStorage.setItem('mailmind_user', JSON.stringify(storedUser));
+    if (!storedUser || !storedUser.connected || !storedUser.email || isDemoAccount(storedUser)) {
+      router.replace('/onboarding');
+      return;
     }
 
     setUser(storedUser);
@@ -56,8 +51,7 @@ export default function InboxPage() {
         password: storedUser.password,
         provider: storedUser.provider,
         tone: storedUser.tone,
-        limit: customLimit,
-        isDemo: storedUser.isDemo
+        limit: customLimit
       });
 
       try {
@@ -76,31 +70,35 @@ export default function InboxPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setEmails((data.emails && data.emails.length) ? data.emails : mockEmails);
+        setEmails(Array.isArray(data.emails) ? data.emails : []);
         setIsLive(true);
-        setPollingBadge(storedUser.isDemo ? 'Live Demo' : 'Live Sync');
+        setPollingBadge('Live Sync');
       } else {
-        setEmails(mockEmails);
-        setIsLive(true);
-        setPollingBadge(storedUser.isDemo ? 'Live Demo' : 'Live Sync');
+        setEmails([]);
+        setIsLive(false);
+        setErrorMessage(data.error || 'Unable to sync with email server.');
+        setPollingBadge('Offline');
       }
-    } catch {
-      setEmails(mockEmails);
-      setIsLive(true);
-      setPollingBadge('Live Demo');
+    } catch (err) {
+      setEmails([]);
+      setIsLive(false);
+      setErrorMessage(err.message || 'Connection error.');
+      setPollingBadge('Offline');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     loadEmails(15);
 
     const handleAccountSwitched = (e) => {
-      if (e.detail && e.detail.email) {
+      if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
         setUser(e.detail);
         showToast(`Switched account to ${e.detail.email}`);
         loadEmails(15);
+      } else {
+        router.replace('/onboarding');
       }
     };
     window.addEventListener('mailmind:account-switched', handleAccountSwitched);
@@ -108,7 +106,7 @@ export default function InboxPage() {
     return () => {
       window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
     };
-  }, [loadEmails]);
+  }, [loadEmails, router]);
 
   const loadMoreHistory = async () => {
     if (!user) return;

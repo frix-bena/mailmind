@@ -6,6 +6,8 @@ import ComposeModal from '@/components/ComposeModal';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { extractDisplayName } from '@/lib/avatar-utils';
 
+import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
+
 export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -20,22 +22,18 @@ export default function Sidebar({ user: propUser }) {
   ]);
 
   useEffect(() => {
-    if (propUser && propUser.email) {
+    if (propUser && propUser.email && !isDemoAccount(propUser)) {
       setUser(propUser);
     } else {
-      try {
-        const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-        if (stored && stored.email) {
-          setUser(stored);
-        }
-      } catch {
-        // ignore
+      const stored = getActiveUser();
+      if (stored && stored.email && !isDemoAccount(stored)) {
+        setUser(stored);
       }
 
       fetch('/api/auth/status')
         .then(res => res.json())
         .then(data => {
-          if (data && data.connected && data.email) {
+          if (data && data.connected && data.email && !isDemoAccount(data)) {
             setUser(prev => ({
               ...(prev || {}),
               ...data,

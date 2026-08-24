@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { askEmailHistory, fetchEmailHistory, loadLocalConfig } from '@/lib/email-service';
-import { mockEmails } from '@/lib/mockData';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
@@ -37,15 +36,22 @@ export async function POST(request) {
           const hist = await fetchEmailHistory(credentials, { limit: 50 });
           emailData = hist?.emails || [];
         } catch (_) {
-          emailData = mockEmails;
+          emailData = [];
         }
-      }
-      if (!emailData || emailData.length === 0) {
-        emailData = mockEmails;
+      } else {
+        emailData = [];
       }
     }
 
-    const answer = askEmailHistory(question, emailData || mockEmails);
+    if (!emailData || emailData.length === 0) {
+      return NextResponse.json({
+        success: true,
+        question,
+        answer: `No emails found in history for ${credentials?.email || 'your account'} to answer this question.`
+      });
+    }
+
+    const answer = askEmailHistory(question, emailData);
     return NextResponse.json({ success: true, question, answer });
   } catch (err) {
     console.error('Ask inbox route error:', err);
@@ -55,3 +61,4 @@ export async function POST(request) {
     );
   }
 }
+

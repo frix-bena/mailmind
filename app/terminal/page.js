@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopbarUserButton from '@/components/TopbarUserButton';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
-import { mockEmails, mockUser } from '@/lib/mockData';
+import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 
 const QUICK_COMMANDS = [
   'status',
@@ -29,7 +29,7 @@ export default function TerminalPage() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [history, setHistory] = useState([
     { type: 'system', text: '🤖 MailMind Autonomous AI Agent Console v2.4' },
-    { type: 'system', text: '🌐 Live Link Access Active — Full permission-first inbox intelligence.' },
+    { type: 'system', text: '🔒 Secure Inbox Access Active — Full permission-first inbox intelligence.' },
     { type: 'system', text: 'Type "help" to list agent commands, or click any quick command chip below.' }
   ]);
   const [loading, setLoading] = useState(false);
@@ -37,29 +37,23 @@ export default function TerminalPage() {
   const terminalEndRef = useRef(null);
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('mailmind_user') || 'null');
-      if (stored && stored.connected && stored.email) {
-        setUser(stored);
-      } else {
-        // Auto-initialize demo/guest user for instant live link access
-        const guest = { ...mockUser, isDemo: true };
-        localStorage.setItem('mailmind_user', JSON.stringify(guest));
-        setUser(guest);
-      }
-    } catch {
-      const guest = { ...mockUser, isDemo: true };
-      localStorage.setItem('mailmind_user', JSON.stringify(guest));
-      setUser(guest);
+    const stored = getActiveUser();
+    if (stored && stored.connected && stored.email && !isDemoAccount(stored)) {
+      setUser(stored);
+    } else {
+      router.replace('/onboarding');
+      return;
     }
 
     const handleAccountSwitched = (e) => {
-      if (e.detail && e.detail.email) {
+      if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
         setUser(e.detail);
         setHistory(h => [
           ...h,
           { type: 'output', text: `🔄 Active account switched to ${e.detail.email}` }
         ]);
+      } else {
+        router.replace('/onboarding');
       }
     };
     window.addEventListener('mailmind:account-switched', handleAccountSwitched);
@@ -67,7 +61,7 @@ export default function TerminalPage() {
     return () => {
       window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,7 +102,6 @@ export default function TerminalPage() {
   • summarize               Executive digest of recent inbox activity
   • stats                   View email volume, response rate & time saved
   • tone <style>            Change reply tone: professional | casual | brief
-  • demo                    Reload interactive sample dataset
   • cli-guide               How to run the CLI agent locally in your terminal
   • clear                   Clear terminal output
   • <system command>        Execute bash / terminal commands (when available)`
@@ -143,8 +136,7 @@ export default function TerminalPage() {
     }
 
     if (lowerCmd === 'status') {
-      const activeEmail = user?.email || mockUser.email;
-      const isDemoMode = user?.isDemo || (!user?.password && activeEmail.includes('mailmind.ai'));
+      const activeEmail = user?.email || 'No active account';
       setHistory([
         ...newHistory,
         {
@@ -152,8 +144,8 @@ export default function TerminalPage() {
           text: `🤖 MailMind Autonomous Agent Status:
 --------------------------------------------------
   • System State:      🟢 Online & Active
-  • Access Mode:       ${isDemoMode ? '🌐 Live Demo Link (Guest Access)' : '🔒 Private IMAP Connected'}
-  • Active Account:    ${activeEmail} (${user?.provider || 'gmail'})
+  • Access Mode:       🔒 Private Mailbox Connected
+  • Active Account:    ${activeEmail} (${user?.provider || 'IMAP/SMTP'})
   • Reply Tone:        ${user?.tone || 'professional'}
   • Safety Policy:     🙋 Permission-First (No unapproved emails sent)
   • Q&A Engine:        Semantic Matcher & Zero-Shot Categorization
@@ -170,13 +162,11 @@ export default function TerminalPage() {
           type: 'output',
           text: `📊 MailMind Autonomous Agent Performance & Metrics:
 --------------------------------------------------
-  • Total Messages Analyzed:   142
-  • Action Items Identified:    18 (12.7%)
-  • Drafts Prepared:            18 (100% human-approved before send)
-  • Routine FYIs Filtered:     124 (Receipts, Newsletters, Alerts)
-  • Estimated Time Saved:      ~4.5 hours / week
-  • Response Precision:        98.4%
-  • Average Draft Gen Time:    0.42s`
+  • Active Mailbox:            ${user?.email || 'Connected'}
+  • Status:                    Monitoring in real time
+  • Safety Policy:             100% human-approved drafts before send
+  • AI Classification:         Active (Action Required vs FYI)
+  • Draft Engine:              Ready`
         }
       ]);
       return;
@@ -185,7 +175,7 @@ export default function TerminalPage() {
     if (lowerCmd.startsWith('tone ')) {
       const selectedTone = lowerCmd.replace('tone ', '').trim();
       if (['professional', 'casual', 'brief'].includes(selectedTone)) {
-        const updated = { ...(user || mockUser), tone: selectedTone };
+        const updated = { ...(user || {}), tone: selectedTone };
         setUser(updated);
         localStorage.setItem('mailmind_user', JSON.stringify(updated));
         setHistory([
@@ -204,20 +194,6 @@ export default function TerminalPage() {
           }
         ]);
       }
-      return;
-    }
-
-    if (lowerCmd === 'demo') {
-      const guest = { ...mockUser, isDemo: true };
-      localStorage.setItem('mailmind_user', JSON.stringify(guest));
-      setUser(guest);
-      setHistory([
-        ...newHistory,
-        {
-          type: 'output',
-          text: `✨ Demo dataset reloaded with 6 sample emails (action requests, questions, receipts, newsletters).`
-        }
-      ]);
       return;
     }
 
@@ -257,17 +233,23 @@ export default function TerminalPage() {
     if (lowerCmd === 'classify') {
       setLoading(true);
       try {
-        let emailList = mockEmails;
-        if (user && !user.isDemo && user.password) {
+        let emailList = [];
+        if (user && user.email) {
           try {
             const res = await fetch('/api/fetch-emails', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: user.email, password: user.password, limit: 10 })
+              body: JSON.stringify({ email: user.email, password: user.password, limit: 15 })
             });
             const data = await res.json();
-            if (data.emails && data.emails.length) emailList = data.emails;
+            if (data.emails && Array.isArray(data.emails)) emailList = data.emails;
           } catch (_) {}
+        }
+
+        if (emailList.length === 0) {
+          setHistory([...newHistory, { type: 'output', text: '📬 No emails found in your inbox to classify.' }]);
+          setLoading(false);
+          return;
         }
 
         const actionItems = emailList.filter(e => e.needsReply || e.needs_reply);
@@ -293,17 +275,40 @@ export default function TerminalPage() {
     }
 
     if (lowerCmd === 'draft' || lowerCmd.startsWith('draft ')) {
-      const targetSubj = lowerCmd.replace('draft', '').trim();
       const currentTone = user?.tone || 'professional';
-      const targetEmail = mockEmails.find(e => e.needsReply && (!targetSubj || e.subject.toLowerCase().includes(targetSubj) || e.id === targetSubj)) || mockEmails[0];
+      const authorName = user?.name || user?.email?.split('@')[0] || 'User';
 
-      const draftContent = targetEmail.draft?.body || targetEmail.draftBody || `Hi ${targetEmail.sender?.split(' ')[0] || 'there'},\n\nThank you for your note regarding "${targetEmail.subject}". I will look over this and follow up shortly.\n\nBest regards,\n${user?.name || 'Alex'}`;
+      setLoading(true);
+      try {
+        let emailList = [];
+        if (user && user.email) {
+          try {
+            const res = await fetch('/api/fetch-emails', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: user.email, password: user.password, limit: 10 })
+            });
+            const data = await res.json();
+            if (data.emails && Array.isArray(data.emails)) emailList = data.emails;
+          } catch (_) {}
+        }
 
-      setHistory([
-        ...newHistory,
-        {
-          type: 'output',
-          text: `✍️ AI Generated Reply Draft (${currentTone.toUpperCase()} TONE):
+        const targetSubj = lowerCmd.replace('draft', '').trim().toLowerCase();
+        const targetEmail = emailList.find(e => (e.needsReply || e.needs_reply) && (!targetSubj || (e.subject && e.subject.toLowerCase().includes(targetSubj)))) || emailList[0];
+
+        if (!targetEmail) {
+          setHistory([...newHistory, { type: 'output', text: '📬 No actionable emails found in your inbox needing a draft.' }]);
+          setLoading(false);
+          return;
+        }
+
+        const draftContent = targetEmail.draft?.body || targetEmail.draftBody || `Hi ${targetEmail.sender?.split(' ')[0] || 'there'},\n\nThank you for your note regarding "${targetEmail.subject}". I have received your email and will follow up shortly.\n\nBest regards,\n${authorName}`;
+
+        setHistory([
+          ...newHistory,
+          {
+            type: 'output',
+            text: `✍️ AI Generated Reply Draft (${currentTone.toUpperCase()} TONE):
 --------------------------------------------------
 To: ${targetEmail.sender_email || targetEmail.senderEmail || 'recipient@domain.com'}
 Subject: Re: ${targetEmail.subject}
@@ -313,8 +318,13 @@ ${draftContent}
 
 --------------------------------------------------
 💡 Note: MailMind never sends without your explicit consent. You can approve or edit this in the Inbox view.`
-        }
-      ]);
+          }
+        ]);
+      } catch (err) {
+        setHistory([...newHistory, { type: 'error', text: `Draft error: ${err.message}` }]);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -327,8 +337,7 @@ ${draftContent}
           password: user?.password,
           provider: user?.provider,
           tone: user?.tone,
-          limit: 6,
-          isDemo: user?.isDemo
+          limit: 10
         });
 
         try {
@@ -346,21 +355,31 @@ ${draftContent}
         }
 
         const data = await res.json();
-        const emailsToDisplay = (data.emails && data.emails.length) ? data.emails : mockEmails;
+        const emailsToDisplay = (data.emails && Array.isArray(data.emails)) ? data.emails : [];
 
-        const list = emailsToDisplay.map((m, i) => {
-          const actionTag = (m.needsReply || m.needs_reply) ? '⚡ [NEEDS REPLY]' : '📌 [NO REPLY NEEDED]';
-          const urgencyTag = m.urgency ? `[${m.urgency.toUpperCase()}]` : '';
-          return `[${i + 1}] ${actionTag} ${urgencyTag} ${m.subject}\n    From: ${m.sender || m.sender_name} <${m.sender_email || m.senderEmail || ''}>\n    Summary: ${m.summary || m.ai_summary || 'No summary available.'}`;
-        }).join('\n\n');
+        if (emailsToDisplay.length === 0) {
+          setHistory([
+            ...newHistory,
+            {
+              type: 'output',
+              text: `📬 Inbox is clear. No recent messages found for ${user?.email || 'account'}.`
+            }
+          ]);
+        } else {
+          const list = emailsToDisplay.map((m, i) => {
+            const actionTag = (m.needsReply || m.needs_reply) ? '⚡ [NEEDS REPLY]' : '📌 [NO REPLY NEEDED]';
+            const urgencyTag = m.urgency ? `[${m.urgency.toUpperCase()}]` : '';
+            return `[${i + 1}] ${actionTag} ${urgencyTag} ${m.subject}\n    From: ${m.sender || m.sender_name} <${m.sender_email || m.senderEmail || ''}>\n    Summary: ${m.summary || m.ai_summary || 'No summary available.'}`;
+          }).join('\n\n');
 
-        setHistory([
-          ...newHistory,
-          {
-            type: 'output',
-            text: `📥 Retrieved ${emailsToDisplay.length} messages from inbox:\n\n${list}`
-          }
-        ]);
+          setHistory([
+            ...newHistory,
+            {
+              type: 'output',
+              text: `📥 Retrieved ${emailsToDisplay.length} messages from inbox:\n\n${list}`
+            }
+          ]);
+        }
       } catch (err) {
         setHistory([...newHistory, { type: 'error', text: `Fetch error: ${err.message}` }]);
       } finally {
@@ -377,16 +396,37 @@ ${draftContent}
       }
       setLoading(true);
       try {
-        const matches = mockEmails.filter(e => {
-          const full = `${e.subject} ${e.sender} ${e.body_plain || e.body || ''} ${e.summary || ''}`.toLowerCase();
-          return full.includes(q.toLowerCase());
+        let res;
+        const reqBody = JSON.stringify({
+          email: user?.email,
+          password: user?.password,
+          provider: user?.provider,
+          query: q,
+          limit: 20
         });
+
+        try {
+          res = await fetch('/api/search-history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+          });
+        } catch {
+          res = await fetch('http://localhost:3002/api/search-history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: reqBody
+          });
+        }
+
+        const data = await res.json();
+        const matches = (data.emails && Array.isArray(data.emails)) ? data.emails : [];
 
         if (matches.length === 0) {
           setHistory([...newHistory, { type: 'output', text: `No emails found matching query "${q}".` }]);
         } else {
           const formatted = matches.map((m, i) =>
-            `[${i + 1}] ${m.subject}\n    From: ${m.sender || m.sender_name} | Date: ${new Date(m.receivedAt || m.received_at).toLocaleDateString()}\n    Summary: ${m.summary || m.ai_summary}`
+            `[${i + 1}] ${m.subject}\n    From: ${m.sender || m.sender_name} | Date: ${new Date(m.receivedAt || m.received_at || Date.now()).toLocaleDateString()}\n    Summary: ${m.summary || m.ai_summary || 'No summary'}`
           ).join('\n\n');
           setHistory([...newHistory, { type: 'output', text: `🔍 Found ${matches.length} matching message(s) for "${q}":\n\n${formatted}` }]);
         }
@@ -407,8 +447,7 @@ ${draftContent}
           email: user?.email,
           password: user?.password,
           provider: user?.provider,
-          question,
-          emails: mockEmails
+          question
         });
 
         try {
