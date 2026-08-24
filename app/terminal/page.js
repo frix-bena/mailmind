@@ -52,6 +52,21 @@ export default function TerminalPage() {
       localStorage.setItem('mailmind_user', JSON.stringify(guest));
       setUser(guest);
     }
+
+    const handleAccountSwitched = (e) => {
+      if (e.detail && e.detail.email) {
+        setUser(e.detail);
+        setHistory(h => [
+          ...h,
+          { type: 'output', text: `🔄 Active account switched to ${e.detail.email}` }
+        ]);
+      }
+    };
+    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
+
+    return () => {
+      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
+    };
   }, []);
 
   useEffect(() => {
@@ -704,6 +719,13 @@ ${draftContent}
             router.replace('/onboarding');
           }}
           onUserUpdate={(updated) => setUser(updated)}
+          onAccountSwitch={(switched) => {
+            setUser(switched);
+            setHistory(h => [
+              ...h,
+              { type: 'output', text: `🔄 Active account switched to ${switched.email}` }
+            ]);
+          }}
         />
       )}
     </div>

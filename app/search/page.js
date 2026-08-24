@@ -107,6 +107,18 @@ function SearchContent() {
       localStorage.setItem('mailmind_user', JSON.stringify(stored));
       setUser(stored);
     }
+
+    const handleAccountSwitched = (e) => {
+      if (e.detail && e.detail.email) {
+        setUser(e.detail);
+        setAnswer(null);
+      }
+    };
+    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
+
+    return () => {
+      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
+    };
   }, [searchParams]);
 
   const handleCopyAnswer = () => {
@@ -319,6 +331,10 @@ function SearchContent() {
             router.replace('/onboarding');
           }}
           onUserUpdate={(updated) => setUser(updated)}
+          onAccountSwitch={(switched) => {
+            setUser(switched);
+            setAnswer(null);
+          }}
         />
       )}
     </div>

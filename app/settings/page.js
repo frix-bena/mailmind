@@ -54,6 +54,7 @@ export default function SettingsPage() {
   const [testResult, setTestResult] = useState(null);
   const [saved, setSaved] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userModalTab, setUserModalTab] = useState('overview');
   const [showCustomizer, setShowCustomizer] = useState(false);
 
   useEffect(() => {
@@ -76,6 +77,22 @@ export default function SettingsPage() {
       localStorage.setItem('mailmind_user', JSON.stringify(stored));
       setUser(stored);
     }
+
+    const handleAccountSwitched = (e) => {
+      if (e.detail && e.detail.email) {
+        const u = e.detail;
+        setUser(u);
+        if (u.name) setName(u.name);
+        if (u.avatar || u.picture) setAvatar(u.avatar || u.picture || '');
+        if (u.avatarColor || u.color) setAvatarColor(u.avatarColor || u.color || '');
+        if (u.tone) setTone(u.tone);
+      }
+    };
+    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
+
+    return () => {
+      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
+    };
   }, []);
 
   const tones = [
@@ -297,6 +314,17 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       className="chip"
+                      onClick={() => {
+                        setUserModalTab('switch');
+                        setUserModalOpen(true);
+                      }}
+                      style={{ fontSize: 12, cursor: 'pointer', background: 'var(--accent-glow)', borderColor: 'var(--accent)' }}
+                    >
+                      ⇄ Switch Account
+                    </button>
+                    <button
+                      type="button"
+                      className="chip"
                       onClick={() => setShowCustomizer(!showCustomizer)}
                       style={{ fontSize: 12, cursor: 'pointer' }}
                     >
@@ -456,6 +484,16 @@ export default function SettingsPage() {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="badge badge-low">● Connected</span>
                 <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setUserModalTab('switch');
+                    setUserModalOpen(true);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <span>⇄</span> Switch Account
+                </button>
+                <button
                   className="btn btn-danger btn-sm"
                   onClick={handleDisconnect}
                   disabled={disconnecting}
@@ -547,7 +585,11 @@ export default function SettingsPage() {
       {userModalOpen && (
         <GoogleAccountModal
           user={user}
-          onClose={() => setUserModalOpen(false)}
+          initialTab={userModalTab}
+          onClose={() => {
+            setUserModalOpen(false);
+            setUserModalTab('overview');
+          }}
           onOpenCompose={() => router.push('/inbox')}
           onDisconnect={handleDisconnect}
           onUserUpdate={(updated) => {
@@ -555,6 +597,13 @@ export default function SettingsPage() {
             if (updated.avatar !== undefined) setAvatar(updated.avatar);
             if (updated.avatarColor !== undefined) setAvatarColor(updated.avatarColor);
             if (updated.name !== undefined) setName(updated.name);
+          }}
+          onAccountSwitch={(switched) => {
+            setUser(switched);
+            if (switched.name) setName(switched.name);
+            if (switched.avatar !== undefined) setAvatar(switched.avatar);
+            if (switched.avatarColor !== undefined) setAvatarColor(switched.avatarColor);
+            if (switched.tone) setTone(switched.tone);
           }}
         />
       )}

@@ -95,6 +95,19 @@ export default function InboxPage() {
 
   useEffect(() => {
     loadEmails(15);
+
+    const handleAccountSwitched = (e) => {
+      if (e.detail && e.detail.email) {
+        setUser(e.detail);
+        showToast(`Switched account to ${e.detail.email}`);
+        loadEmails(15);
+      }
+    };
+    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
+
+    return () => {
+      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
+    };
   }, [loadEmails]);
 
   const loadMoreHistory = async () => {
@@ -470,6 +483,11 @@ export default function InboxPage() {
             router.replace('/onboarding');
           }}
           onUserUpdate={(updated) => setUser(updated)}
+          onAccountSwitch={(switched) => {
+            setUser(switched);
+            showToast(`Switched account to ${switched.email}`);
+            loadEmails(15);
+          }}
         />
       )}
     </div>

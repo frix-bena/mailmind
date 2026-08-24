@@ -4,30 +4,100 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
 import { extractDisplayName } from '@/lib/avatar-utils';
+import {
+  getStoredAccounts,
+  saveStoredAccounts,
+  addOrUpdateAccount,
+  removeStoredAccount,
+  switchActiveAccount,
+  PRESET_DEMO_ACCOUNTS
+} from '@/lib/account-manager';
+
+const PROVIDERS = [
+  {
+    id: 'google',
+    name: 'Google / Gmail',
+    icon: '🔴',
+    hint: 'Requires a 16-character Google App Password',
+    guideUrl: 'https://myaccount.google.com/apppasswords'
+  },
+  {
+    id: 'microsoft',
+    name: 'Outlook / 365',
+    icon: '🔷',
+    hint: 'Use your Microsoft password or App Password',
+    guideUrl: 'https://account.live.com/proofs/manage/additional'
+  },
+  {
+    id: 'yahoo',
+    name: 'Yahoo Mail',
+    icon: '🟣',
+    hint: 'Use a Yahoo App Password from Security settings',
+    guideUrl: 'https://login.yahoo.com/account/security'
+  },
+  {
+    id: 'icloud',
+    name: 'Apple iCloud',
+    icon: '☁️',
+    hint: 'Use an app-specific password from appleid.apple.com',
+    guideUrl: 'https://appleid.apple.com/account/manage'
+  },
+  {
+    id: 'custom',
+    name: 'Custom IMAP',
+    icon: '⚙️',
+    hint: 'Connect to your private IMAP/SMTP server'
+  }
+];
 
 export default function GoogleAccountModal({
   user,
   onClose,
   onOpenCompose,
   onDisconnect,
-  onUserUpdate
+  onUserUpdate,
+  onAccountSwitch,
+  initialTab = 'overview'
 }) {
   const router = useRouter();
   const displayName = extractDisplayName(user?.name, user?.email);
   const firstName = displayName.split(' ')[0] || 'User';
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'photo' | 'color'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'overview' | 'switch' | 'photo' | 'color'
   const [photoUrl, setPhotoUrl] = useState(user?.avatar || user?.picture || user?.photoUrl || '');
   const [selectedColor, setSelectedColor] = useState(user?.avatarColor || user?.color || '');
   const [tempPhotoUrl, setTempPhotoUrl] = useState(photoUrl);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [accounts, setAccounts] = useState([]);
+  const [switchingTo, setSwitchingTo] = useState(null);
+
+  // Add new account form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newProvider, setNewProvider] = useState('google');
+  const [newHost, setNewHost] = useState('');
+  const [newPort, setNewPort] = useState('993');
+  const [newTone, setNewTone] = useState('professional');
+  const [newAccountError, setNewAccountError] = useState('');
+  const [newAccountConnecting, setNewAccountConnecting] = useState(false);
 
   useEffect(() => {
     setPhotoUrl(user?.avatar || user?.picture || user?.photoUrl || '');
     setSelectedColor(user?.avatarColor || user?.color || '');
     setTempPhotoUrl(user?.avatar || user?.picture || user?.photoUrl || '');
+    refreshAccounts();
   }, [user]);
+
+  const refreshAccounts = () => {
+    try {
+      const stored = getStoredAccounts();
+      setAccounts(stored);
+    } catch {
+      setAccounts(PRESET_DEMO_ACCOUNTS);
+    }
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
@@ -58,12 +128,11 @@ export default function GoogleAccountModal({
       color: newColor !== undefined ? newColor : selectedColor,
     };
 
-    // Update localStorage
     try {
       localStorage.setItem('mailmind_user', JSON.stringify(updated));
+      addOrUpdateAccount(updated);
     } catch {}
 
-    // Update backend config
     try {
       await fetch('/api/auth/profile', {
         method: 'POST',
@@ -95,6 +164,136 @@ export default function GoogleAccountModal({
     handleSaveAvatar('', selectedColor);
   };
 
+  // Switch to an existing account
+  const handleSwitchAccount = async (targetAcc) => {
+    if (!targetAcc || targetAcc.email.toLowerCase() === user?.email?.toLowerCase()) {
+      setActiveTab('overview');
+      return;
+    }
+
+    setSwitchingTo(targetAcc.email);
+    try {
+      const switched = await switchActiveAccount(targetAcc);
+      if (switched) {
+        setPhotoUrl(switched.avatar || switched.picture || '');
+        setSelectedColor(switched.avatarColor || switched.color || '');
+        refreshAccounts();
+
+        if (onAccountSwitch) {
+          onAccountSwitch(switched);
+        } else if (onUserUpdate) {
+          onUserUpdate(switched);
+        }
+
+        setSuccessMsg('Switched to ' + switched.email + '!');
+        setTimeout(() => setSuccessMsg(''), 3000);
+      }
+    } catch (err) {
+      console.error('Account switch failed:', err);
+    } finally {
+      setSwitchingTo(null);
+      setActiveTab('overview');
+    }
+  };
+
+  // Remove account from list
+  const handleRemoveAccount = (e, emailToRemove) => {
+    e.stopPropagation();
+    if (window.confirm('Remove ' + emailToRemove + ' from saved accounts?')) {
+      removeStoredAccount(emailToRemove);
+      refreshAccounts();
+    }
+  };
+
+  // Auto-detect provider when typing new email
+  const handleNewEmailChange = (val) => {
+    setNewEmail(val);
+    const domain = (val.split('@')[1] || '').toLowerCase();
+    if (domain.includes('gmail') || domain.includes('googlemail')) {
+      setNewProvider('google');
+    } else if (domain.includes('outlook') || domain.includes('hotmail') || domain.includes('live') || domain.includes('office365')) {
+      setNewProvider('microsoft');
+    } else if (domain.includes('yahoo')) {
+      setNewProvider('yahoo');
+    } else if (domain.includes('icloud') || domain.includes('me.com') || domain.includes('mac.com')) {
+      setNewProvider('icloud');
+    }
+  };
+
+  // Connect and switch to a new email address
+  const handleConnectNewAccount = async (e) => {
+    e.preventDefault();
+    if (!newEmail || !newEmail.includes('@')) {
+      setNewAccountError('Please enter a valid email address.');
+      return;
+    }
+
+    setNewAccountConnecting(true);
+    setNewAccountError('');
+
+    const newName = extractDisplayName('', newEmail);
+    const candidateAccount = {
+      email: newEmail.trim().toLowerCase(),
+      name: newName,
+      provider: newProvider,
+      password: newPassword,
+      host: newProvider === 'custom' ? newHost : undefined,
+      port: newProvider === 'custom' ? newPort : undefined,
+      tone: newTone,
+      connected: true,
+      isDemo: !newPassword,
+      savedAt: new Date().toISOString()
+    };
+
+    // If password provided, attempt real server connection test
+    if (newPassword) {
+      try {
+        const res = await fetch('/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: candidateAccount.email,
+            password: candidateAccount.password,
+            provider: candidateAccount.provider,
+            host: candidateAccount.host,
+            port: candidateAccount.port,
+            tone: candidateAccount.tone
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          candidateAccount.isDemo = false;
+          if (data.name) candidateAccount.name = data.name;
+        } else {
+          const confirmAdd = window.confirm(
+            `Authentication with ${newEmail} returned: "${data.error || 'Check password'}".\n\nDo you still want to add this account profile to MailMind?`
+          );
+          if (!confirmAdd) {
+            setNewAccountConnecting(false);
+            setNewAccountError(data.error || 'Failed to authenticate with email server.');
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Backend connect error, proceeding with local switch:', err);
+      }
+    }
+
+    // Switch to newly added account
+    await handleSwitchAccount(candidateAccount);
+    setNewAccountConnecting(false);
+    setShowAddForm(false);
+    setNewEmail('');
+    setNewPassword('');
+    setNewAccountError('');
+  };
+
+  const currentProviderObj = PROVIDERS.find(p => p.id === newProvider) || PROVIDERS[0];
+  const otherAccounts = accounts.filter(
+    a => a.email && a.email.toLowerCase() !== user?.email?.toLowerCase()
+  );
+
   return (
     <div
       className="modal-overlay"
@@ -109,7 +308,7 @@ export default function GoogleAccountModal({
       <div
         className="modal google-account-card"
         style={{
-          maxWidth: 440,
+          maxWidth: 460,
           width: '100%',
           padding: 0,
           borderRadius: 24,
@@ -117,7 +316,10 @@ export default function GoogleAccountModal({
           border: '1px solid var(--border2, #2f2f44)',
           boxShadow: '0 12px 40px rgba(0, 0, 0, 0.55)',
           overflow: 'hidden',
-          animation: 'scaleUp 0.18s ease-out'
+          animation: 'scaleUp 0.18s ease-out',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {/* Google Account Modal Header */}
@@ -126,7 +328,8 @@ export default function GoogleAccountModal({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '16px 20px 12px',
-          borderBottom: '1px solid var(--border, #2a2a3c)'
+          borderBottom: '1px solid var(--border, #2a2a3c)',
+          flexShrink: 0
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg viewBox="0 0 24 24" width="20" height="20">
@@ -136,151 +339,701 @@ export default function GoogleAccountModal({
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
             </svg>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted, #94a3b8)', letterSpacing: '0.2px' }}>
-              Google Account
+              Google Account &bull; Profile
             </span>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--muted)',
-              fontSize: 18,
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {activeTab !== 'overview' && (
+              <button
+                onClick={() => setActiveTab('overview')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 6
+                }}
+              >
+                &larr; Overview
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--muted)',
+                fontSize: 18,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1
+              }}
+            >
+              &#10005;
+            </button>
+          </div>
         </div>
 
-        {/* User Profile Overview Body */}
-        <div style={{ padding: '24px 24px 20px', textAlign: 'center' }}>
-          {/* Main Large Gmail Avatar with Camera Badge */}
-          <div style={{ display: 'inline-block', position: 'relative', marginBottom: 12 }}>
-            <EmailAvatar
-              src={photoUrl}
-              email={user?.email}
-              name={displayName}
-              size={80}
-              isUser={true}
-              color={selectedColor}
-              showCameraBadge={true}
-              onCameraClick={() => setActiveTab(activeTab === 'photo' ? 'overview' : 'photo')}
-              style={{
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
-                border: '2px solid rgba(255, 255, 255, 0.15)'
-              }}
-            />
-          </div>
+        {/* Modal Scrollable Body */}
+        <div style={{ padding: '20px 20px 16px', overflowY: 'auto', flex: 1 }}>
 
-          <h2 style={{
-            fontSize: 20,
-            fontWeight: 700,
-            margin: '4px 0 2px',
-            fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif'
-          }}>
-            Hi, {firstName}!
-          </h2>
-
-          <div style={{
-            fontSize: 13.5,
-            color: 'var(--muted, #94a3b8)',
-            marginBottom: 16,
-            fontFamily: 'monospace'
-          }}>
-            {user?.email}
-          </div>
-
+          {/* Success Message Banner */}
           {successMsg && (
             <div style={{
               background: 'rgba(34, 197, 94, 0.15)',
               border: '1px solid var(--success)',
               color: '#86efac',
-              fontSize: 12,
-              padding: '6px 12px',
+              fontSize: 12.5,
+              padding: '8px 14px',
               borderRadius: 20,
               marginBottom: 14,
-              display: 'inline-block'
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
             }}>
-              ✅ {successMsg}
+              <span>&#9989;</span> {successMsg}
             </div>
           )}
 
-          {/* Manage Profile Picture Pill Button */}
-          <button
-            onClick={() => setActiveTab(activeTab === 'overview' ? 'photo' : 'overview')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: activeTab !== 'overview' ? 'var(--surface2)' : 'transparent',
-              border: '1px solid var(--border2, #3b3b54)',
-              color: 'var(--text)',
-              fontSize: 13,
-              fontWeight: 500,
-              padding: '7px 18px',
-              borderRadius: 100,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              marginBottom: 18
-            }}
-          >
-            <span>📷</span>
-            {activeTab === 'overview' ? 'Customize Profile Picture' : 'Hide Customizer'}
-          </button>
+          {/* ══════════════════ TAB: OVERVIEW ══════════════════ */}
+          {activeTab === 'overview' && (
+            <div style={{ textAlign: 'center' }}>
+              {/* Main Gmail Avatar */}
+              <div style={{ display: 'inline-block', position: 'relative', marginBottom: 10 }}>
+                <EmailAvatar
+                  src={photoUrl}
+                  email={user?.email}
+                  name={displayName}
+                  size={76}
+                  isUser={true}
+                  color={selectedColor}
+                  showCameraBadge={true}
+                  onCameraClick={() => setActiveTab('photo')}
+                  style={{
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
+                    border: '2px solid rgba(255, 255, 255, 0.15)'
+                  }}
+                />
+              </div>
 
-          {/* Profile Picture Customizer Panel */}
-          {activeTab !== 'overview' && (
-            <div style={{
-              background: 'var(--surface2, #252538)',
-              borderRadius: 14,
-              padding: 16,
-              marginBottom: 20,
-              textAlign: 'left',
-              border: '1px solid var(--border)'
-            }}>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              <h2 style={{
+                fontSize: 19,
+                fontWeight: 700,
+                margin: '2px 0 2px',
+                fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif'
+              }}>
+                Hi, {firstName}!
+              </h2>
+
+              <div style={{
+                fontSize: 13,
+                color: 'var(--muted, #94a3b8)',
+                marginBottom: 14,
+                fontFamily: 'monospace'
+              }}>
+                {user?.email}
+              </div>
+
+              {/* Quick Action Pill Buttons: Switch Account & Customize Photo */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('switch')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--accent)',
+                    color: 'var(--text)',
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    padding: '7px 16px',
+                    borderRadius: 100,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 2px 8px rgba(108, 99, 255, 0.2)'
+                  }}
+                >
+                  <span>&#8644;</span> Switch Account ({accounts.length})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('photo')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'transparent',
+                    border: '1px solid var(--border2, #3b3b54)',
+                    color: 'var(--muted)',
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    padding: '7px 14px',
+                    borderRadius: 100,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>&#128247;</span> Customize Photo
+                </button>
+              </div>
+
+              {/* Quick Google-Style Account Switcher Strip */}
+              {otherAccounts.length > 0 && (
+                <div style={{
+                  background: 'var(--surface2, #252538)',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  marginBottom: 18,
+                  textAlign: 'left',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 10
+                  }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Other Accounts on this device
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('switch')}
+                      style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Manage &rarr;
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {otherAccounts.slice(0, 3).map((acc) => {
+                      const accName = extractDisplayName(acc.name, acc.email);
+                      const isTargetSwitching = switchingTo === acc.email;
+                      return (
+                        <div
+                          key={acc.email}
+                          onClick={() => handleSwitchAccount(acc)}
+                          title={'Click to switch to ' + acc.email}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: '8px 10px',
+                            background: 'var(--surface)',
+                            borderRadius: 10,
+                            cursor: 'pointer',
+                            border: '1px solid var(--border)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                        >
+                          <EmailAvatar
+                            src={acc.avatar || acc.picture}
+                            email={acc.email}
+                            name={accName}
+                            size={28}
+                            color={acc.avatarColor || acc.color}
+                            isUser={true}
+                            showTooltip={false}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {accName}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {acc.email}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6 }}
+                          >
+                            {isTargetSwitching ? '...' : 'Switch'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Account Details Box */}
+              <div style={{
+                background: 'var(--surface2, #242436)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                marginBottom: 18,
+                fontSize: 12.5,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 7,
+                border: '1px solid var(--border)',
+                textAlign: 'left'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--muted)' }}>Account Provider:</span>
+                  <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: '#22c55e', fontSize: 11 }}>&bull;</span>
+                    {user?.provider === 'gmail' || user?.provider === 'google' ? 'Google / Gmail' : (user?.provider || 'Gmail')}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--muted)' }}>AI Reply Tone:</span>
+                  <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{user?.tone || 'Professional'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--muted)' }}>Monitoring Mode:</span>
+                  <span style={{ fontWeight: 600 }}>Permission-First</span>
+                </div>
+              </div>
+
+              {/* Main Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    onClose();
+                    onOpenCompose && onOpenCompose();
+                  }}
+                  style={{ borderRadius: 10, padding: '9px 12px', fontSize: 12.5 }}
+                >
+                  &#9993;&#65039; Compose Email
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    onClose();
+                    router.push('/settings');
+                  }}
+                  style={{ borderRadius: 10, padding: '9px 12px', fontSize: 12.5 }}
+                >
+                  &#9881;&#65039; Account Settings
+                </button>
+              </div>
+
+              {/* Disconnect / Sign Out */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onDisconnect && onDisconnect();
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: 'var(--danger, #f87171)',
+                    padding: '6px 18px',
+                    borderRadius: 100,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  Sign out / Disconnect Active Account
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════════ TAB: SWITCH ACCOUNT ══════════════════ */}
+          {activeTab === 'switch' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
+                    Switch Account
+                  </h3>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                    Choose an account to switch into or connect a new email address.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="btn btn-primary btn-sm"
+                  style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8 }}
+                >
+                  {showAddForm ? 'Hide Form' : '+ Add Email'}
+                </button>
+              </div>
+
+              {/* Add Account Inline Form */}
+              {showAddForm && (
+                <form
+                  onSubmit={handleConnectNewAccount}
+                  style={{
+                    background: 'var(--surface2, #252538)',
+                    borderRadius: 14,
+                    padding: 16,
+                    marginBottom: 18,
+                    border: '1px solid var(--accent)'
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text)' }}>
+                    Connect &amp; Switch to Another Email Address
+                  </div>
+
+                  {newAccountError && (
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid var(--danger)',
+                      color: '#fca5a5',
+                      fontSize: 12,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      marginBottom: 10
+                    }}>
+                      &#9888;&#65039; {newAccountError}
+                    </div>
+                  )}
+
+                  {/* Provider Pills */}
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 10, overflowX: 'auto', paddingBottom: 2 }}>
+                    {PROVIDERS.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setNewProvider(p.id)}
+                        style={{
+                          flex: 1,
+                          minWidth: 65,
+                          padding: '6px 4px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                          border: '1px solid ' + (newProvider === p.id ? 'var(--accent)' : 'var(--border)'),
+                          background: newProvider === p.id ? 'var(--accent-glow)' : 'var(--surface)',
+                          color: newProvider === p.id ? 'var(--text)' : 'var(--muted)',
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {p.icon} {p.name.split('/')[0].trim()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
+                      Email Address:
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. user@gmail.com, work@company.com"
+                      value={newEmail}
+                      onChange={e => handleNewEmailChange(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        padding: '8px 10px',
+                        color: 'var(--text)',
+                        fontSize: 12.5,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
+                        Password or App Password:
+                      </label>
+                      {currentProviderObj.guideUrl && (
+                        <a
+                          href={currentProviderObj.guideUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'underline' }}
+                        >
+                          Get App Password &nearr;
+                        </a>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      placeholder={newProvider === 'google' ? '16-char App Password (or leave empty for demo)' : 'Account password (or empty for demo)'}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        padding: '8px 10px',
+                        color: 'var(--text)',
+                        fontSize: 12.5,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {newProvider === 'custom' && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                      <div style={{ flex: 2 }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 3 }}>IMAP Host</label>
+                        <input
+                          type="text"
+                          placeholder="imap.mail.com"
+                          value={newHost}
+                          onChange={e => setNewHost(e.target.value)}
+                          style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 3 }}>Port</label>
+                        <input
+                          type="text"
+                          placeholder="993"
+                          value={newPort}
+                          onChange={e => setNewPort(e.target.value)}
+                          style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', color: 'var(--text)', fontSize: 12, boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(false)}
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 11.5 }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={newAccountConnecting || !newEmail}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 11.5, padding: '6px 14px' }}
+                    >
+                      {newAccountConnecting ? 'Connecting & Switching...' : 'Connect & Switch →'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Saved Accounts List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+                {/* Active Account */}
+                {user && user.email && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    background: 'var(--accent-glow)',
+                    border: '1.5px solid var(--accent)',
+                    boxShadow: '0 2px 10px rgba(108, 99, 255, 0.15)'
+                  }}>
+                    <EmailAvatar
+                      src={photoUrl}
+                      email={user.email}
+                      name={displayName}
+                      size={36}
+                      color={selectedColor}
+                      isUser={true}
+                      showTooltip={false}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                          {displayName}
+                        </span>
+                        <span className="badge badge-low" style={{ fontSize: 10, padding: '1px 6px' }}>
+                          &bull; Active
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.email}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 16, color: 'var(--accent)' }}>&#10003;</span>
+                  </div>
+                )}
+
+                {/* Other Saved Accounts */}
+                {otherAccounts.map((acc) => {
+                  const accDisplayName = extractDisplayName(acc.name, acc.email);
+                  const isSwitchingThis = switchingTo === acc.email;
+                  return (
+                    <div
+                      key={acc.email}
+                      onClick={() => handleSwitchAccount(acc)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 14px',
+                        borderRadius: 12,
+                        background: 'var(--surface2)',
+                        border: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                    >
+                      <EmailAvatar
+                        src={acc.avatar || acc.picture}
+                        email={acc.email}
+                        name={accDisplayName}
+                        size={36}
+                        color={acc.avatarColor || acc.color}
+                        isUser={true}
+                        showTooltip={false}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                            {accDisplayName}
+                          </span>
+                          {acc.isDemo && (
+                            <span className="badge badge-purple" style={{ fontSize: 9, padding: '1px 5px' }}>
+                              Demo
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {acc.email}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleSwitchAccount(acc); }}
+                        disabled={isSwitchingThis}
+                        className="btn btn-primary btn-sm"
+                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6 }}
+                      >
+                        {isSwitchingThis ? 'Switching...' : 'Switch'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveAccount(e, acc.email)}
+                        title="Remove from saved accounts"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--muted)',
+                          cursor: 'pointer',
+                          padding: '4px 6px',
+                          fontSize: 13,
+                          borderRadius: 4
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; }}
+                      >
+                        &#10005;
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Fast 1-Click Demo Profiles */}
+              <div style={{
+                background: 'rgba(108, 99, 255, 0.08)',
+                border: '1px dashed var(--accent)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                textAlign: 'left'
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  &#9889; Quick Preset Accounts:
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {PRESET_DEMO_ACCOUNTS.map((preset) => {
+                    const isCur = user?.email?.toLowerCase() === preset.email.toLowerCase();
+                    return (
+                      <button
+                        key={preset.email}
+                        type="button"
+                        onClick={() => handleSwitchAccount(preset)}
+                        disabled={isCur}
+                        style={{
+                          fontSize: 11,
+                          padding: '4px 10px',
+                          borderRadius: 100,
+                          border: '1px solid ' + (isCur ? 'var(--success)' : 'var(--border)'),
+                          background: isCur ? 'rgba(34, 197, 94, 0.15)' : 'var(--surface)',
+                          color: isCur ? '#86efac' : 'var(--text)',
+                          cursor: isCur ? 'default' : 'pointer'
+                        }}
+                      >
+                        {isCur ? '✓ ' : ''}{preset.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════════ TAB: PHOTO & COLORS ══════════════════ */}
+          {(activeTab === 'photo' || activeTab === 'color') && (
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('photo')}
                   style={{
                     flex: 1,
-                    padding: '6px 10px',
+                    padding: '7px 10px',
                     fontSize: 12,
                     fontWeight: 600,
                     borderRadius: 8,
                     border: 'none',
-                    background: activeTab === 'photo' ? 'var(--accent)' : 'transparent',
+                    background: activeTab === 'photo' ? 'var(--accent)' : 'var(--surface2)',
                     color: activeTab === 'photo' ? '#fff' : 'var(--muted)',
                     cursor: 'pointer'
                   }}
                 >
-                  🖼️ Photo URL / Upload
+                  &#128444;&#65039; Photo URL / Upload
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('color')}
                   style={{
                     flex: 1,
-                    padding: '6px 10px',
+                    padding: '7px 10px',
                     fontSize: 12,
                     fontWeight: 600,
                     borderRadius: 8,
                     border: 'none',
-                    background: activeTab === 'color' ? 'var(--accent)' : 'transparent',
+                    background: activeTab === 'color' ? 'var(--accent)' : 'var(--surface2)',
                     color: activeTab === 'color' ? '#fff' : 'var(--muted)',
                     cursor: 'pointer'
                   }}
                 >
-                  🎨 Google Colors
+                  &#127912; Google Colors
                 </button>
               </div>
 
@@ -296,7 +1049,7 @@ export default function GoogleAccountModal({
                     placeholder="https://example.com/my-avatar.jpg"
                     style={{
                       width: '100%',
-                      background: 'var(--surface)',
+                      background: 'var(--surface2)',
                       border: '1px solid var(--border)',
                       borderRadius: 8,
                       padding: '8px 10px',
@@ -307,11 +1060,11 @@ export default function GoogleAccountModal({
                     }}
                   />
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                     <label
                       style={{
                         flex: 1,
-                        background: 'var(--surface)',
+                        background: 'var(--surface2)',
                         border: '1px dashed var(--border2)',
                         borderRadius: 8,
                         padding: '7px 10px',
@@ -321,7 +1074,7 @@ export default function GoogleAccountModal({
                         cursor: 'pointer'
                       }}
                     >
-                      📁 Upload Photo from Computer
+                      &#128193; Upload Photo from Computer
                       <input
                         type="file"
                         accept="image/*"
@@ -339,7 +1092,7 @@ export default function GoogleAccountModal({
                       style={{ fontSize: 11, padding: '5px 10px' }}
                       title="Fetch photo automatically from Google / Gravatar"
                     >
-                      🔄 Auto Google Sync
+                      &#128259; Auto Google Sync
                     </button>
                     <button
                       type="button"
@@ -348,7 +1101,7 @@ export default function GoogleAccountModal({
                       className="btn btn-primary btn-sm"
                       style={{ fontSize: 11, padding: '5px 14px' }}
                     >
-                      {saving ? 'Saving…' : 'Apply Photo'}
+                      {saving ? 'Saving...' : 'Apply Photo'}
                     </button>
                   </div>
                 </div>
@@ -363,7 +1116,7 @@ export default function GoogleAccountModal({
                     display: 'grid',
                     gridTemplateColumns: 'repeat(8, 1fr)',
                     gap: 6,
-                    marginBottom: 12
+                    marginBottom: 14
                   }}>
                     {GMAIL_AVATAR_PALETTE.map((pal) => {
                       const isSelected = (selectedColor && selectedColor.toLowerCase() === pal.hex.toLowerCase()) ||
@@ -397,99 +1150,22 @@ export default function GoogleAccountModal({
             </div>
           )}
 
-          {/* Account Details Box */}
-          <div style={{
-            background: 'var(--surface2, #242436)',
-            borderRadius: 12,
-            padding: '12px 16px',
-            marginBottom: 20,
-            fontSize: 13,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            border: '1px solid var(--border)',
-            textAlign: 'left'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--muted)' }}>Account Provider:</span>
-              <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: '#22c55e', fontSize: 11 }}>●</span>
-                {user?.provider === 'gmail' || user?.provider === 'google' ? 'Google / Gmail' : (user?.provider || 'Gmail')}
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>AI Reply Tone:</span>
-              <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{user?.tone || 'Professional'}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>Monitoring Mode:</span>
-              <span style={{ fontWeight: 600 }}>Permission-First</span>
-            </div>
-          </div>
-
-          {/* Main Action Buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                onClose();
-                onOpenCompose && onOpenCompose();
-              }}
-              style={{ borderRadius: 10, padding: '9px 12px' }}
-            >
-              ✉️ Compose Email
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                onClose();
-                router.push('/settings');
-              }}
-              style={{ borderRadius: 10, padding: '9px 12px' }}
-            >
-              ⚙️ Account Settings
-            </button>
-          </div>
-
-          {/* Disconnect / Sign Out */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            <button
-              onClick={() => {
-                onClose();
-                onDisconnect && onDisconnect();
-              }}
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: 'var(--danger, #f87171)',
-                padding: '7px 20px',
-                borderRadius: 100,
-                fontSize: 12.5,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              Sign out / Disconnect Account
-            </button>
-          </div>
         </div>
 
         {/* Google-style Footer */}
         <div style={{
-          padding: '12px 20px',
+          padding: '10px 20px',
           background: 'rgba(0, 0, 0, 0.15)',
           borderTop: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'center',
           gap: 16,
           fontSize: 11,
-          color: 'var(--muted)'
+          color: 'var(--muted)',
+          flexShrink: 0
         }}>
           <a href="#" onClick={e => e.preventDefault()} style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</a>
-          <span>•</span>
+          <span>&bull;</span>
           <a href="#" onClick={e => e.preventDefault()} style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</a>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar from '@/components/EmailAvatar';
 import { extractDisplayName } from '@/lib/avatar-utils';
+import { addOrUpdateAccount } from '@/lib/account-manager';
 
 const STEPS = ['connect', 'tone', 'notifications', 'done'];
 
@@ -115,6 +116,7 @@ export default function OnboardingPage() {
       savedAt: new Date().toISOString()
     };
     localStorage.setItem('mailmind_user', JSON.stringify(demoUser));
+    addOrUpdateAccount(demoUser);
     router.push('/terminal');
   };
 
@@ -131,6 +133,7 @@ export default function OnboardingPage() {
       savedAt: new Date().toISOString()
     };
     localStorage.setItem('mailmind_user', JSON.stringify(demoUser));
+    addOrUpdateAccount(demoUser);
     router.push('/inbox');
   };
 
@@ -196,7 +199,7 @@ export default function OnboardingPage() {
 
   const handleDone = () => {
     const displayName = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    localStorage.setItem('mailmind_user', JSON.stringify({
+    const newUser = {
       provider: selectedProvider,
       email: email,
       password: password,
@@ -205,7 +208,10 @@ export default function OnboardingPage() {
       digest,
       connected: true,
       name: displayName || 'User',
-    }));
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('mailmind_user', JSON.stringify(newUser));
+    addOrUpdateAccount(newUser);
     router.push('/inbox');
   };
 

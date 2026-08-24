@@ -93,6 +93,51 @@ app.post('/api/auth/profile', (req, res) => {
   }
 });
 
+app.post('/api/auth/switch', (req, res) => {
+  try {
+    const { email, name, avatar, picture, avatarColor, color, password, provider, host, port, tone, isDemo } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required to switch account.' });
+    }
+
+    const existing = loadLocalConfig() || {};
+    const updated = {
+      ...existing,
+      email: email.trim(),
+      name: name !== undefined ? name : existing.name,
+      avatar: avatar !== undefined ? avatar : existing.avatar,
+      picture: picture !== undefined ? picture : existing.picture,
+      avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
+      color: color !== undefined ? color : existing.color,
+      provider: provider || existing.provider || 'google',
+      tone: tone || existing.tone || 'professional',
+      connected: true,
+      isDemo: isDemo !== undefined ? isDemo : existing.isDemo,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (password) updated.password = password;
+    if (host !== undefined) updated.host = host;
+    if (port !== undefined) updated.port = port;
+
+    saveLocalConfig(updated);
+    res.json({
+      success: true,
+      switched: true,
+      email: updated.email,
+      name: updated.name,
+      provider: updated.provider,
+      avatar: updated.avatar,
+      picture: updated.picture,
+      avatarColor: updated.avatarColor,
+      color: updated.color,
+      tone: updated.tone
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/auth/connect', async (req, res) => {
   try {
     const { email, password, provider, host, port, tone } = req.body || {};

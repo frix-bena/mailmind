@@ -56,15 +56,22 @@ export default function Sidebar({ user: propUser }) {
     const handleToggle = () => setDrawerOpen(prev => !prev);
     const handleClose = () => setDrawerOpen(false);
     const handleOpenCompose = () => setComposeOpen(true);
+    const handleAccountSwitched = (e) => {
+      if (e.detail && e.detail.email) {
+        setUser(e.detail);
+      }
+    };
 
     window.addEventListener('mailmind:toggle-drawer', handleToggle);
     window.addEventListener('mailmind:close-drawer', handleClose);
     window.addEventListener('mailmind:open-compose', handleOpenCompose);
+    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
 
     return () => {
       window.removeEventListener('mailmind:toggle-drawer', handleToggle);
       window.removeEventListener('mailmind:close-drawer', handleClose);
       window.removeEventListener('mailmind:open-compose', handleOpenCompose);
+      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
     };
   }, []);
 
@@ -335,6 +342,9 @@ export default function Sidebar({ user: propUser }) {
           onDisconnect={handleDisconnect}
           onUserUpdate={(updatedUser) => {
             setUser(updatedUser);
+          }}
+          onAccountSwitch={(switchedUser) => {
+            setUser(switchedUser);
           }}
         />
       )}
