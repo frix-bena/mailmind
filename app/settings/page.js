@@ -842,24 +842,6 @@ export default function SettingsPage() {
             </Row>
           </Section>
 
-          {/* Autonomous AI Agent */}
-          <Section title="Autonomous AI Agent & Terminal">
-            <Row label="Interactive Agent Terminal" desc="Access autonomous inbox intelligence, classification & terminal CLI">
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => router.push('/terminal')}
-                style={{ fontSize: 13, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                <span>🤖</span> Launch AI Agent Console →
-              </button>
-            </Row>
-            <Row label="System CLI Agent" desc="Run MailMind natively from your system terminal with full node execution">
-              <div style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--surface2)', padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
-                $ npm run agent
-              </div>
-            </Row>
-          </Section>
 
           {/* Save button */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 40 }}>
