@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import ComposeModal from '@/components/ComposeModal';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
+import ProviderIcon from '@/components/ProviderIcon';
 import { extractDisplayName } from '@/lib/avatar-utils';
 
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
@@ -271,7 +272,10 @@ export default function Sidebar({ user: propUser }) {
                 <div className="user-name" style={{ fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif' }}>
                   {displayName}
                 </div>
-                <div className="user-email">{user.email}</div>
+                <div className="user-email" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <ProviderIcon provider={user.provider || user.email} size={11} />
+                  <span>{user.email}</span>
+                </div>
               </div>
             </div>
           )}

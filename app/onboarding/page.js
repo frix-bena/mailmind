@@ -2,56 +2,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar from '@/components/EmailAvatar';
+import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
 import { extractDisplayName } from '@/lib/avatar-utils';
 import { addOrUpdateAccount } from '@/lib/account-manager';
 
 const STEPS = ['connect', 'tone', 'notifications', 'done'];
 
-const providers = [
-  {
-    id: 'google',
-    name: 'Google / Gmail',
-    icon: '🔴',
-    color: '#4285F4',
-    hint: 'Requires a 16-character Google App Password',
-    guideUrl: 'https://myaccount.google.com/apppasswords',
-    guideText: 'myaccount.google.com/apppasswords',
-  },
-  {
-    id: 'microsoft',
-    name: 'Microsoft Outlook / 365',
-    icon: '🔷',
-    color: '#00A4EF',
-    hint: 'Use your Outlook account password or App Password',
-    guideUrl: 'https://account.live.com/proofs/manage/additional',
-    guideText: 'Microsoft Security Settings',
-  },
-  {
-    id: 'yahoo',
-    name: 'Yahoo Mail',
-    icon: '🟣',
-    color: '#6001D2',
-    hint: 'Use a Yahoo App Password from account security settings',
-    guideUrl: 'https://login.yahoo.com/account/security',
-    guideText: 'Yahoo Account Security',
-  },
-  {
-    id: 'icloud',
-    name: 'Apple iCloud',
-    icon: '☁️',
-    color: '#38bdf8',
-    hint: 'Use an app-specific password from appleid.apple.com',
-    guideUrl: 'https://appleid.apple.com/account/manage',
-    guideText: 'Apple ID Security',
-  },
-  {
-    id: 'custom',
-    name: 'Custom IMAP Server',
-    icon: '⚙️',
-    color: '#6c63ff',
-    hint: 'Connect to any private or company IMAP/SMTP server',
-  }
-];
+const providers = PROVIDER_LIST;
 
 const tones = [
   { id: 'professional', label: 'Professional', emoji: '💼', desc: 'Polished and clear — great for work emails' },
@@ -223,35 +180,41 @@ export default function OnboardingPage() {
             </p>
 
             {/* Provider Selector Tabs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 6, marginBottom: 16 }}>
-              {providers.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedProvider(p.id);
-                    setAuthError('');
-                    setAuthHint('');
-                  }}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '10px 6px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: selectedProvider === p.id ? 'var(--accent-glow)' : 'var(--surface)',
-                    border: `1px solid ${selectedProvider === p.id ? 'var(--accent)' : 'var(--border)'}`,
-                    color: selectedProvider === p.id ? 'var(--text)' : 'var(--muted)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    textAlign: 'center'
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>{p.icon}</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{p.name.split('/')[0].trim()}</span>
-                </button>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8, marginBottom: 18 }}>
+              {providers.map(p => {
+                const isSelected = selectedProvider === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProvider(p.id);
+                      setAuthError('');
+                      setAuthHint('');
+                    }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '12px 6px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: isSelected ? 'var(--accent-glow)' : 'var(--surface)',
+                      border: `1.5px solid ${isSelected ? (p.color || 'var(--accent)') : 'var(--border)'}`,
+                      color: isSelected ? 'var(--text)' : 'var(--muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center'
+                    }}
+                    title={p.brandName || p.name}
+                  >
+                    <ProviderIcon provider={p.id} size={22} />
+                    <span style={{ fontSize: 11, fontWeight: isSelected ? 700 : 600, lineHeight: 1.2 }}>
+                      {p.shortName || p.name.split('/')[0].trim()}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Login Form */}
@@ -310,22 +273,25 @@ export default function OnboardingPage() {
                   onChange={e => setPassword(e.target.value)}
                   autoComplete="current-password"
                 />
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4 }}>
-                  {selectedProvider === 'google' && (
-                    <span>💡 Gmail requires an App Password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>myaccount.google.com/apppasswords</a>.</span>
-                  )}
-                  {selectedProvider === 'microsoft' && (
-                    <span>💡 Use your Outlook/Office 365 password or Microsoft App Password.</span>
-                  )}
-                  {selectedProvider === 'yahoo' && (
-                    <span>💡 Generate an App Password in Yahoo Account Security settings.</span>
-                  )}
-                  {selectedProvider === 'icloud' && (
-                    <span>💡 Generate an app-specific password at <a href="https://appleid.apple.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>appleid.apple.com</a>.</span>
-                  )}
-                  {selectedProvider === 'custom' && (
-                    <span>💡 Enter your email account password.</span>
-                  )}
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <ProviderIcon provider={selectedProvider} size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div>
+                    {selectedProvider === 'google' && (
+                      <span>Gmail requires an App Password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>myaccount.google.com/apppasswords</a>.</span>
+                    )}
+                    {selectedProvider === 'microsoft' && (
+                      <span>Use your Outlook/Office 365 password or Microsoft App Password from <a href="https://account.live.com/proofs/manage/additional" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Security Settings</a>.</span>
+                    )}
+                    {selectedProvider === 'yahoo' && (
+                      <span>Generate an App Password in <a href="https://login.yahoo.com/account/security" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Yahoo Account Security</a> settings.</span>
+                    )}
+                    {selectedProvider === 'icloud' && (
+                      <span>Generate an app-specific password at <a href="https://appleid.apple.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>appleid.apple.com</a>.</span>
+                    )}
+                    {selectedProvider === 'custom' && (
+                      <span>Enter your email account password and IMAP server settings below.</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -13,42 +13,9 @@ import {
   switchActiveAccount
 } from '@/lib/account-manager';
 
-const PROVIDERS = [
-  {
-    id: 'google',
-    name: 'Google / Gmail',
-    icon: '🔴',
-    hint: 'Requires a 16-character Google App Password',
-    guideUrl: 'https://myaccount.google.com/apppasswords'
-  },
-  {
-    id: 'microsoft',
-    name: 'Outlook / 365',
-    icon: '🔷',
-    hint: 'Use your Microsoft password or App Password',
-    guideUrl: 'https://account.live.com/proofs/manage/additional'
-  },
-  {
-    id: 'yahoo',
-    name: 'Yahoo Mail',
-    icon: '🟣',
-    hint: 'Use a Yahoo App Password from Security settings',
-    guideUrl: 'https://login.yahoo.com/account/security'
-  },
-  {
-    id: 'icloud',
-    name: 'Apple iCloud',
-    icon: '☁️',
-    hint: 'Use an app-specific password from appleid.apple.com',
-    guideUrl: 'https://appleid.apple.com/account/manage'
-  },
-  {
-    id: 'custom',
-    name: 'Custom IMAP',
-    icon: '⚙️',
-    hint: 'Connect to your private IMAP/SMTP server'
-  }
-];
+import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
+
+const PROVIDERS = PROVIDER_LIST;
 
 export default function GoogleAccountModal({
   user,
@@ -703,8 +670,8 @@ export default function GoogleAccountModal({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted)' }}>Account Provider:</span>
                   <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ color: '#22c55e', fontSize: 11 }}>&bull;</span>
-                    {user?.provider === 'gmail' || user?.provider === 'google' ? 'Google / Gmail' : (user?.provider || 'Gmail')}
+                    <ProviderIcon provider={user?.provider || user?.email} size={16} />
+                    {getProviderInfo(user?.provider || user?.email).name}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -860,29 +827,39 @@ export default function GoogleAccountModal({
                   )}
 
                   {/* Provider Pills */}
-                  <div style={{ display: 'flex', gap: 4, marginBottom: 12, overflowX: 'auto', paddingBottom: 2 }}>
-                    {PROVIDERS.map(p => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setNewProvider(p.id)}
-                        style={{
-                          flex: 1,
-                          minWidth: 65,
-                          padding: '6px 4px',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          borderRadius: 6,
-                          border: '1px solid ' + (newProvider === p.id ? 'var(--accent)' : 'var(--border)'),
-                          background: newProvider === p.id ? 'var(--accent-glow)' : 'var(--surface)',
-                          color: newProvider === p.id ? 'var(--text)' : 'var(--muted)',
-                          cursor: 'pointer',
-                          textAlign: 'center'
-                        }}
-                      >
-                        {p.icon} {p.name.split('/')[0].trim()}
-                      </button>
-                    ))}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }}>
+                    {PROVIDERS.map(p => {
+                      const isSelected = newProvider === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setNewProvider(p.id)}
+                          style={{
+                            flex: 1,
+                            minWidth: 70,
+                            padding: '8px 4px',
+                            fontSize: 11.5,
+                            fontWeight: isSelected ? 700 : 600,
+                            borderRadius: 8,
+                            border: `1.5px solid ${isSelected ? (p.color || 'var(--accent)') : 'var(--border)'}`,
+                            background: isSelected ? 'var(--accent-glow)' : 'var(--surface)',
+                            color: isSelected ? 'var(--text)' : 'var(--muted)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 5,
+                            transition: 'all 0.15s ease',
+                            textAlign: 'center'
+                          }}
+                          title={p.brandName || p.name}
+                        >
+                          <ProviderIcon provider={p.id} size={20} />
+                          <span style={{ fontSize: 11, lineHeight: 1.1 }}>{p.shortName || p.name.split('/')[0].trim()}</span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Account Name / Label */}
@@ -1164,8 +1141,9 @@ export default function GoogleAccountModal({
                         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
                           {displayName}
                         </span>
-                        <span className="badge badge-low" style={{ fontSize: 10, padding: '1px 6px' }}>
-                          &bull; Active
+                        <span className="badge badge-low" style={{ fontSize: 10, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <ProviderIcon provider={user?.provider || user?.email} size={11} />
+                          Active
                         </span>
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1212,11 +1190,20 @@ export default function GoogleAccountModal({
                           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                             {accDisplayName}
                           </span>
-                          {acc.provider && (
-                            <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'capitalize' }}>
-                              ({acc.provider})
-                            </span>
-                          )}
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 10.5,
+                            color: 'var(--muted)',
+                            background: 'var(--surface)',
+                            padding: '1px 6px',
+                            borderRadius: 6,
+                            border: '1px solid var(--border)'
+                          }}>
+                            <ProviderIcon provider={acc.provider || acc.email} size={12} />
+                            {getProviderInfo(acc.provider || acc.email).shortName}
+                          </span>
                         </div>
                         <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {acc.email}

@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import MonitoringModeModal from '@/components/MonitoringModeModal';
+import ProviderIcon, { getProviderInfo } from '@/components/ProviderIcon';
 import { extractDisplayName } from '@/lib/avatar-utils';
 import {
   getActiveUser,
@@ -362,8 +363,11 @@ export default function SettingsPage() {
                   <div style={{ fontSize: 13.5, color: 'var(--muted)', fontFamily: 'monospace', marginTop: 3 }}>
                     {user.email}
                   </div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    <span className="badge badge-purple">{providerLabels[user.provider] || 'Google Account'}</span>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span className="badge badge-purple" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <ProviderIcon provider={user.provider || user.email} size={14} />
+                      {providerLabels[user.provider] || 'Google Account'}
+                    </span>
                     <button
                       type="button"
                       className="chip"
@@ -603,8 +607,9 @@ export default function SettingsPage() {
                                 </span>
                               )}
                             </div>
-                            <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {acc.email} ({providerLabels[acc.provider] || acc.provider || 'email'})
+                            <div style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                              <ProviderIcon provider={acc.provider || acc.email} size={12} />
+                              <span>{acc.email} ({providerLabels[acc.provider] || acc.provider || 'email'})</span>
                             </div>
                           </div>
                         </div>
