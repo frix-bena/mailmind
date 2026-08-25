@@ -115,6 +115,12 @@ async function promptForCredentials() {
   if (toneChoice === '2') tone = 'casual';
   if (toneChoice === '3') tone = 'brief';
 
+  console.log(`\nSelect monitoring mode:`);
+  console.log(` 1) 🛡️ Ask Permission (Permission-First, human reviews drafts before sending) [Default]`);
+  console.log(` 2) ⚡ Reply Without Permission (Autonomous, replies sent automatically)`);
+  const modeChoice = (await askQuestion(`Choice [1-2, default: 1]: `)).trim() || '1';
+  const monitoringMode = modeChoice === '2' ? 'auto_reply' : 'ask_permission';
+
   const config = {
     email,
     password,
@@ -122,6 +128,7 @@ async function promptForCredentials() {
     host,
     port,
     tone,
+    monitoringMode,
     connected: true,
     savedAt: new Date().toISOString()
   };
@@ -457,9 +464,11 @@ async function main() {
 
   if (args.includes('--status')) {
     if (config && config.email) {
+      const isAuto = config.monitoringMode === 'auto_reply' || config.monitoringMode === 'without_permission';
       console.log(`${c.green}● Connected Account:${c.reset} ${config.email}`);
       console.log(`  Provider: ${config.provider || 'gmail'}`);
       console.log(`  Tone: ${config.tone || 'professional'}`);
+      console.log(`  Monitoring Mode: ${isAuto ? '⚡ Reply Without Permission (Autonomous)' : '🛡️ Ask Permission (Permission-First)'}`);
       console.log(`  Saved At: ${config.savedAt || 'N/A'}`);
     } else {
       console.log(`${c.yellow}○ No email account connected. Run 'node terminal-agent.js --login' to connect.${c.reset}`);
@@ -478,7 +487,9 @@ async function main() {
       const provider = provIdx !== -1 ? args[provIdx + 1] : 'gmail';
       const toneIdx = args.indexOf('--tone');
       const tone = toneIdx !== -1 ? args[toneIdx + 1] : 'professional';
-      const cliConfig = { email, password, provider, tone, connected: true, savedAt: new Date().toISOString() };
+      const modeIdx = args.indexOf('--mode');
+      const monitoringMode = modeIdx !== -1 ? args[modeIdx + 1] : 'ask_permission';
+      const cliConfig = { email, password, provider, tone, monitoringMode, connected: true, savedAt: new Date().toISOString() };
       const testRes = await testConnection(cliConfig);
       if (testRes.success) {
         saveLocalConfig(cliConfig);
@@ -542,8 +553,9 @@ async function main() {
 
   // Main interactive loop
   while (true) {
+    const isAuto = config.monitoringMode === 'auto_reply' || config.monitoringMode === 'without_permission';
     console.log(`\n${c.cyan}======================================================${c.reset}`);
-    console.log(`${c.bright}Active Account:${c.reset} ${c.green}${config.email}${c.reset} (${config.provider}) | ${c.dim}Tone: ${config.tone}${c.reset}`);
+    console.log(`${c.bright}Active Account:${c.reset} ${c.green}${config.email}${c.reset} (${config.provider}) | ${c.dim}Tone: ${config.tone}${c.reset} | ${isAuto ? `${c.magenta}⚡ Auto-Reply (No Permission)${c.reset}` : `${c.green}🛡️ Ask Permission${c.reset}`}`);
     console.log(`${c.cyan}------------------------------------------------------${c.reset}`);
     console.log(` ${c.bright}[1]${c.reset} 📥 Live Inbox (Recent Emails & AI Drafts)`);
     console.log(` ${c.bright}[2]${c.reset} 📜 Browse Email History (Deep Lookback)`);
@@ -551,12 +563,13 @@ async function main() {
     console.log(` ${c.bright}[4]${c.reset} 🤖 Ask AI Agent (Natural Language Lookback)`);
     console.log(` ${c.bright}[5]${c.reset} 💻 Terminal Shell Execution (Run System Commands)`);
     console.log(` ${c.bright}[6]${c.reset} 🔄 Live Watch / Polling Mode`);
-    console.log(` ${c.bright}[7]${c.reset} ⚙️ Reconfigure / Switch Account`);
-    console.log(` ${c.bright}[8]${c.reset} 🚪 Log out / Disconnect Account`);
+    console.log(` ${c.bright}[7]${c.reset} 🛡️ Toggle Monitoring Mode (Current: ${isAuto ? '⚡ Reply Without Permission' : '🛡️ Ask Permission'})`);
+    console.log(` ${c.bright}[8]${c.reset} ⚙️ Reconfigure / Switch Account`);
+    console.log(` ${c.bright}[9]${c.reset} 🚪 Log out / Disconnect Account`);
     console.log(` ${c.bright}[0]${c.reset} 🚪 Exit`);
     console.log(`${c.cyan}======================================================${c.reset}`);
 
-    const choice = (await askQuestion(`${c.bright}Select option [0-8]: ${c.reset}`)).trim();
+    const choice = (await askQuestion(`${c.bright}Select option [0-9]: ${c.reset}`)).trim();
 
     if (choice === '1') {
       await viewLiveInbox(config);
@@ -571,9 +584,14 @@ async function main() {
     } else if (choice === '6') {
       await watchInboxLive(config);
     } else if (choice === '7') {
+      const nextMode = isAuto ? 'ask_permission' : 'auto_reply';
+      config.monitoringMode = nextMode;
+      saveLocalConfig(config);
+      console.log(`\n${c.green}✔ Monitoring mode switched to: ${nextMode === 'auto_reply' ? '⚡ Reply Without Permission (Autonomous)' : '🛡️ Ask Permission (Permission-First)'}${c.reset}`);
+    } else if (choice === '8') {
       const newConfig = await promptForCredentials();
       if (newConfig) config = newConfig;
-    } else if (choice === '8') {
+    } else if (choice === '9') {
       clearLocalConfig();
       console.log(`\n${c.yellow}Logged out of ${config.email}.${c.reset}`);
       const reLogin = (await askQuestion(`Log in with a new email account now? (y/n): `)).toLowerCase();
@@ -588,7 +606,7 @@ async function main() {
       console.log(`\n${c.green}Goodbye! MailMind Agent session ended.${c.reset}\n`);
       break;
     } else {
-      console.log(`${c.red}Invalid option. Please choose from 0 to 8.${c.reset}`);
+      console.log(`${c.red}Invalid option. Please choose from 0 to 9.${c.reset}`);
     }
   }
 

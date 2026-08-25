@@ -16,6 +16,7 @@ export async function POST(request) {
       host,
       port,
       tone,
+      monitoringMode,
       isDemo
     } = body || {};
 
@@ -37,6 +38,7 @@ export async function POST(request) {
       color: color !== undefined ? color : existing.color,
       provider: provider || existing.provider || 'google',
       tone: tone || existing.tone || 'professional',
+      monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
       connected: true,
       isDemo: isDemo !== undefined ? isDemo : existing.isDemo,
       updatedAt: new Date().toISOString()
@@ -60,7 +62,8 @@ export async function POST(request) {
       picture: updated.picture,
       avatarColor: updated.avatarColor,
       color: updated.color,
-      tone: updated.tone
+      tone: updated.tone,
+      monitoringMode: updated.monitoringMode
     });
   } catch (err) {
     return NextResponse.json(

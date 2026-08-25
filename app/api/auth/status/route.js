@@ -15,6 +15,7 @@ export async function GET() {
         color: config.color || config.avatarColor || null,
         provider: config.provider || 'gmail',
         tone: config.tone || 'professional',
+        monitoringMode: config.monitoringMode || 'ask_permission',
         savedAt: config.savedAt
       });
     }

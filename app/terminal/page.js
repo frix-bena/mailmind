@@ -94,6 +94,7 @@ export default function TerminalPage() {
           text: `📧 MailMind Autonomous Agent Command Suite:
 --------------------------------------------------
   • status                  Show agent health, active inbox & tone mode
+  • mode <permission|auto>  Set monitoring mode: Ask permission vs Reply without permission
   • fetch-inbox             Retrieve & analyze recent inbox messages
   • ask <question>          AI lookback & Q&A over inbox history
   • search <query>          Search emails by keyword, sender, or subject
@@ -137,6 +138,14 @@ export default function TerminalPage() {
 
     if (lowerCmd === 'status') {
       const activeEmail = user?.email || 'No active account';
+      const isAuto = user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission';
+      const modeLabel = isAuto
+        ? '⚡ Reply Without Permission (Autonomous Mode)'
+        : '🛡️ Ask Permission (Permission-First Mode)';
+      const policyDesc = isAuto
+        ? '⚡ Autonomous (Replies sent automatically without manual confirmation)'
+        : '🙋 Permission-First (All AI drafts require manual review before sending)';
+
       setHistory([
         ...newHistory,
         {
@@ -147,7 +156,8 @@ export default function TerminalPage() {
   • Access Mode:       🔒 Private Mailbox Connected
   • Active Account:    ${activeEmail} (${user?.provider || 'IMAP/SMTP'})
   • Reply Tone:        ${user?.tone || 'professional'}
-  • Safety Policy:     🙋 Permission-First (No unapproved emails sent)
+  • Monitoring Mode:   ${modeLabel}
+  • Safety Policy:     ${policyDesc}
   • Q&A Engine:        Semantic Matcher & Zero-Shot Categorization
   • Inbox Monitor:     Real-time polling active`
         }
@@ -156,6 +166,7 @@ export default function TerminalPage() {
     }
 
     if (lowerCmd === 'stats') {
+      const isAuto = user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission';
       setHistory([
         ...newHistory,
         {
@@ -164,11 +175,56 @@ export default function TerminalPage() {
 --------------------------------------------------
   • Active Mailbox:            ${user?.email || 'Connected'}
   • Status:                    Monitoring in real time
-  • Safety Policy:             100% human-approved drafts before send
+  • Monitoring Mode:           ${isAuto ? '⚡ Autonomous (Reply without permission)' : '🛡️ Permission-First (Ask permission)'}
+  • Safety Policy:             ${isAuto ? 'Autonomous dispatch enabled for actionable emails' : '100% human-approved drafts before send'}
   • AI Classification:         Active (Action Required vs FYI)
   • Draft Engine:              Ready`
         }
       ]);
+      return;
+    }
+
+    if (lowerCmd.startsWith('mode ') || lowerCmd.startsWith('monitoring ')) {
+      const selectedMode = lowerCmd.replace(/^(mode|monitoring)\s+/i, '').trim();
+      let targetMode = null;
+      if (['permission', 'ask', 'ask_permission', 'permission-first', 'safe'].includes(selectedMode)) {
+        targetMode = 'ask_permission';
+      } else if (['auto', 'auto-reply', 'auto_reply', 'without-permission', 'without_permission', 'autonomous', 'reply'].includes(selectedMode)) {
+        targetMode = 'auto_reply';
+      }
+
+      if (targetMode) {
+        const updated = { ...(user || {}), monitoringMode: targetMode };
+        setUser(updated);
+        localStorage.setItem('mailmind_user', JSON.stringify(updated));
+        try {
+          fetch('/api/auth/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ monitoringMode: targetMode })
+          }).catch(() => {});
+        } catch (_) {}
+
+        const modeName = targetMode === 'auto_reply'
+          ? '⚡ Reply Without Permission (Autonomous Mode)'
+          : '🛡️ Ask Permission (Permission-First Mode)';
+
+        setHistory([
+          ...newHistory,
+          {
+            type: 'output',
+            text: `✅ Monitoring mode updated to: ${modeName}\n${targetMode === 'auto_reply' ? 'The agent will now reply automatically to actionable messages without asking for permission.' : 'The agent will now ask for your explicit permission and review before sending any replies.'}`
+          }
+        ]);
+      } else {
+        setHistory([
+          ...newHistory,
+          {
+            type: 'error',
+            text: `Invalid mode "${selectedMode}". Usage: mode permission (Ask permission) | mode auto (Reply without permission)`
+          }
+        ]);
+      }
       return;
     }
 

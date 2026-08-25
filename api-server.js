@@ -55,6 +55,7 @@ app.get('/api/auth/status', (req, res) => {
         color: config.color || config.avatarColor || null,
         provider: config.provider || 'gmail',
         tone: config.tone || 'professional',
+        monitoringMode: config.monitoringMode || 'ask_permission',
         savedAt: config.savedAt
       });
     }
@@ -66,7 +67,7 @@ app.get('/api/auth/status', (req, res) => {
 
 app.post('/api/auth/profile', (req, res) => {
   try {
-    const { name, avatar, picture, avatarColor, color, tone } = req.body || {};
+    const { name, avatar, picture, avatarColor, color, tone, monitoringMode } = req.body || {};
     const existing = loadLocalConfig() || {};
     const updated = {
       ...existing,
@@ -76,6 +77,7 @@ app.post('/api/auth/profile', (req, res) => {
       avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
       color: color !== undefined ? color : existing.color,
       tone: tone !== undefined ? tone : existing.tone,
+      monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
       updatedAt: new Date().toISOString()
     };
     saveLocalConfig(updated);
@@ -86,7 +88,9 @@ app.post('/api/auth/profile', (req, res) => {
       avatar: updated.avatar,
       picture: updated.picture,
       avatarColor: updated.avatarColor,
-      color: updated.color
+      color: updated.color,
+      tone: updated.tone,
+      monitoringMode: updated.monitoringMode
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -95,7 +99,7 @@ app.post('/api/auth/profile', (req, res) => {
 
 app.post('/api/auth/switch', (req, res) => {
   try {
-    const { email, name, avatar, picture, avatarColor, color, password, provider, host, port, tone, isDemo } = req.body || {};
+    const { email, name, avatar, picture, avatarColor, color, password, provider, host, port, tone, monitoringMode, isDemo } = req.body || {};
     if (!email) {
       return res.status(400).json({ error: 'Email address is required to switch account.' });
     }
@@ -111,6 +115,7 @@ app.post('/api/auth/switch', (req, res) => {
       color: color !== undefined ? color : existing.color,
       provider: provider || existing.provider || 'google',
       tone: tone || existing.tone || 'professional',
+      monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
       connected: true,
       isDemo: isDemo !== undefined ? isDemo : existing.isDemo,
       updatedAt: new Date().toISOString()
@@ -131,7 +136,8 @@ app.post('/api/auth/switch', (req, res) => {
       picture: updated.picture,
       avatarColor: updated.avatarColor,
       color: updated.color,
-      tone: updated.tone
+      tone: updated.tone,
+      monitoringMode: updated.monitoringMode
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -140,7 +146,7 @@ app.post('/api/auth/switch', (req, res) => {
 
 app.post('/api/auth/connect', async (req, res) => {
   try {
-    const { email, password, provider, host, port, tone } = req.body || {};
+    const { email, password, provider, host, port, tone, monitoringMode } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password/App Password are required.' });
     }
@@ -152,6 +158,7 @@ app.post('/api/auth/connect', async (req, res) => {
       host,
       port,
       tone: tone || 'professional',
+      monitoringMode: monitoringMode || 'ask_permission',
       connected: true,
       savedAt: new Date().toISOString()
     };

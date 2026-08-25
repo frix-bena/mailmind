@@ -91,6 +91,23 @@ select.styled:focus{border-color:var(--accent)}
         </div>
       </div>
 
+      <!-- Agent Monitoring Mode -->
+      <div class="section">
+        <div class="section-label">Agent Monitoring &amp; Reply Policy</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Monitoring Mode</div>
+              <div class="row-desc">Choose whether the agent asks for permission or replies without permission</div>
+            </div>
+            <div class="tone-group" id="mode-group">
+              <button class="tone-btn active" data-m="ask_permission" onclick="setMode(this)">🛡️ Ask Permission</button>
+              <button class="tone-btn" data-m="auto_reply" onclick="setMode(this)">⚡ Reply Without Permission</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Notifications -->
       <div class="section">
         <div class="section-label">Notifications</div>
@@ -148,9 +165,9 @@ select.styled:focus{border-color:var(--accent)}
           <div class="settings-row">
             <div>
               <div class="row-label">Classification Model</div>
-              <div class="row-desc">Classifies every email: needsReply, category, urgency, summary</div>
+              <div class="row-desc">OpenAI GPT-4o mini · temperature: 0.2</div>
             </div>
-            <span class="chip" style="cursor:default">GPT-4o</span>
+            <span class="chip" style="font-family:monospace;font-size:12px">gpt-4o-mini</span>
           </div>
           <div class="settings-row">
             <div>
@@ -164,7 +181,7 @@ select.styled:focus{border-color:var(--accent)}
 
       <!-- Danger zone -->
       <div class="section">
-        <div class="section-label">Danger Zone</div>
+        <div class="section-label" style="color:var(--danger)">Danger Zone</div>
         <div class="settings-card">
           <div class="settings-row row-danger">
             <div>
@@ -197,8 +214,13 @@ if (!user || !user.email) {
   window.location.replace('onboarding.html');
 } else {
   if (user.tone) {
-    document.querySelectorAll('.tone-btn').forEach(b => {
+    document.querySelectorAll('#tone-group .tone-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.t === user.tone);
+    });
+  }
+  if (user.monitoringMode) {
+    document.querySelectorAll('#mode-group .tone-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.m === user.monitoringMode);
     });
   }
   if (user.inApp === false) document.getElementById('tog-inapp').classList.remove('on');
@@ -207,16 +229,23 @@ if (!user || !user.email) {
 }
 
 function setTone(el) {
-  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tone-group .tone-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setMode(el) {
+  document.querySelectorAll('#mode-group .tone-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
 }
 
 function save() {
   const existing = getUser();
-  const activeTone = document.querySelector('.tone-btn.active')?.dataset.t || existing.tone;
+  const activeTone = document.querySelector('#tone-group .tone-btn.active')?.dataset.t || existing.tone || 'professional';
+  const activeMode = document.querySelector('#mode-group .tone-btn.active')?.dataset.m || existing.monitoringMode || 'ask_permission';
   localStorage.setItem('mailmind_user', JSON.stringify({
     ...existing,
     tone: activeTone,
+    monitoringMode: activeMode,
     inApp: document.getElementById('tog-inapp').classList.contains('on'),
     digest: document.getElementById('tog-digest').classList.contains('on'),
     pollInterval: document.getElementById('poll-select').value,

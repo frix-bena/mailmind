@@ -4,7 +4,7 @@ import { loadLocalConfig, saveLocalConfig } from '@/lib/email-service';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, avatar, picture, avatarColor, color, tone } = body || {};
+    const { name, avatar, picture, avatarColor, color, tone, monitoringMode } = body || {};
 
     const existing = loadLocalConfig() || {};
     const updated = {
@@ -15,6 +15,7 @@ export async function POST(request) {
       avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
       color: color !== undefined ? color : existing.color,
       tone: tone !== undefined ? tone : existing.tone,
+      monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
       updatedAt: new Date().toISOString()
     };
 
@@ -27,7 +28,9 @@ export async function POST(request) {
       avatar: updated.avatar,
       picture: updated.picture,
       avatarColor: updated.avatarColor,
-      color: updated.color
+      color: updated.color,
+      tone: updated.tone,
+      monitoringMode: updated.monitoringMode
     });
   } catch (err) {
     return NextResponse.json(

@@ -257,6 +257,19 @@ export default function InboxPage() {
               {loading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> <span className="hide-on-mobile">Refreshing…</span></> : <>🔄 <span className="hide-on-mobile">Refresh</span></>}
             </button>
 
+            {/* Monitoring Mode Badge */}
+            <button
+              type="button"
+              onClick={() => router.push('/settings')}
+              className={user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? 'badge badge-purple' : 'chip'}
+              style={{ fontSize: 11.5, padding: '3px 8px', cursor: 'pointer', border: 'none' }}
+              title={`Monitoring Mode: ${user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? 'Reply Without Permission (Autonomous)' : 'Ask Permission (Permission-First)'}. Click to change in Settings.`}
+            >
+              <span className="hide-on-mobile">
+                {user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? '⚡ Auto-Reply Active' : '🛡️ Ask Permission'}
+              </span>
+            </button>
+
             {pending > 0 && (
               <button
                 className="badge badge-purple"
@@ -300,10 +313,12 @@ export default function InboxPage() {
               borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
               display: 'flex', alignItems: 'center', gap: 12,
             }}>
-              <span style={{ fontSize: 18 }}>📬</span>
+              <span style={{ fontSize: 18 }}>{(user.monitoringMode === 'auto_reply' || user.monitoringMode === 'without_permission') ? '⚡' : '📬'}</span>
               <div style={{ flex: 1, fontSize: 14 }}>
                 <strong>Inbox: {user.email}</strong>
-                {pending > 0 ? ` — ${pending} email(s) currently need your review & approval before sending.` : ' — Monitoring your inbox in real time.'}
+                {(user.monitoringMode === 'auto_reply' || user.monitoringMode === 'without_permission')
+                  ? ' — ⚡ Autonomous mode: Agent replies automatically to actionable emails without asking for permission.'
+                  : (pending > 0 ? ` — 🛡️ Permission-first mode: ${pending} email(s) awaiting your review & approval.` : ' — 🛡️ Permission-first mode: Monitoring your inbox in real time.')}
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => setNewBanner(false)}>Dismiss</button>
             </div>

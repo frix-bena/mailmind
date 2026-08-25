@@ -170,6 +170,7 @@ export default function OnboardingPage() {
       email: email.trim().toLowerCase(),
       password: password,
       tone,
+      monitoringMode: 'ask_permission',
       inApp,
       digest,
       connected: true,

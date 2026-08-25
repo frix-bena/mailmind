@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [avatar, setAvatar] = useState('');
   const [avatarColor, setAvatarColor] = useState('');
   const [tone, setTone] = useState('professional');
+  const [monitoringMode, setMonitoringMode] = useState('ask_permission');
   const [inApp, setInApp] = useState(true);
   const [digest, setDigest] = useState(false);
   const [pollInterval, setPollInterval] = useState('3');
@@ -83,6 +84,7 @@ export default function SettingsPage() {
     if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
     if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
     if (stored.tone) setTone(stored.tone);
+    if (stored.monitoringMode) setMonitoringMode(stored.monitoringMode);
     if (stored.inApp !== undefined) setInApp(stored.inApp);
     if (stored.digest !== undefined) setDigest(stored.digest);
     if (stored.pollInterval) setPollInterval(stored.pollInterval);
@@ -96,6 +98,7 @@ export default function SettingsPage() {
         if (u.avatar || u.picture) setAvatar(u.avatar || u.picture || '');
         if (u.avatarColor || u.color) setAvatarColor(u.avatarColor || u.color || '');
         if (u.tone) setTone(u.tone);
+        if (u.monitoringMode) setMonitoringMode(u.monitoringMode);
         refreshAccountsList();
       } else {
         router.replace('/onboarding');
@@ -143,12 +146,14 @@ export default function SettingsPage() {
       avatarColor,
       color: avatarColor,
       tone,
+      monitoringMode,
       inApp,
       digest,
       pollInterval
     };
     setUser(updated);
     localStorage.setItem('mailmind_user', JSON.stringify(updated));
+    addOrUpdateAccount(updated);
 
     // Save to backend
     try {
@@ -161,7 +166,8 @@ export default function SettingsPage() {
           picture: updated.picture,
           avatarColor: updated.avatarColor,
           color: updated.color,
-          tone: updated.tone
+          tone: updated.tone,
+          monitoringMode: updated.monitoringMode
         })
       });
     } catch {}
@@ -637,6 +643,181 @@ export default function SettingsPage() {
             </Row>
           </Section>
 
+          {/* Monitoring Mode & Agent Reply Policy */}
+          <Section title="Agent Monitoring & Reply Permission Mode">
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                    Inbox Monitoring &amp; Reply Policy
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                    Choose whether MailMind must ask for your permission before sending replies, or if it can reply autonomously without permission.
+                  </div>
+                </div>
+                <span
+                  className={monitoringMode === 'auto_reply' || monitoringMode === 'without_permission' ? 'badge badge-purple' : 'badge badge-low'}
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                >
+                  {monitoringMode === 'auto_reply' || monitoringMode === 'without_permission' ? '⚡ Autonomous Mode' : '🛡️ Permission-First Mode'}
+                </span>
+              </div>
+
+              {/* Mode Selection Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginTop: 14 }}>
+                {/* Option 1: Ask Permission */}
+                <div
+                  onClick={() => setMonitoringMode('ask_permission')}
+                  style={{
+                    background: (monitoringMode === 'ask_permission' || !monitoringMode) ? 'var(--accent-glow)' : 'var(--surface2)',
+                    border: `2px solid ${monitoringMode === 'ask_permission' || !monitoringMode ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 12,
+                    padding: '18px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    boxShadow: monitoringMode === 'ask_permission' || !monitoringMode ? '0 4px 16px rgba(108, 99, 255, 0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        background: monitoringMode === 'ask_permission' || !monitoringMode ? 'rgba(108, 99, 255, 0.2)' : 'var(--surface)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 20
+                      }}>
+                        🛡️
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                          Ask Permission
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>
+                          Human-in-the-loop (Permission-First)
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border: `2px solid ${monitoringMode === 'ask_permission' || !monitoringMode ? 'var(--accent)' : 'var(--muted)'}`,
+                      background: monitoringMode === 'ask_permission' || !monitoringMode ? 'var(--accent)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 'bold',
+                      flexShrink: 0
+                    }}>
+                      {(monitoringMode === 'ask_permission' || !monitoringMode) ? '✓' : ''}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.5, margin: '8px 0 0 0', opacity: 0.9 }}>
+                    The agent continuously monitors your mailbox, categorizes messages, and prepares AI draft replies. <strong>No reply is sent without your explicit review and approval.</strong>
+                  </p>
+                  <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <span className="badge badge-low" style={{ fontSize: 10.5, padding: '2px 7px' }}>🔒 100% Safe</span>
+                    <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Review Drafts First</span>
+                    <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Zero Unapproved Sends</span>
+                  </div>
+                </div>
+
+                {/* Option 2: Reply Without Permission */}
+                <div
+                  onClick={() => setMonitoringMode('auto_reply')}
+                  style={{
+                    background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent-glow)' : 'var(--surface2)',
+                    border: `2px solid ${monitoringMode === 'auto_reply' || monitoringMode === 'without_permission' ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 12,
+                    padding: '18px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    boxShadow: monitoringMode === 'auto_reply' || monitoringMode === 'without_permission' ? '0 4px 16px rgba(108, 99, 255, 0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.2)' : 'var(--surface)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 20
+                      }}>
+                        ⚡
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                          Reply Without Permission
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>
+                          Autonomous Auto-Pilot
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border: `2px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
+                      background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 'bold',
+                      flexShrink: 0
+                    }}>
+                      {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? '✓' : ''}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.5, margin: '8px 0 0 0', opacity: 0.9 }}>
+                    The agent monitors incoming emails, crafts smart responses in your chosen tone, and <strong>sends replies automatically via SMTP without waiting for confirmation.</strong>
+                  </p>
+                  <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <span className="badge badge-purple" style={{ fontSize: 10.5, padding: '2px 7px' }}>⚡ Auto-Pilot</span>
+                    <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Instant SMTP Dispatch</span>
+                    <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Hands-Free Replies</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Banner */}
+              <div style={{
+                marginTop: 16,
+                padding: '12px 16px',
+                borderRadius: 10,
+                background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                border: `1px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+                fontSize: 12.5,
+                color: 'var(--text)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10
+              }}>
+                <span style={{ fontSize: 16 }}>{(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? '⚡' : '🛡️'}</span>
+                <div>
+                  <strong>Active Policy: </strong>
+                  {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
+                    ? 'The agent is authorized to reply without permission. Actionable incoming messages will be replied to automatically in real time.'
+                    : 'The agent will ask for permission before sending any replies. All generated drafts will await your approval in your Inbox.'}
+                </div>
+              </div>
+            </div>
+          </Section>
+
           {/* Notifications */}
           <Section title="Notifications">
             <Row label="In-app notifications" desc="Real-time bell alerts inside MailMind">
@@ -710,6 +891,7 @@ export default function SettingsPage() {
             if (updated.avatar !== undefined) setAvatar(updated.avatar);
             if (updated.avatarColor !== undefined) setAvatarColor(updated.avatarColor);
             if (updated.name !== undefined) setName(updated.name);
+            if (updated.monitoringMode !== undefined) setMonitoringMode(updated.monitoringMode);
           }}
           onAccountSwitch={(switched) => {
             setUser(switched);
@@ -717,6 +899,7 @@ export default function SettingsPage() {
             if (switched.avatar !== undefined) setAvatar(switched.avatar);
             if (switched.avatarColor !== undefined) setAvatarColor(switched.avatarColor);
             if (switched.tone) setTone(switched.tone);
+            if (switched.monitoringMode !== undefined) setMonitoringMode(switched.monitoringMode);
           }}
         />
       )}

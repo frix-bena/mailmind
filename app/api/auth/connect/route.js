@@ -7,7 +7,7 @@ import {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { email, password, provider, host, port, tone } = body || {};
+    const { email, password, provider, host, port, tone, monitoringMode } = body || {};
 
     if (!email || !password) {
       return NextResponse.json(
@@ -23,6 +23,7 @@ export async function POST(request) {
       host,
       port,
       tone: tone || 'professional',
+      monitoringMode: monitoringMode || 'ask_permission',
       connected: true,
       savedAt: new Date().toISOString()
     };

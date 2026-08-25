@@ -80,6 +80,7 @@ export default function GoogleAccountModal({
   const [newHost, setNewHost] = useState('');
   const [newPort, setNewPort] = useState('993');
   const [newTone, setNewTone] = useState('professional');
+  const [newMonitoringMode, setNewMonitoringMode] = useState('ask_permission');
   const [newAvatarColor, setNewAvatarColor] = useState('#1a73e8');
   const [newAccountError, setNewAccountError] = useState('');
   const [newAccountConnecting, setNewAccountConnecting] = useState(false);
@@ -241,6 +242,7 @@ export default function GoogleAccountModal({
       host: newProvider === 'custom' ? (newHost.trim() || undefined) : undefined,
       port: newProvider === 'custom' ? (newPort.trim() || '993') : undefined,
       tone: newTone,
+      monitoringMode: newMonitoringMode || 'ask_permission',
       avatarColor: newAvatarColor || selectedColor || '#1a73e8',
       connected: true,
       isDemo: false,
@@ -256,6 +258,7 @@ export default function GoogleAccountModal({
     setNewHost('');
     setNewPort('993');
     setNewTone('professional');
+    setNewMonitoringMode('ask_permission');
     setNewAvatarColor('#1a73e8');
     setNewAccountError('');
     setNewAccountConnecting(false);
@@ -706,9 +709,52 @@ export default function GoogleAccountModal({
                   <span style={{ color: 'var(--muted)' }}>AI Reply Tone:</span>
                   <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{user?.tone || 'Professional'}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted)' }}>Monitoring Mode:</span>
-                  <span style={{ fontWeight: 600 }}>Permission-First</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      fontWeight: 600,
+                      color: (user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission') ? 'var(--accent)' : '#86efac',
+                      fontSize: 12
+                    }}>
+                      {(user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission') ? '⚡ Autonomous' : '🛡️ Permission-First'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const isAuto = user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission';
+                        const nextMode = isAuto ? 'ask_permission' : 'auto_reply';
+                        const updated = { ...(user || {}), monitoringMode: nextMode };
+                        localStorage.setItem('mailmind_user', JSON.stringify(updated));
+                        addOrUpdateAccount(updated);
+                        try {
+                          await fetch('/api/auth/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              monitoringMode: nextMode
+                            })
+                          });
+                        } catch {}
+                        if (onUserUpdate) onUserUpdate(updated);
+                        setSuccessMsg(`Mode changed to: ${nextMode === 'auto_reply' ? 'Reply without permission' : 'Ask permission'}`);
+                        setTimeout(() => setSuccessMsg(''), 2500);
+                      }}
+                      style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border2, #3b3b54)',
+                        color: 'var(--text)',
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        padding: '2px 7px',
+                        borderRadius: 4,
+                        cursor: 'pointer'
+                      }}
+                      title="Click to toggle between Ask Permission and Reply Without Permission"
+                    >
+                      Change ⇄
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -989,6 +1035,55 @@ export default function GoogleAccountModal({
                           {t}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Monitoring Mode Selection */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
+                      Monitoring &amp; Reply Mode:
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => setNewMonitoringMode('ask_permission')}
+                        style={{
+                          padding: '6px 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                          textAlign: 'left',
+                          border: '1px solid ' + (newMonitoringMode === 'ask_permission' ? 'var(--accent)' : 'var(--border)'),
+                          background: newMonitoringMode === 'ask_permission' ? 'var(--accent-glow)' : 'var(--surface)',
+                          color: newMonitoringMode === 'ask_permission' ? 'var(--text)' : 'var(--muted)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🛡️ Ask Permission
+                        <div style={{ fontSize: 9.5, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}>
+                          Human approval required
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewMonitoringMode('auto_reply')}
+                        style={{
+                          padding: '6px 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                          textAlign: 'left',
+                          border: '1px solid ' + (newMonitoringMode === 'auto_reply' ? 'var(--accent)' : 'var(--border)'),
+                          background: newMonitoringMode === 'auto_reply' ? 'var(--accent-glow)' : 'var(--surface)',
+                          color: newMonitoringMode === 'auto_reply' ? 'var(--text)' : 'var(--muted)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚡ Without Permission
+                        <div style={{ fontSize: 9.5, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}>
+                          Auto-reply immediately
+                        </div>
+                      </button>
                     </div>
                   </div>
 
