@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
+import MonitoringModeModal from '@/components/MonitoringModeModal';
 import { extractDisplayName } from '@/lib/avatar-utils';
 import {
   getStoredAccounts,
@@ -70,6 +71,7 @@ export default function GoogleAccountModal({
   const [successMsg, setSuccessMsg] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [switchingTo, setSwitchingTo] = useState(null);
+  const [showMonitoringModal, setShowMonitoringModal] = useState(false);
 
   // Add new account form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -721,38 +723,23 @@ export default function GoogleAccountModal({
                     </span>
                     <button
                       type="button"
-                      onClick={async () => {
-                        const isAuto = user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission';
-                        const nextMode = isAuto ? 'ask_permission' : 'auto_reply';
-                        const updated = { ...(user || {}), monitoringMode: nextMode };
-                        localStorage.setItem('mailmind_user', JSON.stringify(updated));
-                        addOrUpdateAccount(updated);
-                        try {
-                          await fetch('/api/auth/profile', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              monitoringMode: nextMode
-                            })
-                          });
-                        } catch {}
-                        if (onUserUpdate) onUserUpdate(updated);
-                        setSuccessMsg(`Mode changed to: ${nextMode === 'auto_reply' ? 'Reply without permission' : 'Ask permission'}`);
-                        setTimeout(() => setSuccessMsg(''), 2500);
-                      }}
+                      onClick={() => setShowMonitoringModal(true)}
                       style={{
                         background: 'var(--surface)',
                         border: '1px solid var(--border2, #3b3b54)',
                         color: 'var(--text)',
                         fontSize: 10.5,
                         fontWeight: 600,
-                        padding: '2px 7px',
-                        borderRadius: 4,
-                        cursor: 'pointer'
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4
                       }}
-                      title="Click to toggle between Ask Permission and Reply Without Permission"
+                      title="Open pop-up bar to change monitoring mode"
                     >
-                      Change ⇄
+                      <span>⚙️</span> Change ⇄
                     </button>
                   </div>
                 </div>
@@ -1470,6 +1457,37 @@ export default function GoogleAccountModal({
           <a href="#" onClick={e => e.preventDefault()} style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</a>
         </div>
       </div>
+
+      {showMonitoringModal && (
+        <MonitoringModeModal
+          isOpen={showMonitoringModal}
+          currentMode={user?.monitoringMode || 'ask_permission'}
+          user={user}
+          onClose={() => setShowMonitoringModal(false)}
+          onSave={async (nextMode) => {
+            const updated = { ...(user || {}), monitoringMode: nextMode };
+            try {
+              localStorage.setItem('mailmind_user', JSON.stringify(updated));
+              addOrUpdateAccount(updated);
+            } catch {}
+            try {
+              await fetch('/api/auth/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  monitoringMode: nextMode
+                })
+              });
+            } catch {}
+            if (onUserUpdate) onUserUpdate(updated);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('mailmind:account-switched', { detail: updated }));
+            }
+            setSuccessMsg(`Mode changed to: ${nextMode === 'auto_reply' ? 'Reply without permission' : 'Ask permission'}`);
+            setTimeout(() => setSuccessMsg(''), 2500);
+          }}
+        />
+      )}
     </div>
   );
 }
