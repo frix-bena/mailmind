@@ -9,6 +9,7 @@ import { extractDisplayName } from '@/lib/avatar-utils';
 
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 import { useTheme, THEME_MODES, CUSTOM_PRESETS } from '@/lib/theme-manager';
+import { sendUnifiedDeviceNotification } from '@/lib/browser-notifications';
 
 export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
@@ -367,6 +368,13 @@ export default function Sidebar({ user: propUser }) {
               { id: `n_${Date.now()}`, type: 'sent', text: 'Email sent successfully via SMTP', time: 'Just now', read: false },
               ...n
             ]);
+            sendUnifiedDeviceNotification({
+              title: '✅ Email Sent',
+              message: 'Your email was successfully sent via SMTP.',
+              urgency: 'normal',
+              category: 'reply',
+              sound: false
+            });
           }}
         />
       )}

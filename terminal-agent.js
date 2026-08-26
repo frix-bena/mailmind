@@ -13,6 +13,12 @@ const {
   saveLocalConfig,
   clearLocalConfig
 } = require('./lib/email-service');
+const {
+  sendDeviceNotification,
+  formatEmailNotification,
+  testDeviceNotification,
+  getNotificationCapabilities
+} = require('./lib/notification-service');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -369,6 +375,15 @@ async function executeSendEmail(config, originalEmail, replyBody) {
       inReplyTo: originalEmail?.id
     });
     console.log(`${c.green}✔ Reply sent successfully! (Message-ID: ${res.messageId})${c.reset}\n`);
+    
+    // Dispatch confirmation notification to user's device
+    await sendDeviceNotification({
+      title: `✅ MailMind: Reply Sent`,
+      message: `Successfully replied to ${targetEmail} regarding "${subject}"`,
+      urgency: 'normal',
+      category: 'reply',
+      sound: false
+    });
   } catch (err) {
     console.log(`${c.red}❌ Failed to send reply: ${err.message}${c.reset}`);
   }
@@ -377,11 +392,27 @@ async function executeSendEmail(config, originalEmail, replyBody) {
 async function runTerminalExecution() {
   console.log(`\n${c.cyan}--- 💻 Terminal Shell Mode ---${c.reset}`);
   console.log(`${c.dim}Execute shell / bash commands directly within the agent session.${c.reset}`);
-  console.log(`${c.dim}Type any terminal command (e.g. 'git status', 'ls -la', 'ps aux', 'uptime', or 'exit'):${c.reset}\n`);
+  console.log(`${c.dim}Commands: 'test-notify', 'notify <msg>', 'git status', 'ls -la', or 'exit':${c.reset}\n`);
 
   while (true) {
     const cmd = (await askQuestion(`${c.green}terminal-agent$ ${c.reset}`)).trim();
     if (!cmd || cmd === 'exit' || cmd === 'back' || cmd === 'q') break;
+
+    if (cmd === 'test-notify' || cmd === 'notify-test') {
+      console.log(`${c.yellow}⏳ Sending test notification to device...${c.reset}`);
+      const res = await testDeviceNotification();
+      console.log(`${c.green}✔ Notification sent via ${res.method} (${res.platform})${c.reset}`);
+      continue;
+    }
+
+    if (cmd.startsWith('notify ')) {
+      const msg = cmd.slice(7).trim();
+      if (msg) {
+        await sendDeviceNotification({ title: '🔔 MailMind Agent', message: msg, urgency: 'normal' });
+        console.log(`${c.green}✔ Notification sent to device.${c.reset}`);
+      }
+      continue;
+    }
 
     await new Promise((resolve) => {
       exec(cmd, { cwd: process.cwd() }, (error, stdout, stderr) => {
@@ -396,7 +427,7 @@ async function runTerminalExecution() {
 
 async function watchInboxLive(config) {
   console.log(`\n${c.cyan}--- 🔄 Live Watch / Polling Mode ---${c.reset}`);
-  console.log(`${c.dim}Monitoring ${config?.email} every 30 seconds. Press Enter to stop.${c.reset}\n`);
+  console.log(`${c.dim}Monitoring ${config?.email} every 30 seconds. Device alerts active. Press Enter to stop.${c.reset}\n`);
 
   let lastChecked = new Date();
 
@@ -412,13 +443,21 @@ async function watchInboxLive(config) {
         });
         if (newEmails.length > 0) {
           console.log(`\n\n${c.bright}${c.magenta}🔔 ${newEmails.length} NEW EMAIL(S) ARRIVED!${c.reset}`);
-          newEmails.forEach(e => {
+          for (const e of newEmails) {
             const subj = e?.subject ?? 'No Subject';
             const sender = e?.sender || e?.sender_name || 'Unknown';
             const sum = e?.summary || e?.ai_summary || '';
             console.log(`  • ${c.bright}${subj}${c.reset} from ${sender}`);
             if (sum) console.log(`    Summary: ${sum}`);
-          });
+
+            // Send native device desktop notification to user's OS
+            try {
+              const notifPayload = formatEmailNotification(e, { agentMode: config?.monitoringMode });
+              await sendDeviceNotification(notifPayload);
+            } catch (nErr) {
+              console.log(`${c.dim}Notification delivery note: ${nErr.message}${c.reset}`);
+            }
+          }
           lastChecked = new Date();
         }
       }
@@ -449,8 +488,27 @@ async function main() {
   node terminal-agent.js --history 50  # Fetch history (N emails)
   node terminal-agent.js --search "q"  # Search email history
   node terminal-agent.js --ask "q"     # AI question over email history
+  node terminal-agent.js --test-notify # Send test notification to user's device
+  node terminal-agent.js --notify "T" "M" # Send custom notification to device
   node terminal-agent.js --exec "cmd"  # Execute terminal command
 `);
+    process.exit(0);
+  }
+
+  if (args.includes('--test-notify') || args.includes('--test-notification')) {
+    console.log(`${c.yellow}⏳ Sending test notification to user's device...${c.reset}`);
+    const result = await testDeviceNotification();
+    console.log(`${c.green}✔ Notification result: ${JSON.stringify(result, null, 2)}${c.reset}`);
+    process.exit(0);
+  }
+
+  if (args.includes('--notify')) {
+    const nIdx = args.indexOf('--notify');
+    const title = args[nIdx + 1] || '🔔 MailMind Agent';
+    const message = args[nIdx + 2] || 'Notification from terminal agent';
+    console.log(`${c.yellow}⏳ Sending device notification: "${title}: ${message}"...${c.reset}`);
+    const result = await sendDeviceNotification({ title, message, urgency: 'normal' });
+    console.log(`${c.green}✔ Sent via ${result.method} (${result.platform})${c.reset}`);
     process.exit(0);
   }
 
@@ -465,10 +523,12 @@ async function main() {
   if (args.includes('--status')) {
     if (config && config.email) {
       const isAuto = config.monitoringMode === 'auto_reply' || config.monitoringMode === 'without_permission';
+      const caps = getNotificationCapabilities();
       console.log(`${c.green}● Connected Account:${c.reset} ${config.email}`);
       console.log(`  Provider: ${config.provider || 'gmail'}`);
       console.log(`  Tone: ${config.tone || 'professional'}`);
       console.log(`  Monitoring Mode: ${isAuto ? '⚡ Reply Without Permission (Autonomous)' : '🛡️ Ask Permission (Permission-First)'}`);
+      console.log(`  Device Alerts: ${caps.desktopNotifications ? '🟢 Active (OS Native Desktop & Bell)' : '⚪ Terminal Bell'}`);
       console.log(`  Saved At: ${config.savedAt || 'N/A'}`);
     } else {
       console.log(`${c.yellow}○ No email account connected. Run 'node terminal-agent.js --login' to connect.${c.reset}`);
@@ -562,14 +622,15 @@ async function main() {
     console.log(` ${c.bright}[3]${c.reset} 🔍 Search Email History`);
     console.log(` ${c.bright}[4]${c.reset} 🤖 Ask AI Agent (Natural Language Lookback)`);
     console.log(` ${c.bright}[5]${c.reset} 💻 Terminal Shell Execution (Run System Commands)`);
-    console.log(` ${c.bright}[6]${c.reset} 🔄 Live Watch / Polling Mode`);
+    console.log(` ${c.bright}[6]${c.reset} 🔄 Live Watch / Polling Mode (With Device Alerts)`);
     console.log(` ${c.bright}[7]${c.reset} 🛡️ Toggle Monitoring Mode (Current: ${isAuto ? '⚡ Reply Without Permission' : '🛡️ Ask Permission'})`);
-    console.log(` ${c.bright}[8]${c.reset} ⚙️ Reconfigure / Switch Account`);
-    console.log(` ${c.bright}[9]${c.reset} 🚪 Log out / Disconnect Account`);
+    console.log(` ${c.bright}[8]${c.reset} 🔔 Send Test Device Notification (Verify OS Alerts)`);
+    console.log(` ${c.bright}[9]${c.reset} ⚙️ Reconfigure / Switch Account`);
+    console.log(` ${c.bright}[10]${c.reset} 🚪 Log out / Disconnect Account`);
     console.log(` ${c.bright}[0]${c.reset} 🚪 Exit`);
     console.log(`${c.cyan}======================================================${c.reset}`);
 
-    const choice = (await askQuestion(`${c.bright}Select option [0-9]: ${c.reset}`)).trim();
+    const choice = (await askQuestion(`${c.bright}Select option [0-10]: ${c.reset}`)).trim();
 
     if (choice === '1') {
       await viewLiveInbox(config);
@@ -589,9 +650,16 @@ async function main() {
       saveLocalConfig(config);
       console.log(`\n${c.green}✔ Monitoring mode switched to: ${nextMode === 'auto_reply' ? '⚡ Reply Without Permission (Autonomous)' : '🛡️ Ask Permission (Permission-First)'}${c.reset}`);
     } else if (choice === '8') {
+      console.log(`\n${c.yellow}⏳ Sending test notification to user's device...${c.reset}`);
+      const testRes = await testDeviceNotification({
+        title: '🔔 MailMind Agent Active',
+        message: `Desktop notifications verified for ${config.email}.`
+      });
+      console.log(`${c.green}✔ Device notification sent via ${testRes.method} on ${testRes.platform}!${c.reset}`);
+    } else if (choice === '9') {
       const newConfig = await promptForCredentials();
       if (newConfig) config = newConfig;
-    } else if (choice === '9') {
+    } else if (choice === '10') {
       clearLocalConfig();
       console.log(`\n${c.yellow}Logged out of ${config.email}.${c.reset}`);
       const reLogin = (await askQuestion(`Log in with a new email account now? (y/n): `)).toLowerCase();
@@ -606,7 +674,7 @@ async function main() {
       console.log(`\n${c.green}Goodbye! MailMind Agent session ended.${c.reset}\n`);
       break;
     } else {
-      console.log(`${c.red}Invalid option. Please choose from 0 to 9.${c.reset}`);
+      console.log(`${c.red}Invalid option. Please choose from 0 to 10.${c.reset}`);
     }
   }
 

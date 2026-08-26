@@ -5,6 +5,11 @@ import EmailAvatar from '@/components/EmailAvatar';
 import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
 import { extractDisplayName } from '@/lib/avatar-utils';
 import { addOrUpdateAccount } from '@/lib/account-manager';
+import {
+  requestDeviceNotificationPermission,
+  getDeviceNotificationPermission,
+  saveNotificationSettings
+} from '@/lib/browser-notifications';
 
 const STEPS = ['connect', 'tone', 'notifications', 'done'];
 
@@ -43,7 +48,16 @@ export default function OnboardingPage() {
   const [authHint, setAuthHint] = useState('');
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
+  const [deviceNotifications, setDeviceNotifications] = useState(true);
+  const [notifSound, setNotifSound] = useState(true);
   const [digest, setDigest] = useState(false);
+
+  const handleToggleDevice = async (val) => {
+    setDeviceNotifications(val);
+    if (val && getDeviceNotificationPermission() === 'default') {
+      await requestDeviceNotificationPermission();
+    }
+  };
 
   // Auto-detect provider when user types an email address
   const handleEmailChange = (newEmail) => {
@@ -129,12 +143,18 @@ export default function OnboardingPage() {
       tone,
       monitoringMode: 'ask_permission',
       inApp,
+      deviceNotifications,
+      notifSound,
       digest,
       connected: true,
       isDemo: false,
       name: displayName || 'User',
       savedAt: new Date().toISOString()
     };
+    saveNotificationSettings({
+      enabled: deviceNotifications,
+      sound: notifSound
+    });
     localStorage.setItem('mailmind_user', JSON.stringify(newUser));
     addOrUpdateAccount(newUser);
     router.push('/inbox');
@@ -385,10 +405,12 @@ export default function OnboardingPage() {
           <div className="fade-in">
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Notification preferences</h2>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>
-              Choose how you would like to be alerted when new emails arrive.
+              Choose how you would like to be alerted when new emails and reply drafts arrive.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
               {[
+                { label: 'Device & desktop notifications', desc: 'Real-time alerts sent to your OS desktop or device', val: deviceNotifications, set: handleToggleDevice },
+                { label: 'Notification sound alert', desc: 'Audio chime when important emails arrive', val: notifSound, set: setNotifSound },
                 { label: 'In-app notifications', desc: 'Real-time bell updates inside MailMind', val: inApp, set: setInApp },
                 { label: 'Daily digest email', desc: 'Morning summary of key emails', val: digest, set: setDigest },
               ].map(item => (
@@ -398,7 +420,7 @@ export default function OnboardingPage() {
                       <div style={{ fontWeight: 600, fontSize: 15 }}>{item.label}</div>
                       <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{item.desc}</div>
                     </div>
-                    <div className={`toggle${item.val ? ' on' : ''}`} onClick={() => item.set(v => !v)} />
+                    <div className={`toggle${item.val ? ' on' : ''}`} onClick={() => item.set(!item.val)} />
                   </div>
                 </div>
               ))}

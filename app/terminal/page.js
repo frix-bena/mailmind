@@ -6,9 +6,11 @@ import TopbarUserButton from '@/components/TopbarUserButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
+import { sendUnifiedDeviceNotification } from '@/lib/browser-notifications';
 
 const QUICK_COMMANDS = [
   'status',
+  'test-notify',
   'fetch-inbox',
   'ask Summarize this week',
   'classify',
@@ -70,6 +72,8 @@ export default function TerminalPage() {
           text: `📧 MailMind Autonomous Agent Command Suite:
 --------------------------------------------------
   • status                  Show agent health, active inbox & tone mode
+  • test-notify             Trigger instant test notification to your device
+  • notify <message>        Send custom device notification alert
   • mode <permission|auto>  Set monitoring mode: Ask permission vs Reply without permission
   • fetch-inbox             Retrieve & analyze recent inbox messages
   • ask <question>          AI lookback & Q&A over inbox history
@@ -84,6 +88,69 @@ export default function TerminalPage() {
   • <system command>        Execute bash / terminal commands (when available)`
         }
       ]);
+      return;
+    }
+
+    if (lowerCmd === 'test-notify' || lowerCmd === 'notify-test') {
+      setLoading(true);
+      try {
+        await sendUnifiedDeviceNotification({
+          title: '🔔 MailMind Agent Active',
+          message: `Device notification verified from Web Terminal for ${user?.email || 'user'}.`,
+          urgency: 'normal'
+        });
+        setHistory([
+          ...newHistory,
+          {
+            type: 'output',
+            text: `✔ Test notification dispatched successfully to your device (OS desktop & browser push enabled).`
+          }
+        ]);
+      } catch (err) {
+        setHistory([
+          ...newHistory,
+          {
+            type: 'output',
+            text: `⚠️ Notification dispatch note: ${err.message}`
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (lowerCmd.startsWith('notify ')) {
+      const msg = cmd.slice(7).trim();
+      if (!msg) {
+        setHistory([...newHistory, { type: 'output', text: 'Usage: notify <message>' }]);
+        return;
+      }
+      setLoading(true);
+      try {
+        await sendUnifiedDeviceNotification({
+          title: '🔔 MailMind Alert',
+          message: msg,
+          urgency: 'normal'
+        });
+        setHistory([
+          ...newHistory,
+          {
+            type: 'output',
+            text: `✔ Notification sent to device: "${msg}"`
+          }
+        ]);
+      } catch (err) {
+        setHistory([
+          ...newHistory,
+          {
+            type: 'output',
+            text: `❌ Error sending notification: ${err.message}`
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 

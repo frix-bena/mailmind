@@ -25,6 +25,15 @@ import {
   ACCENT_SWATCHES,
   hexToRgba
 } from '@/lib/theme-manager';
+import {
+  requestDeviceNotificationPermission,
+  getDeviceNotificationPermission,
+  isDeviceNotificationSupported,
+  sendUnifiedDeviceNotification,
+  playNotificationChime,
+  loadNotificationSettings,
+  saveNotificationSettings
+} from '@/lib/browser-notifications';
 
 function Section({ title, children }) {
   return (
@@ -68,6 +77,13 @@ export default function SettingsPage() {
   const [tone, setTone] = useState('professional');
   const [monitoringMode, setMonitoringMode] = useState('ask_permission');
   const [inApp, setInApp] = useState(true);
+  const [deviceNotifications, setDeviceNotifications] = useState(true);
+  const [notifSound, setNotifSound] = useState(true);
+  const [highUrgencyOnly, setHighUrgencyOnly] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [browserPermission, setBrowserPermission] = useState('default');
+  const [testingNotif, setTestingNotif] = useState(false);
+  const [notifStatusMsg, setNotifStatusMsg] = useState('');
   const [digest, setDigest] = useState(false);
   const [pollInterval, setPollInterval] = useState('3');
   const [disconnecting, setDisconnecting] = useState(false);
@@ -100,8 +116,21 @@ export default function SettingsPage() {
     if (stored.tone) setTone(stored.tone);
     if (stored.monitoringMode) setMonitoringMode(stored.monitoringMode);
     if (stored.inApp !== undefined) setInApp(stored.inApp);
+    if (stored.deviceNotifications !== undefined) setDeviceNotifications(stored.deviceNotifications);
+    if (stored.notifSound !== undefined) setNotifSound(stored.notifSound);
+    if (stored.highUrgencyOnly !== undefined) setHighUrgencyOnly(stored.highUrgencyOnly);
+    if (stored.webhookUrl) setWebhookUrl(stored.webhookUrl);
     if (stored.digest !== undefined) setDigest(stored.digest);
     if (stored.pollInterval) setPollInterval(stored.pollInterval);
+    
+    // Load local device notification settings
+    const nSettings = loadNotificationSettings();
+    if (nSettings.enabled !== undefined) setDeviceNotifications(nSettings.enabled);
+    if (nSettings.sound !== undefined) setNotifSound(nSettings.sound);
+    if (nSettings.highUrgencyOnly !== undefined) setHighUrgencyOnly(nSettings.highUrgencyOnly);
+    if (nSettings.webhookUrl) setWebhookUrl(nSettings.webhookUrl);
+    setBrowserPermission(getDeviceNotificationPermission());
+
     refreshAccountsList();
 
     const handleAccountSwitched = (e) => {
@@ -162,12 +191,24 @@ export default function SettingsPage() {
       tone,
       monitoringMode,
       inApp,
+      deviceNotifications,
+      notifSound,
+      highUrgencyOnly,
+      webhookUrl,
       digest,
       pollInterval
     };
     setUser(updated);
     localStorage.setItem('mailmind_user', JSON.stringify(updated));
     addOrUpdateAccount(updated);
+
+    // Save notification local settings
+    saveNotificationSettings({
+      enabled: deviceNotifications,
+      sound: notifSound,
+      highUrgencyOnly,
+      webhookUrl
+    });
 
     // Save to backend
     try {
@@ -188,6 +229,53 @@ export default function SettingsPage() {
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleToggleDeviceNotifications = async (val) => {
+    setDeviceNotifications(val);
+    if (val && getDeviceNotificationPermission() === 'default') {
+      const perm = await requestDeviceNotificationPermission();
+      setBrowserPermission(perm);
+    }
+    saveNotificationSettings({
+      enabled: val,
+      sound: notifSound,
+      highUrgencyOnly,
+      webhookUrl
+    });
+  };
+
+  const handleRequestPermission = async () => {
+    const perm = await requestDeviceNotificationPermission();
+    setBrowserPermission(perm);
+    if (perm === 'granted') {
+      setNotifStatusMsg('Notification permission granted!');
+      setTimeout(() => setNotifStatusMsg(''), 3000);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setTestingNotif(true);
+    setNotifStatusMsg('');
+    try {
+      if (getDeviceNotificationPermission() === 'default') {
+        const perm = await requestDeviceNotificationPermission();
+        setBrowserPermission(perm);
+      }
+      await sendUnifiedDeviceNotification({
+        title: '🔔 MailMind Agent Active',
+        message: `Device notifications are working for ${user?.email || 'your account'}.`,
+        urgency: 'normal',
+        sound: notifSound,
+        webhookUrl
+      });
+      setNotifStatusMsg('Test notification sent to your device!');
+      setTimeout(() => setNotifStatusMsg(''), 4000);
+    } catch (err) {
+      setNotifStatusMsg(`Notification test: ${err.message}`);
+    } finally {
+      setTestingNotif(false);
+    }
   };
 
   const handleSaveMonitoringMode = async (newMode) => {
@@ -1308,12 +1396,101 @@ export default function SettingsPage() {
           </Section>
 
           {/* Notifications */}
-          <Section title="Notifications">
-            <Row label="In-app notifications" desc="Real-time bell alerts inside MailMind">
+          <Section title="Notifications & Device Alerts">
+            <Row
+              label="Device & Desktop Notifications"
+              desc="Allow the MailMind agent to send native OS desktop notifications to your device when new emails or drafts arrive"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {browserPermission === 'granted' ? (
+                  <span className="badge badge-low" style={{ fontSize: 11, padding: '3px 8px' }}>🟢 Granted</span>
+                ) : browserPermission === 'denied' ? (
+                  <span className="badge badge-high" style={{ fontSize: 11, padding: '3px 8px' }}>🔴 Blocked in Browser</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleRequestPermission}
+                    style={{ fontSize: 12, padding: '4px 10px' }}
+                  >
+                    🔔 Grant Permission
+                  </button>
+                )}
+                <Toggle value={deviceNotifications} onChange={handleToggleDeviceNotifications} />
+              </div>
+            </Row>
+
+            <Row
+              label="Notification sound chime"
+              desc="Play a gentle synthesizer chime alert on your device when notifications arrive"
+            >
+              <Toggle value={notifSound} onChange={setNotifSound} />
+            </Row>
+
+            <Row
+              label="Smart notification filter"
+              desc="Only send device notifications for actionable emails and high-urgency messages"
+            >
+              <Toggle value={highUrgencyOnly} onChange={setHighUrgencyOnly} />
+            </Row>
+
+            <Row
+              label="In-app notification bell"
+              desc="Display real-time badge and notification history in the sidebar"
+            >
               <Toggle value={inApp} onChange={setInApp} />
             </Row>
-            <Row label="Daily digest email" desc="Morning summary sent to your inbox">
+
+            <Row
+              label="Daily digest email"
+              desc="Morning executive summary sent directly to your inbox"
+            >
               <Toggle value={digest} onChange={setDigest} />
+            </Row>
+
+            <Row
+              label="Test Device Notification"
+              desc="Send an instant test notification to verify delivery on this device"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {notifStatusMsg && (
+                  <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>
+                    {notifStatusMsg}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleTestNotification}
+                  disabled={testingNotif}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+                >
+                  <span>{testingNotif ? '⏳' : '🔔'}</span>
+                  <span>{testingNotif ? 'Sending...' : 'Send Test Notification'}</span>
+                </button>
+              </div>
+            </Row>
+
+            <Row
+              label="Push Webhook / External Device URL (Optional)"
+              desc="Forward notifications to mobile or custom services (e.g. ntfy.sh, Pushover, Discord, Slack webhook)"
+            >
+              <input
+                type="url"
+                placeholder="https://ntfy.sh/your-topic or webhook URL"
+                value={webhookUrl}
+                onChange={e => setWebhookUrl(e.target.value)}
+                style={{
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '7px 12px',
+                  color: 'var(--text)',
+                  fontSize: 13,
+                  width: '100%',
+                  maxWidth: 320
+                }}
+              />
             </Row>
           </Section>
 

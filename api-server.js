@@ -18,6 +18,12 @@ const {
   safeIncludes,
   safeMatch
 } = require('./lib/email-service');
+const {
+  sendDeviceNotification,
+  formatEmailNotification,
+  testDeviceNotification,
+  getNotificationCapabilities
+} = require('./lib/notification-service');
 
 const app = express();
 app.use(cors());
@@ -422,6 +428,81 @@ app.post('/api/terminal/exec', (req, res) => {
       error: error ? error.message : null
     });
   });
+});
+
+// ── Device Notification Endpoints ─────────────────────────────────
+
+app.get('/api/notifications', (req, res) => {
+  try {
+    const isTest = req.query.test === 'true' || req.query.action === 'test';
+    if (isTest) {
+      testDeviceNotification({
+        title: req.query.title || '🔔 MailMind Device Notification Test',
+        message: req.query.message || 'Device notifications are active and connected.'
+      }).then(result => res.json(result))
+        .catch(err => res.status(500).json({ success: false, error: err.message }));
+      return;
+    }
+    const capabilities = getNotificationCapabilities();
+    res.json({ success: true, status: 'ready', capabilities });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/notifications/test', async (req, res) => {
+  try {
+    const result = await testDeviceNotification({
+      title: req.query.title || '🔔 MailMind Device Notification Test',
+      message: req.query.message || 'Device notifications are working on your machine.'
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post(['/api/notifications', '/api/notifications/send'], async (req, res) => {
+  try {
+    const { title, message, body: altBody, urgency, category, sound, appName, icon, timeout, webhookUrl, isTest } = req.body || {};
+    
+    if (isTest) {
+      const testResult = await testDeviceNotification({
+        title: title || '🔔 MailMind Agent Active',
+        message: message || altBody || 'Device notifications are working correctly.'
+      });
+      return res.json(testResult);
+    }
+
+    const result = await sendDeviceNotification({
+      title: title || '📧 MailMind Alert',
+      message: message || altBody || 'New message update.',
+      urgency: urgency || 'normal',
+      category: category || 'email',
+      sound: sound !== false,
+      appName: appName || 'MailMind Agent',
+      icon,
+      timeout,
+      webhookUrl
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to send device notification.' });
+  }
+});
+
+app.post('/api/notifications/test', async (req, res) => {
+  try {
+    const { title, message } = req.body || {};
+    const result = await testDeviceNotification({
+      title: title || '🔔 MailMind Device Notification Test',
+      message: message || 'Device notifications verified successfully.'
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 const PORT = process.env.PORT || 3002;

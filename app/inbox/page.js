@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import EmailCard from '@/components/EmailCard';
@@ -8,6 +8,12 @@ import TopbarUserButton from '@/components/TopbarUserButton';
 import ThemeToggle from '@/components/ThemeToggle';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
+import {
+  sendUnifiedDeviceNotification,
+  getDeviceNotificationPermission,
+  requestDeviceNotificationPermission,
+  loadNotificationSettings
+} from '@/lib/browser-notifications';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
 
@@ -27,6 +33,9 @@ export default function InboxPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [browserPermission, setBrowserPermission] = useState('default');
+  const knownEmailIdsRef = useRef(new Set());
+  const isInitialLoadRef = useRef(true);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -71,9 +80,52 @@ export default function InboxPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setEmails(Array.isArray(data.emails) ? data.emails : []);
+        const fetchedEmails = Array.isArray(data.emails) ? data.emails : [];
+        setEmails(fetchedEmails);
         setIsLive(true);
         setPollingBadge('Live Sync');
+
+        // Detect newly arrived emails and dispatch device notifications
+        if (!isInitialLoadRef.current && fetchedEmails.length > 0) {
+          const newArrivals = fetchedEmails.filter(e => {
+            const id = e.id || e.messageId || `${e.senderEmail}_${e.subject}_${e.receivedAt}`;
+            return !knownEmailIdsRef.current.has(id);
+          });
+
+          if (newArrivals.length > 0) {
+            newArrivals.slice(0, 3).forEach(e => {
+              const sender = e.sender || e.sender_name || (e.senderEmail ? e.senderEmail.split('@')[0] : 'Sender');
+              const subj = e.subject || 'No Subject';
+              const urgency = (e.urgency || 'normal').toLowerCase();
+              const isUrgent = urgency === 'high' || urgency === 'urgent';
+              const needsReply = e.needsReply || e.needs_reply;
+
+              let title = `📨 New Email from ${sender}`;
+              if (isUrgent) title = `🚨 Urgent Email: ${sender}`;
+              else if (needsReply) title = `💬 Action Needed: ${sender}`;
+
+              let message = `"${subj}"`;
+              if (e.summary) message += `\n• ${e.summary}`;
+
+              sendUnifiedDeviceNotification({
+                title,
+                message,
+                urgency: isUrgent ? 'high' : 'normal',
+                category: isUrgent ? 'urgent' : needsReply ? 'draft' : 'email',
+                sound: true,
+                onClick: () => {
+                  window.focus();
+                }
+              });
+            });
+
+            showToast(`🔔 ${newArrivals.length} new email(s) arrived`);
+          }
+        }
+
+        const newSet = new Set(fetchedEmails.map(e => e.id || e.messageId || `${e.senderEmail}_${e.subject}_${e.receivedAt}`));
+        knownEmailIdsRef.current = newSet;
+        isInitialLoadRef.current = false;
       } else {
         setEmails([]);
         setIsLive(false);
@@ -91,6 +143,7 @@ export default function InboxPage() {
   }, [router]);
 
   useEffect(() => {
+    setBrowserPermission(getDeviceNotificationPermission());
     loadEmails(15);
 
     const handleAccountSwitched = (e) => {
@@ -108,6 +161,31 @@ export default function InboxPage() {
       window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
     };
   }, [loadEmails, router]);
+
+  // Periodic inbox polling for continuous device notification monitoring
+  useEffect(() => {
+    const intervalMinutes = parseInt(user?.pollInterval || '3', 10) || 3;
+    const intervalMs = Math.max(30000, intervalMinutes * 60 * 1000);
+
+    const timer = setInterval(() => {
+      loadEmails(historyLimit);
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [loadEmails, historyLimit, user?.pollInterval]);
+
+  const handleEnableDeviceNotifications = async () => {
+    const perm = await requestDeviceNotificationPermission();
+    setBrowserPermission(perm);
+    if (perm === 'granted') {
+      showToast('Device notifications enabled!');
+      sendUnifiedDeviceNotification({
+        title: '🔔 MailMind Notifications Active',
+        message: 'You will receive real-time alerts on this device when new emails arrive.',
+        urgency: 'normal'
+      });
+    }
+  };
 
   const loadMoreHistory = async () => {
     if (!user) return;
@@ -279,6 +357,20 @@ export default function InboxPage() {
                 title="Filter emails needing your review"
               >
                 {pending} <span className="hide-on-mobile">awaiting approval</span>
+              </button>
+            )}
+
+            {/* Device Notifications Toggle / Status button */}
+            {browserPermission === 'default' && (
+              <button
+                type="button"
+                onClick={handleEnableDeviceNotifications}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: 11.5, padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 5 }}
+                title="Click to allow MailMind agent to send device alerts"
+              >
+                <span>🔔</span>
+                <span className="hide-on-mobile">Enable Device Alerts</span>
               </button>
             )}
 

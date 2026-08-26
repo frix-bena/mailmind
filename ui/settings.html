@@ -128,14 +128,35 @@ select.styled:focus{border-color:var(--accent)}
 
       <!-- Notifications -->
       <div class="section">
-        <div class="section-label">Notifications</div>
+        <div class="section-label">Notifications & Device Alerts</div>
         <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Device & Desktop notifications</div>
+              <div class="row-desc">Allow the agent to send native OS desktop notifications to your device</div>
+            </div>
+            <div class="toggle on" id="tog-device" onclick="handleDeviceNotifToggle(this)"></div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Notification sound chime</div>
+              <div class="row-desc">Play audio alerts when new emails arrive</div>
+            </div>
+            <div class="toggle on" id="tog-sound" onclick="this.classList.toggle('on')"></div>
+          </div>
           <div class="settings-row">
             <div>
               <div class="row-label">In-app notifications</div>
               <div class="row-desc">Real-time bell alerts inside MailMind</div>
             </div>
             <div class="toggle on" id="tog-inapp" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Test Device Notification</div>
+              <div class="row-desc">Verify alert delivery on your machine</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="sendDeviceNotification('🔔 MailMind Agent Active', { message: 'Device notifications verified successfully!' })">Send Test Alert</button>
           </div>
           <div class="settings-row">
             <div>
@@ -271,21 +292,32 @@ function setMode(el) {
   el.classList.add('active');
 }
 
+function handleDeviceNotifToggle(el) {
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) {
+    requestDeviceNotificationPermission();
+  }
+}
+
 function save() {
   const existing = getUser();
-  const activeTone = document.querySelector('#tone-group .tone-btn.active')?.dataset.t || existing.tone || 'professional';
-  const activeMode = document.querySelector('#mode-group .tone-btn.active')?.dataset.m || existing.monitoringMode || 'ask_permission';
+  const activeTone = document.querySelector('#tone-group .tone-btn.active')?.dataset.t || existing?.tone || 'professional';
+  const activeMode = document.querySelector('#mode-group .tone-btn.active')?.dataset.m || existing?.monitoringMode || 'ask_permission';
   localStorage.setItem('mailmind_user', JSON.stringify({
     ...existing,
     tone: activeTone,
     monitoringMode: activeMode,
-    inApp: document.getElementById('tog-inapp').classList.contains('on'),
-    digest: document.getElementById('tog-digest').classList.contains('on'),
-    pollInterval: document.getElementById('poll-select').value,
+    inApp: document.getElementById('tog-inapp')?.classList.contains('on'),
+    deviceNotifications: document.getElementById('tog-device')?.classList.contains('on'),
+    notifSound: document.getElementById('tog-sound')?.classList.contains('on'),
+    digest: document.getElementById('tog-digest')?.classList.contains('on'),
+    pollInterval: document.getElementById('poll-select')?.value || '3',
   }));
   const label = document.getElementById('saved-label');
-  label.style.display = '';
-  setTimeout(() => { label.style.display = 'none'; }, 2500);
+  if (label) {
+    label.style.display = '';
+    setTimeout(() => { label.style.display = 'none'; }, 2500);
+  }
 }
 
 function disconnect() {

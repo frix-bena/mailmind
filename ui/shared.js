@@ -142,3 +142,62 @@ function markAllRead() {
   document.getElementById('notif-count').style.display = 'none';
   renderNotifs();
 }
+
+// ── Device Notification Utilities ──
+
+function isDeviceNotificationSupported() {
+  return typeof window !== 'undefined' && 'Notification' in window;
+}
+
+function requestDeviceNotificationPermission() {
+  if (!isDeviceNotificationSupported()) return Promise.resolve('unsupported');
+  return Notification.requestPermission();
+}
+
+function playNotificationChime(type = 'normal') {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const freqs = type === 'urgent' ? [880, 1108.73, 1318.51] : [587.33, 880];
+    freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + i * 0.09);
+      gain.gain.setValueAtTime(0, now + i * 0.09);
+      gain.gain.linearRampToValueAtTime(0.15, now + i * 0.09 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.09);
+      osc.stop(now + i * 0.09 + 0.32);
+    });
+  } catch (_) {}
+}
+
+function sendDeviceNotification(title, options = {}) {
+  if (isDeviceNotificationSupported() && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body: options.message || options.body || '',
+        icon: '/favicon.ico',
+        tag: `mailmind_${Date.now()}`
+      });
+      playNotificationChime(options.urgency || 'normal');
+    } catch (_) {}
+  }
+  // Call server notification API
+  fetch('/api/notifications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title,
+      message: options.message || options.body || '',
+      urgency: options.urgency || 'normal',
+      category: options.category || 'email'
+    })
+  }).catch(() => {});
+}
