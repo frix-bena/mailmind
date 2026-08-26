@@ -16,6 +16,15 @@ import {
   addOrUpdateAccount,
   isDemoAccount
 } from '@/lib/account-manager';
+import ThemeToggle from '@/components/ThemeToggle';
+import {
+  useTheme,
+  THEME_MODES,
+  CUSTOM_PRESETS,
+  BACKGROUND_TONES,
+  ACCENT_SWATCHES,
+  hexToRgba
+} from '@/lib/theme-manager';
 
 function Section({ title, children }) {
   return (
@@ -50,6 +59,7 @@ function Toggle({ value, onChange }) {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { theme, mode, preset, setMode, setPreset, updateTheme } = useTheme();
   const [user, setUser] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [name, setName] = useState('');
@@ -298,6 +308,7 @@ export default function SettingsPage() {
           </button>
           <span className="topbar-title">⚙️ Settings</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <ThemeToggle showLabel={true} />
             {saved && (
               <span className="badge badge-low fade-in" style={{ fontSize: 11, padding: '3px 8px' }}>✅ Saved</span>
             )}
@@ -531,6 +542,490 @@ export default function SettingsPage() {
               {testResult.success ? '✅' : '⚠️'} {testResult.message}
             </div>
           )}
+
+          {/* Appearance & Theme Settings Section */}
+          <div id="theme-settings" style={{ marginBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
+                  🎨 Appearance &amp; Theme
+                </h2>
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                  Switch between Light Mode, Dark Mode, or fully customize your color palette, presets, and styling.
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="badge badge-purple" style={{ fontSize: 11, textTransform: 'capitalize' }}>
+                  Current: {theme.mode === 'custom' ? (CUSTOM_PRESETS.find(p => p.id === theme.preset)?.name || 'Custom Palette') : `${theme.mode} Mode`}
+                </span>
+                {theme.mode === THEME_MODES.CUSTOM && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: 11, padding: '3px 8px' }}
+                    onClick={() => setMode(THEME_MODES.DARK)}
+                    title="Reset theme to default Dark mode"
+                  >
+                    🔄 Reset Default Dark
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: 22 }}>
+              {/* 3 Main Theme Mode Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 16 }}>
+                {/* Dark Mode Card */}
+                <div
+                  onClick={() => setMode(THEME_MODES.DARK)}
+                  style={{
+                    border: `2px solid ${theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'var(--border)'}`,
+                    background: theme.mode === THEME_MODES.DARK ? 'var(--accent-glow)' : 'var(--surface2)',
+                    borderRadius: 14,
+                    padding: '16px 18px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    boxShadow: theme.mode === THEME_MODES.DARK ? '0 4px 18px var(--accent-glow)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 24 }}>🌙</span>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Dark Mode</span>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      border: `2px solid ${theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'var(--muted)'}`,
+                      background: theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 11, fontWeight: 'bold'
+                    }}>
+                      {theme.mode === THEME_MODES.DARK ? '✓' : ''}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.4 }}>
+                    Obsidian dark background with deep purple neon accents. Easy on the eyes.
+                  </p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#090a10', border: '1px solid rgba(255,255,255,0.2)' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#161622', border: '1px solid rgba(255,255,255,0.2)' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#6c63ff' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f1f1f5' }} />
+                  </div>
+                </div>
+
+                {/* Light Mode Card */}
+                <div
+                  onClick={() => setMode(THEME_MODES.LIGHT)}
+                  style={{
+                    border: `2px solid ${theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'var(--border)'}`,
+                    background: theme.mode === THEME_MODES.LIGHT ? 'var(--accent-glow)' : 'var(--surface2)',
+                    borderRadius: 14,
+                    padding: '16px 18px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    boxShadow: theme.mode === THEME_MODES.LIGHT ? '0 4px 18px var(--accent-glow)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 24 }}>☀️</span>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Light Mode</span>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      border: `2px solid ${theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'var(--muted)'}`,
+                      background: theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 11, fontWeight: 'bold'
+                    }}>
+                      {theme.mode === THEME_MODES.LIGHT ? '✓' : ''}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.4 }}>
+                    Crisp white &amp; soft slate cards with high contrast indigo typography.
+                  </p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f4f6fb', border: '1px solid rgba(0,0,0,0.1)' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#5b4ef0' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#0f172a' }} />
+                  </div>
+                </div>
+
+                {/* Custom Theme Card */}
+                <div
+                  onClick={() => setMode(THEME_MODES.CUSTOM)}
+                  style={{
+                    border: `2px solid ${theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'var(--border)'}`,
+                    background: theme.mode === THEME_MODES.CUSTOM ? 'var(--accent-glow)' : 'var(--surface2)',
+                    borderRadius: 14,
+                    padding: '16px 18px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    boxShadow: theme.mode === THEME_MODES.CUSTOM ? '0 4px 18px var(--accent-glow)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 24 }}>✨</span>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Custom Palette</span>
+                    </div>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      border: `2px solid ${theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'var(--muted)'}`,
+                      background: theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 11, fontWeight: 'bold'
+                    }}>
+                      {theme.mode === THEME_MODES.CUSTOM ? '✓' : ''}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.4 }}>
+                    Curated presets (Cyberpunk, Emerald, Sunset, Ocean) or customize hex colors.
+                  </p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#00f0ff' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#10b981' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f43f5e' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f59e0b' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#a855f7' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Theme Controls - Expands when Custom mode is selected */}
+              {theme.mode === THEME_MODES.CUSTOM && (
+                <div className="fade-in" style={{
+                  marginTop: 18,
+                  paddingTop: 18,
+                  borderTop: '1px solid var(--border)'
+                }}>
+                  {/* Curated Presets Grid */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+                      1. Select a Curated Theme Preset:
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+                      Designer-crafted palettes engineered for contrast, aesthetic vibrancy, and focus.
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
+                      {CUSTOM_PRESETS.map((p) => {
+                        const isSelected = theme.preset === p.id && (!theme.customSettings || theme.customSettings._usePresetValues !== false);
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => setPreset(p.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '12px 14px',
+                              borderRadius: 10,
+                              background: isSelected ? 'var(--accent-glow)' : 'var(--surface2)',
+                              border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                              <span style={{ fontSize: 20, flexShrink: 0 }}>{p.emoji}</span>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>
+                                  {p.name}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>
+                                  {p.desc}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0, marginLeft: 8 }}>
+                              <span style={{ width: 12, height: 12, borderRadius: '50%', background: p.accent }} />
+                              <span style={{ width: 12, height: 12, borderRadius: '50%', background: p.bg, border: '1px solid rgba(255,255,255,0.2)' }} />
+                              {isSelected && <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: 12, marginLeft: 4 }}>✓</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Custom Fine-Tuning: Accent Color & Tone */}
+                  <div style={{
+                    background: 'var(--surface2)',
+                    borderRadius: 12,
+                    padding: '18px 20px',
+                    border: '1px solid var(--border)',
+                    marginBottom: 20
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
+                      2. Fine-Tune Custom Accent Color &amp; Background:
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
+                      {/* Accent Color Picker */}
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
+                          Primary Accent Color:
+                        </label>
+                        
+                        {/* Swatch grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 12 }}>
+                          {ACCENT_SWATCHES.map((swatch) => {
+                            const currentAccent = (theme.customSettings?.accent || '').toLowerCase();
+                            const isCur = currentAccent === swatch.hex.toLowerCase();
+                            return (
+                              <button
+                                key={swatch.hex}
+                                type="button"
+                                onClick={() => {
+                                  updateTheme({
+                                    mode: THEME_MODES.CUSTOM,
+                                    customSettings: {
+                                      ...theme.customSettings,
+                                      _usePresetValues: false,
+                                      accent: swatch.hex,
+                                      accentHover: swatch.hex,
+                                      accentGlow: hexToRgba(swatch.hex, 0.22)
+                                    }
+                                  });
+                                }}
+                                title={swatch.name}
+                                style={{
+                                  height: 32,
+                                  borderRadius: 8,
+                                  background: swatch.hex,
+                                  border: isCur ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.2)',
+                                  boxShadow: isCur ? '0 0 0 2px var(--text)' : 'none',
+                                  cursor: 'pointer',
+                                  transform: isCur ? 'scale(1.08)' : 'scale(1)',
+                                  transition: 'transform 0.15s ease',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#fff',
+                                  fontSize: 12,
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {isCur ? '✓' : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Custom Hex / Color Input */}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input
+                            type="color"
+                            value={theme.customSettings?.accent || '#6c63ff'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateTheme({
+                                mode: THEME_MODES.CUSTOM,
+                                customSettings: {
+                                  ...theme.customSettings,
+                                  _usePresetValues: false,
+                                  accent: val,
+                                  accentHover: val,
+                                  accentGlow: hexToRgba(val, 0.22)
+                                }
+                              });
+                            }}
+                            style={{
+                              width: 38,
+                              height: 36,
+                              padding: 2,
+                              borderRadius: 8,
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              cursor: 'pointer'
+                            }}
+                            title="Pick custom hex color"
+                          />
+                          <input
+                            type="text"
+                            value={theme.customSettings?.accent || '#6c63ff'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateTheme({
+                                mode: THEME_MODES.CUSTOM,
+                                customSettings: {
+                                  ...theme.customSettings,
+                                  _usePresetValues: false,
+                                  accent: val,
+                                  accentHover: val,
+                                  accentGlow: hexToRgba(val, 0.22)
+                                }
+                              });
+                            }}
+                            placeholder="#6c63ff"
+                            style={{
+                              flex: 1,
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 8,
+                              padding: '8px 12px',
+                              color: 'var(--text)',
+                              fontSize: 13,
+                              fontFamily: 'monospace'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Background Tone Selector */}
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
+                          Background Base Tone:
+                        </label>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 12 }}>
+                          {BACKGROUND_TONES.map((tone) => {
+                            const isSel = (theme.customSettings?.bgToneId || 'dark-default') === tone.id;
+                            return (
+                              <button
+                                key={tone.id}
+                                type="button"
+                                onClick={() => {
+                                  updateTheme({
+                                    mode: THEME_MODES.CUSTOM,
+                                    customSettings: {
+                                      ...theme.customSettings,
+                                      _usePresetValues: false,
+                                      bgToneId: tone.id
+                                    }
+                                  });
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  padding: '7px 10px',
+                                  borderRadius: 8,
+                                  background: isSel ? 'var(--accent-glow)' : 'var(--surface)',
+                                  border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
+                                  color: 'var(--text)',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                <span style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: '50%',
+                                  background: tone.color,
+                                  border: '1px solid rgba(128,128,128,0.4)',
+                                  flexShrink: 0
+                                }} />
+                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {tone.name}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Corner Radius Selector */}
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                            Corner Radius:
+                          </label>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {[
+                              { id: '4px', label: 'Sharp (4px)' },
+                              { id: '8px', label: 'Compact (8px)' },
+                              { id: '12px', label: 'Medium (12px)' },
+                              { id: '18px', label: 'Rounded (18px)' }
+                            ].map((rad) => {
+                              const isRadSel = (theme.customSettings?.radius || '12px') === rad.id;
+                              return (
+                                <button
+                                  key={rad.id}
+                                  type="button"
+                                  onClick={() => {
+                                    updateTheme({
+                                      mode: THEME_MODES.CUSTOM,
+                                      customSettings: {
+                                        ...theme.customSettings,
+                                        _usePresetValues: false,
+                                        radius: rad.id
+                                      }
+                                    });
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '6px 4px',
+                                    borderRadius: rad.id,
+                                    background: isRadSel ? 'var(--accent)' : 'var(--surface)',
+                                    color: isRadSel ? '#ffffff' : 'var(--text)',
+                                    border: `1px solid ${isRadSel ? 'var(--accent)' : 'var(--border)'}`,
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  {rad.label.split(' ')[0]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Real-time Theme Preview Card */}
+                  <div style={{
+                    background: 'var(--surface)',
+                    borderRadius: 'var(--radius)',
+                    padding: 16,
+                    border: '1px solid var(--border2)',
+                    boxShadow: 'var(--shadow)'
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                      Live Component Preview:
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: 'var(--accent)', color: '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 'bold', fontSize: 14
+                        }}>
+                          M
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                            Alex Morgan
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                            Re: Quarterly Project Roadmap Review
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span className="badge badge-purple" style={{ fontSize: 10.5 }}>💬 Suggested Reply</span>
+                        <span className="badge badge-low" style={{ fontSize: 10.5 }}>● Low</span>
+                        <button type="button" className="btn btn-primary btn-sm" style={{ fontSize: 11.5, padding: '5px 12px' }}>
+                          Send Reply 🚀
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Connected Accounts */}
           <Section title="Connected Email Accounts">

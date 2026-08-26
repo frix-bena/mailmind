@@ -73,6 +73,24 @@ select.styled:focus{border-color:var(--accent)}
         </div>
       </div>
 
+      <!-- Appearance & Theme -->
+      <div class="section">
+        <div class="section-label">Appearance &amp; Theme</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="row-label">Theme Mode</div>
+              <div class="row-desc">Switch between Light Mode, Dark Mode, or Custom theme</div>
+            </div>
+            <div class="tone-group" id="theme-mode-group">
+              <button class="tone-btn active" data-theme-val="dark" onclick="setUiTheme('dark', this)">🌙 Dark</button>
+              <button class="tone-btn" data-theme-val="light" onclick="setUiTheme('light', this)">☀️ Light</button>
+              <button class="tone-btn" data-theme-val="custom" onclick="setUiTheme('custom', this)">🎨 Custom</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Reply Preferences -->
       <div class="section">
         <div class="section-label">Reply Preferences</div>
@@ -210,6 +228,21 @@ initSidebar();
 
 // Load saved prefs
 const user = getUser();
+const theme = getTheme();
+if (theme && theme.mode) {
+  document.querySelectorAll('#theme-mode-group .tone-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.themeVal === theme.mode);
+  });
+}
+
+function setUiTheme(mode, el) {
+  document.querySelectorAll('#theme-mode-group .tone-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const t = { mode: mode };
+  localStorage.setItem('mailmind_theme', JSON.stringify(t));
+  applyTheme(t);
+}
+
 if (!user || !user.email) {
   window.location.replace('onboarding.html');
 } else {

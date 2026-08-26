@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopbarUserButton from '@/components/TopbarUserButton';
+import ThemeToggle from '@/components/ThemeToggle';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 
@@ -143,6 +144,7 @@ function SearchContent() {
             <span className="chip hide-on-mobile" style={{ fontSize: 11.5 }}>
               📜 {historyScope}
             </span>
+            <ThemeToggle />
             <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
           </div>
         </div>

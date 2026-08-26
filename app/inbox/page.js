@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import EmailCard from '@/components/EmailCard';
 import ComposeModal from '@/components/ComposeModal';
 import TopbarUserButton from '@/components/TopbarUserButton';
+import ThemeToggle from '@/components/ThemeToggle';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 
@@ -281,6 +282,7 @@ export default function InboxPage() {
               </button>
             )}
 
+            <ThemeToggle />
             <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
           </div>
         </div>

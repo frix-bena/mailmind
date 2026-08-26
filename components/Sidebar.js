@@ -8,6 +8,7 @@ import ProviderIcon from '@/components/ProviderIcon';
 import { extractDisplayName } from '@/lib/avatar-utils';
 
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
+import { useTheme, THEME_MODES, CUSTOM_PRESETS } from '@/lib/theme-manager';
 
 export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export default function Sidebar({ user: propUser }) {
   const [composeOpen, setComposeOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { theme, mode, preset, toggleNextMode } = useTheme();
   const [notifications, setNotifications] = useState([
     { id: 'n1', type: 'connected', text: 'Email inbox connected & monitoring', time: 'Just now', read: false },
     { id: 'n2', type: 'system', text: 'Permission-first reply protection active', time: 'Just now', read: false }
@@ -236,6 +238,22 @@ export default function Sidebar({ user: propUser }) {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Quick Theme Switcher item */}
+          <div
+            className="nav-item"
+            onClick={toggleNextMode}
+            title={`Current theme: ${mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.name || 'Custom') : mode}. Click to cycle Light / Dark / Custom.`}
+            style={{ cursor: 'pointer', marginBottom: 8, padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}
+          >
+            <span className="nav-icon">
+              {mode === THEME_MODES.LIGHT ? '☀️' : (mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.emoji || '🎨') : '🌙')}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>
+              Theme: {mode === THEME_MODES.LIGHT ? 'Light' : (mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.name.split(' ')[0] || 'Custom') : 'Dark')}
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--muted)', opacity: 0.8 }}>⇄</span>
           </div>
 
           {/* User profile clickable chip with real Gmail avatar and Google Account modal */}

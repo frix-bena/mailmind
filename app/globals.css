@@ -4,8 +4,13 @@
 
 :root {
   --bg:           #0f0f13;
+  --bg-page:      #090a10;
   --surface:      rgba(22, 22, 34, 0.82);
   --surface2:     rgba(32, 32, 50, 0.82);
+  --sidebar-bg:   rgba(18, 18, 28, 0.92);
+  --topbar-bg:    rgba(15, 17, 28, 0.88);
+  --modal-bg:     rgba(22, 24, 38, 0.96);
+  --mobile-nav-bg:rgba(14, 16, 26, 0.96);
   --border:       rgba(255, 255, 255, 0.1);
   --border2:      rgba(255, 255, 255, 0.18);
   --accent:       #6c63ff;
@@ -23,17 +28,46 @@
   --radius-lg:    16px;
   --shadow:       0 4px 24px rgba(0,0,0,0.4);
   --shadow-lg:    0 8px 48px rgba(0,0,0,0.6);
+  --mesh-opacity: 0.12;
+  --dot-color:    rgba(255, 255, 255, 0.03);
   --transition:   0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+[data-theme="light"] {
+  --bg:           #ffffff;
+  --bg-page:      #f4f6fb;
+  --surface:      rgba(255, 255, 255, 0.94);
+  --surface2:     rgba(241, 243, 249, 0.95);
+  --sidebar-bg:   rgba(255, 255, 255, 0.95);
+  --topbar-bg:    rgba(255, 255, 255, 0.92);
+  --modal-bg:     rgba(255, 255, 255, 0.98);
+  --mobile-nav-bg:rgba(255, 255, 255, 0.96);
+  --border:       rgba(0, 0, 0, 0.09);
+  --border2:      rgba(0, 0, 0, 0.16);
+  --accent:       #5b4ef0;
+  --accent-glow:  rgba(91, 78, 240, 0.14);
+  --accent-hover: #4a3ddb;
+  --success:      #16a34a;
+  --warning:      #d97706;
+  --danger:       #dc2626;
+  --info:         #2563eb;
+  --text:         #0f172a;
+  --muted:        #64748b;
+  --muted2:       #94a3b8;
+  --shadow:       0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-lg:    0 12px 36px rgba(0, 0, 0, 0.12);
+  --mesh-opacity: 0.08;
+  --dot-color:    rgba(0, 0, 0, 0.03);
 }
 
 html { font-size: 16px; }
 body {
-  background-color: #090a10;
+  background-color: var(--bg-page);
   background-image:
-    radial-gradient(at 50% 0%, rgba(108, 99, 255, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.06) 0px, transparent 40%),
-    radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 40%),
-    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    radial-gradient(at 50% 0%, var(--accent-glow) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(56, 189, 248, var(--mesh-opacity)) 0px, transparent 40%),
+    radial-gradient(at 0% 100%, rgba(139, 92, 246, var(--mesh-opacity)) 0px, transparent 40%),
+    radial-gradient(var(--dot-color) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px;
   background-position: center top, right top, left bottom, center center;
   background-attachment: fixed;
@@ -69,7 +103,7 @@ ul { list-style: none; }
 .sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: rgba(18, 18, 28, 0.92);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--border);
@@ -297,7 +331,7 @@ ul { list-style: none; }
 }
 .topbar {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(15, 17, 28, 0.88);
+  background: var(--topbar-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
@@ -468,7 +502,7 @@ textarea.input { resize: vertical; min-height: 120px; line-height: 1.6; }
   -webkit-overflow-scrolling: touch;
 }
 .modal {
-  background: rgba(22, 24, 38, 0.96);
+  background: var(--modal-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border2);
@@ -488,17 +522,17 @@ textarea.input { resize: vertical; min-height: 120px; line-height: 1.6; }
 
 /* Agent background styles */
 .agent-banner {
-  background: linear-gradient(135deg, rgba(24, 26, 42, 0.95) 0%, rgba(17, 19, 31, 0.98) 100%);
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
   border: 1px solid var(--border2);
 }
 
 .agent-terminal-window {
-  background: linear-gradient(180deg, rgba(14, 16, 26, 0.96) 0%, rgba(9, 10, 18, 0.98) 100%);
+  background: var(--bg-page);
   border: 1px solid var(--border2);
 }
 
 .agent-card-bg {
-  background: linear-gradient(135deg, rgba(26, 28, 44, 0.9) 0%, rgba(19, 21, 34, 0.94) 100%);
+  background: var(--surface2);
   border: 1px solid var(--border2);
 }
 
@@ -612,7 +646,7 @@ textarea.input { resize: vertical; min-height: 120px; line-height: 1.6; }
     right: 0;
     height: calc(58px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgba(14, 16, 26, 0.96);
+    background: var(--mobile-nav-bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-top: 1px solid var(--border2);

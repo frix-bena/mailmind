@@ -1,9 +1,20 @@
-// ─── Shared data & utilities ───────────────────────────────────────────
-
 function getUser() {
   try { return JSON.parse(localStorage.getItem('mailmind_user')) || null; }
   catch { return null; }
 }
+
+function getTheme() {
+  try { return JSON.parse(localStorage.getItem('mailmind_theme')) || { mode: 'dark' }; }
+  catch { return { mode: 'dark' }; }
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  const mode = theme?.mode || 'dark';
+  root.setAttribute('data-theme', mode);
+}
+
+applyTheme(getTheme());
 
 const MOCK_EMAILS = [];
 

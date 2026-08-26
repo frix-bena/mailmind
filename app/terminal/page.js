@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopbarUserButton from '@/components/TopbarUserButton';
+import ThemeToggle from '@/components/ThemeToggle';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 
@@ -628,6 +629,7 @@ ${draftContent}
             >
               🧹 <span className="hide-on-mobile">Clear</span>
             </button>
+            <ThemeToggle />
             <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
           </div>
         </div>
