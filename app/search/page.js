@@ -273,14 +273,18 @@ function SearchContent() {
                   <div style={{
                     width: 36,
                     height: 36,
-                    borderRadius: '50%',
-                    backgroundImage: `url("https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=1920&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    border: '1.5px solid var(--accent)',
-                    boxShadow: '0 0 10px var(--accent-glow)',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #6c63ff 0%, #3b82f6 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 18,
+                    border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                    boxShadow: '0 0 12px var(--accent-glow)',
                     flexShrink: 0
-                  }} />
+                  }}>
+                    ✨
+                  </div>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                       Agent Intelligence Response

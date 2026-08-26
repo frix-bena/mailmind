@@ -18,8 +18,6 @@ const QUICK_COMMANDS = [
   'clear'
 ];
 
-const AGENT_IMAGE_URL = 'https://plus.unsplash.com/premium_photo-1680404114169-e254afa55a16?w=1920&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fHRlY2h8ZW58MHx8MHx8fDA%3D';
-
 export default function TerminalPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -635,12 +633,10 @@ ${draftContent}
         </div>
 
         <div className="page-content">
-          {/* Agent Banner with background image */}
+          {/* Agent Banner */}
           <div style={{
-            backgroundImage: `linear-gradient(90deg, rgba(13, 17, 23, 0.78) 0%, rgba(13, 17, 23, 0.58) 50%, rgba(13, 17, 23, 0.78) 100%), url("${AGENT_IMAGE_URL}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            border: '1px solid var(--border)',
+            background: 'linear-gradient(135deg, rgba(22, 24, 38, 0.95) 0%, rgba(15, 17, 28, 0.98) 100%)',
+            border: '1px solid var(--border2)',
             borderRadius: 'var(--radius)',
             padding: '18px 22px',
             marginBottom: 18,
@@ -655,14 +651,18 @@ ${draftContent}
               <div style={{
                 width: 48,
                 height: 48,
-                borderRadius: '50%',
-                backgroundImage: `url("${AGENT_IMAGE_URL}")`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                border: '2px solid var(--accent)',
-                boxShadow: '0 0 16px var(--accent-glow)',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #6c63ff 0%, #3b82f6 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 22,
+                border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 0 20px var(--accent-glow)',
                 flexShrink: 0
-              }} />
+              }}>
+                🤖
+              </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0, color: 'var(--text)' }}>
@@ -716,9 +716,7 @@ ${draftContent}
           </div>
 
           <div style={{
-            backgroundImage: `linear-gradient(rgba(13, 17, 23, 0.78), rgba(13, 17, 23, 0.88)), url("${AGENT_IMAGE_URL}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            background: 'linear-gradient(180deg, #0d1117 0%, #080a0f 100%)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: 20,
@@ -726,7 +724,7 @@ ${draftContent}
             minHeight: '62vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.5)',
             backdropFilter: 'blur(4px)'
           }}>
             <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>
