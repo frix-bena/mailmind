@@ -138,7 +138,7 @@ function SearchContent() {
           >
             ☰
           </button>
-          <span className="topbar-title">🔍 Ask Inbox</span>
+          <span className="topbar-title">🔍 Ask AI</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <span className="chip hide-on-mobile" style={{ fontSize: 11.5 }}>
               📜 {historyScope}

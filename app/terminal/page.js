@@ -37,30 +37,7 @@ export default function TerminalPage() {
   const terminalEndRef = useRef(null);
 
   useEffect(() => {
-    const stored = getActiveUser();
-    if (stored && stored.connected && stored.email && !isDemoAccount(stored)) {
-      setUser(stored);
-    } else {
-      router.replace('/onboarding');
-      return;
-    }
-
-    const handleAccountSwitched = (e) => {
-      if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
-        setUser(e.detail);
-        setHistory(h => [
-          ...h,
-          { type: 'output', text: `🔄 Active account switched to ${e.detail.email}` }
-        ]);
-      } else {
-        router.replace('/onboarding');
-      }
-    };
-    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
-
-    return () => {
-      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
-    };
+    router.replace('/inbox');
   }, [router]);
 
   useEffect(() => {

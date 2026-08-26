@@ -82,10 +82,9 @@ export default function Sidebar({ user: propUser }) {
   const unread = notifications.filter(n => !n.read).length;
 
   const nav = [
-    { href: '/inbox',    icon: '📥', label: 'Inbox',     badge: null },
-    { href: '/terminal', icon: '🤖', label: 'AI Agent',  badge: 'Live' },
-    { href: '/search',   icon: '🔍', label: 'Ask Inbox', badge: null },
-    { href: '/settings', icon: '⚙️',  label: 'Settings',  badge: null },
+    { href: '/inbox',    icon: '📥', label: 'Inbox',    badge: null },
+    { href: '/search',   icon: '🔍', label: 'Ask AI',   badge: null },
+    { href: '/settings', icon: '⚙️',  label: 'Settings', badge: null },
   ];
 
   const markAllRead = () => setNotifications(n => n.map(x => ({ ...x, read: true })));
@@ -297,12 +296,12 @@ export default function Sidebar({ user: propUser }) {
 
         <button
           type="button"
-          className={`mobile-bottom-item${pathname === '/terminal' || pathname === '/agent' ? ' active' : ''}`}
-          onClick={() => router.push('/terminal')}
-          aria-label="AI Agent"
+          className={`mobile-bottom-item${pathname === '/search' ? ' active' : ''}`}
+          onClick={() => router.push('/search')}
+          aria-label="Ask AI"
         >
-          <span className="mobile-bottom-icon">🤖</span>
-          <span className="mobile-bottom-label">Agent</span>
+          <span className="mobile-bottom-icon">🔍</span>
+          <span className="mobile-bottom-label">Ask AI</span>
         </button>
 
         <button
@@ -313,16 +312,6 @@ export default function Sidebar({ user: propUser }) {
           title="Compose New Email"
         >
           <span>✏️</span>
-        </button>
-
-        <button
-          type="button"
-          className={`mobile-bottom-item${pathname === '/search' ? ' active' : ''}`}
-          onClick={() => router.push('/search')}
-          aria-label="Ask Inbox"
-        >
-          <span className="mobile-bottom-icon">🔍</span>
-          <span className="mobile-bottom-label">Ask AI</span>
         </button>
 
         <button
