@@ -909,26 +909,14 @@ export default function GoogleAccountModal({
                     />
                   </div>
 
-                  {/* Password / App Password */}
+                  {/* Password */}
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
-                        Password or App Password:
-                      </label>
-                      {currentProviderObj.guideUrl && (
-                        <a
-                          href={currentProviderObj.guideUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'underline' }}
-                        >
-                          Get App Password &nearr;
-                        </a>
-                      )}
-                    </div>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
+                      Password:
+                    </label>
                     <input
                       type="password"
-                      placeholder={newProvider === 'google' ? '16-character Google App Password (or leave empty)' : 'Account password (or leave empty)'}
+                      placeholder="Email account password (or leave empty)"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       style={{

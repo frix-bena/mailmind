@@ -238,9 +238,9 @@ export const PROVIDER_LIST = [
     brandName: 'Google Gmail',
     color: '#EA4335',
     bgLight: 'rgba(234, 67, 53, 0.12)',
-    hint: 'Requires a 16-character Google App Password',
-    guideUrl: 'https://myaccount.google.com/apppasswords',
-    guideText: 'Google App Passwords'
+    hint: 'Sign in with your Google email and password',
+    guideUrl: null,
+    guideText: 'Google Account'
   },
   {
     id: 'microsoft',
@@ -249,9 +249,9 @@ export const PROVIDER_LIST = [
     brandName: 'Microsoft Outlook / Office 365',
     color: '#0078D4',
     bgLight: 'rgba(0, 120, 212, 0.12)',
-    hint: 'Use your Outlook account password or App Password',
-    guideUrl: 'https://account.live.com/proofs/manage/additional',
-    guideText: 'Microsoft Security Settings'
+    hint: 'Sign in with your Outlook / Microsoft email and password',
+    guideUrl: null,
+    guideText: 'Microsoft Account'
   },
   {
     id: 'yahoo',
@@ -260,9 +260,9 @@ export const PROVIDER_LIST = [
     brandName: 'Yahoo Mail',
     color: '#6001D2',
     bgLight: 'rgba(96, 1, 210, 0.12)',
-    hint: 'Use a Yahoo App Password from account security settings',
-    guideUrl: 'https://login.yahoo.com/account/security',
-    guideText: 'Yahoo Account Security'
+    hint: 'Sign in with your Yahoo email and password',
+    guideUrl: null,
+    guideText: 'Yahoo Account'
   },
   {
     id: 'icloud',
@@ -271,9 +271,9 @@ export const PROVIDER_LIST = [
     brandName: 'Apple iCloud Mail',
     color: '#0284C7',
     bgLight: 'rgba(2, 132, 199, 0.12)',
-    hint: 'Use an app-specific password from appleid.apple.com',
-    guideUrl: 'https://appleid.apple.com/account/manage',
-    guideText: 'Apple ID Security'
+    hint: 'Sign in with your Apple iCloud email and password',
+    guideUrl: null,
+    guideText: 'Apple ID'
   },
   {
     id: 'custom',
@@ -282,7 +282,7 @@ export const PROVIDER_LIST = [
     brandName: 'Custom IMAP / SMTP Server',
     color: '#6366F1',
     bgLight: 'rgba(99, 102, 241, 0.12)',
-    hint: 'Connect to any private or company IMAP/SMTP server',
+    hint: 'Connect with your email address and password',
     guideUrl: null,
     guideText: 'IMAP / SMTP Settings'
   }

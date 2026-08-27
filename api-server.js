@@ -186,7 +186,7 @@ app.post('/api/auth/connect', async (req, res) => {
   try {
     const { email, password, provider, host, port, tone, monitoringMode } = req.body || {};
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password/App Password are required.' });
+      return res.status(400).json({ error: 'Email and password are required.' });
     }
 
     const credentials = {
@@ -205,7 +205,7 @@ app.post('/api/auth/connect', async (req, res) => {
     if (!testResult.success) {
       return res.status(401).json({
         error: testResult.error || 'Failed to authenticate with email server.',
-        hint: 'For Gmail, make sure 2-Step Verification is on and you are using a 16-character App Password.'
+        hint: 'Make sure your email address and password are correct, and IMAP access is enabled in your email provider settings.'
       });
     }
 
@@ -256,7 +256,7 @@ app.post('/api/fetch-emails', async (req, res) => {
     if (!result.success) {
       return res.status(500).json({
         error: result.error || 'Failed to connect to email server.',
-        hint: 'Check your App Password and IMAP settings.'
+        hint: 'Check your email credentials and IMAP settings.'
       });
     }
     res.json(result);
@@ -264,7 +264,7 @@ app.post('/api/fetch-emails', async (req, res) => {
     console.error('Fetch emails error:', error);
     res.status(500).json({
       error: error.message || 'Failed to connect to email server.',
-      hint: 'Check your App Password and IMAP settings.'
+      hint: 'Check your email credentials and IMAP settings.'
     });
   }
 });

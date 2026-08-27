@@ -53,7 +53,7 @@ function printBanner() {
 async function promptForCredentials() {
   console.log(`${c.bright}${c.yellow}🔑 Setup Real Email Account Access${c.reset}`);
   console.log(`${c.dim}MailMind connects via secure IMAP/SMTP to monitor your inbox & draft replies with permission.${c.reset}`);
-  console.log(`${c.dim}(Tip: For Gmail, create a 16-character App Password at: https://myaccount.google.com/apppasswords)\n${c.reset}`);
+  console.log(`${c.dim}(Enter your email address and password to sign in)\n${c.reset}`);
 
   const email = (await askQuestion(`${c.bright}Email address: ${c.reset}`)).trim();
   if (!email || !email.includes('@')) {
@@ -75,7 +75,7 @@ async function promptForCredentials() {
   }
 
   console.log(`\nSelect email provider:`);
-  console.log(` 1) Google / Gmail (App Password recommended)`);
+  console.log(` 1) Google / Gmail`);
   console.log(` 2) Microsoft Outlook / Office 365`);
   console.log(` 3) Yahoo Mail`);
   console.log(` 4) Apple iCloud`);
@@ -95,18 +95,9 @@ async function promptForCredentials() {
     port = (await askQuestion(`IMAP Port [default: 993]: `)).trim() || '993';
   }
 
-  console.log(`\n${c.dim}Enter password or App Password:`);
-  if (provider === 'gmail') {
-    console.log(`(Generate 16-character App Password at: https://myaccount.google.com/apppasswords)${c.reset}`);
-  } else if (provider === 'icloud') {
-    console.log(`(Generate App-Specific Password at: https://appleid.apple.com)${c.reset}`);
-  } else if (provider === 'yahoo') {
-    console.log(`(Generate App Password at: https://login.yahoo.com/account/security)${c.reset}`);
-  } else {
-    console.log(`(Account password or App Password)${c.reset}`);
-  }
+  console.log(`\n${c.dim}Enter your email account password:${c.reset}`);
 
-  const password = (await askQuestion(`${c.bright}Password / App Password: ${c.reset}`)).trim();
+  const password = (await askQuestion(`${c.bright}Password: ${c.reset}`)).trim();
   if (!password) {
     console.log(`${c.red}❌ Password cannot be empty.${c.reset}`);
     return null;
@@ -151,7 +142,7 @@ async function promptForCredentials() {
   } else {
     console.log(`${c.red}Connection failed!${c.reset}`);
     console.log(`${c.red}Error: ${testRes.error}${c.reset}`);
-    console.log(`${c.yellow}\nTroubleshooting tips:\n• For Gmail: Make sure 2-Step Verification is active & generate a 16-character App Password.\n• Check that IMAP access is enabled in your webmail settings.\n• Verify email address, server host & port.${c.reset}\n`);
+    console.log(`${c.yellow}\nTroubleshooting tips:\n• Check that IMAP access is enabled in your webmail settings.\n• Verify email address, password, server host & port.${c.reset}\n`);
     const retry = (await askQuestion(`Would you like to try again? (y/n): `)).toLowerCase();
     if (retry.startsWith('y')) {
       return promptForCredentials();

@@ -81,7 +81,7 @@ export default function OnboardingPage() {
       return;
     }
     if (!password) {
-      setAuthError('Please enter your password or App Password.');
+      setAuthError('Please enter your email password.');
       return;
     }
 
@@ -267,28 +267,14 @@ export default function OnboardingPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>
-                    {selectedProvider === 'google' || selectedProvider === 'yahoo' || selectedProvider === 'icloud'
-                      ? 'App Password'
-                      : 'Password / App Password'}
-                  </label>
-                  {currentProviderObj.guideUrl && (
-                    <a
-                      href={currentProviderObj.guideUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontSize: 11.5, color: 'var(--accent)', textDecoration: 'underline' }}
-                    >
-                      Get {currentProviderObj.name.split('/')[0].trim()} App Password ↗
-                    </a>
-                  )}
-                </div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                  Password
+                </label>
                 <input
                   type="password"
                   required
                   className="input"
-                  placeholder={selectedProvider === 'google' ? '16-character App Password (e.g. abcd efgh ijkl mnop)' : 'Enter password or App Password'}
+                  placeholder="Enter your email password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -296,21 +282,7 @@ export default function OnboardingPage() {
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                   <ProviderIcon provider={selectedProvider} size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                   <div>
-                    {selectedProvider === 'google' && (
-                      <span>Gmail requires an App Password. Generate one at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>myaccount.google.com/apppasswords</a>.</span>
-                    )}
-                    {selectedProvider === 'microsoft' && (
-                      <span>Use your Outlook/Office 365 password or Microsoft App Password from <a href="https://account.live.com/proofs/manage/additional" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Security Settings</a>.</span>
-                    )}
-                    {selectedProvider === 'yahoo' && (
-                      <span>Generate an App Password in <a href="https://login.yahoo.com/account/security" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Yahoo Account Security</a> settings.</span>
-                    )}
-                    {selectedProvider === 'icloud' && (
-                      <span>Generate an app-specific password at <a href="https://appleid.apple.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>appleid.apple.com</a>.</span>
-                    )}
-                    {selectedProvider === 'custom' && (
-                      <span>Enter your email account password and IMAP server settings below.</span>
-                    )}
+                    <span>Enter your {currentProviderObj.name} email password to sign in.</span>
                   </div>
                 </div>
               </div>
@@ -458,7 +430,7 @@ export default function OnboardingPage() {
               MailMind is now connected to your inbox, reading incoming messages, summarizing email history, and drafting replies — always waiting for your approval before sending.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 340, margin: '0 auto 32px', textAlign: 'left' }}>
-              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Google / Gmail Account: <strong>{email}</strong></div>
+              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ {currentProviderObj.name} Account: <strong>{email}</strong></div>
               <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ AI Reply Tone: {tone}</div>
               <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Full History &amp; Search Enabled</div>
               <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Permission-first: No replies sent without your approval</div>

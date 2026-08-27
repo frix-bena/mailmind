@@ -11,7 +11,7 @@ export async function POST(request) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password/App Password are required.' },
+        { error: 'Email and password are required.' },
         { status: 400 }
       );
     }
@@ -33,7 +33,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error: testResult.error || 'Failed to authenticate with email server.',
-          hint: 'For Gmail, make sure 2-Step Verification is active and you are using a 16-character App Password.'
+          hint: 'Make sure your email address and password are correct, and IMAP access is enabled in your email provider settings.'
         },
         { status: 401 }
       );
