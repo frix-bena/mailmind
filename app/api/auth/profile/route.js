@@ -4,18 +4,42 @@ import { loadLocalConfig, saveLocalConfig } from '@/lib/email-service';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, avatar, picture, avatarColor, color, tone, monitoringMode } = body || {};
+    const {
+      name,
+      avatar,
+      picture,
+      avatarColor,
+      color,
+      tone,
+      monitoringMode,
+      inApp,
+      deviceNotifications,
+      notifSound,
+      highUrgencyOnly,
+      webhookUrl,
+      digest,
+      pollInterval,
+      signature
+    } = body || {};
 
     const existing = loadLocalConfig() || {};
     const updated = {
       ...existing,
       name: name !== undefined ? name : existing.name,
       avatar: avatar !== undefined ? avatar : existing.avatar,
-      picture: picture !== undefined ? picture : existing.picture,
+      picture: picture !== undefined ? picture : (avatar !== undefined ? avatar : existing.picture),
       avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
-      color: color !== undefined ? color : existing.color,
+      color: color !== undefined ? color : (avatarColor !== undefined ? avatarColor : existing.color),
       tone: tone !== undefined ? tone : existing.tone,
       monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
+      inApp: inApp !== undefined ? inApp : existing.inApp,
+      deviceNotifications: deviceNotifications !== undefined ? deviceNotifications : existing.deviceNotifications,
+      notifSound: notifSound !== undefined ? notifSound : existing.notifSound,
+      highUrgencyOnly: highUrgencyOnly !== undefined ? highUrgencyOnly : existing.highUrgencyOnly,
+      webhookUrl: webhookUrl !== undefined ? webhookUrl : existing.webhookUrl,
+      digest: digest !== undefined ? digest : existing.digest,
+      pollInterval: pollInterval !== undefined ? pollInterval : existing.pollInterval,
+      signature: signature !== undefined ? signature : existing.signature,
       updatedAt: new Date().toISOString()
     };
 
@@ -30,7 +54,15 @@ export async function POST(request) {
       avatarColor: updated.avatarColor,
       color: updated.color,
       tone: updated.tone,
-      monitoringMode: updated.monitoringMode
+      monitoringMode: updated.monitoringMode,
+      inApp: updated.inApp,
+      deviceNotifications: updated.deviceNotifications,
+      notifSound: updated.notifSound,
+      highUrgencyOnly: updated.highUrgencyOnly,
+      webhookUrl: updated.webhookUrl,
+      digest: updated.digest,
+      pollInterval: updated.pollInterval,
+      signature: updated.signature
     });
   } catch (err) {
     return NextResponse.json(

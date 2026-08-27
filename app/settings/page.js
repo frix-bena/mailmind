@@ -75,6 +75,7 @@ export default function SettingsPage() {
   const [avatar, setAvatar] = useState('');
   const [avatarColor, setAvatarColor] = useState('');
   const [tone, setTone] = useState('professional');
+  const [signature, setSignature] = useState('');
   const [monitoringMode, setMonitoringMode] = useState('ask_permission');
   const [inApp, setInApp] = useState(true);
   const [deviceNotifications, setDeviceNotifications] = useState(true);
@@ -89,6 +90,7 @@ export default function SettingsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState('overview');
@@ -114,6 +116,7 @@ export default function SettingsPage() {
     if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
     if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
     if (stored.tone) setTone(stored.tone);
+    if (stored.signature !== undefined) setSignature(stored.signature);
     if (stored.monitoringMode) setMonitoringMode(stored.monitoringMode);
     if (stored.inApp !== undefined) setInApp(stored.inApp);
     if (stored.deviceNotifications !== undefined) setDeviceNotifications(stored.deviceNotifications);
@@ -141,6 +144,7 @@ export default function SettingsPage() {
         if (u.avatar || u.picture) setAvatar(u.avatar || u.picture || '');
         if (u.avatarColor || u.color) setAvatarColor(u.avatarColor || u.color || '');
         if (u.tone) setTone(u.tone);
+        if (u.signature !== undefined) setSignature(u.signature);
         if (u.monitoringMode) setMonitoringMode(u.monitoringMode);
         refreshAccountsList();
       } else {
@@ -181,14 +185,17 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (!user) return;
+    setSaving(true);
+    const cleanName = name.trim() || user.name || extractDisplayName('', user.email);
     const updated = {
       ...user,
-      name: name || user.name,
+      name: cleanName,
       avatar,
       picture: avatar,
       avatarColor,
       color: avatarColor,
       tone,
+      signature,
       monitoringMode,
       inApp,
       deviceNotifications,
@@ -199,36 +206,69 @@ export default function SettingsPage() {
       pollInterval
     };
     setUser(updated);
-    localStorage.setItem('mailmind_user', JSON.stringify(updated));
-    addOrUpdateAccount(updated);
+
+    try {
+      localStorage.setItem('mailmind_user', JSON.stringify(updated));
+      addOrUpdateAccount(updated);
+      refreshAccountsList();
+    } catch (err) {
+      console.warn('LocalStorage save error:', err);
+    }
 
     // Save notification local settings
-    saveNotificationSettings({
-      enabled: deviceNotifications,
-      sound: notifSound,
-      highUrgencyOnly,
-      webhookUrl
-    });
-
-    // Save to backend
     try {
-      await fetch('/api/auth/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: updated.name,
-          avatar: updated.avatar,
-          picture: updated.picture,
-          avatarColor: updated.avatarColor,
-          color: updated.color,
-          tone: updated.tone,
-          monitoringMode: updated.monitoringMode
-        })
+      saveNotificationSettings({
+        enabled: deviceNotifications,
+        sound: notifSound,
+        highUrgencyOnly,
+        webhookUrl
       });
-    } catch {}
+    } catch (_) {}
 
+    // Save to backend API
+    try {
+      const payload = JSON.stringify({
+        name: updated.name,
+        avatar: updated.avatar,
+        picture: updated.picture,
+        avatarColor: updated.avatarColor,
+        color: updated.color,
+        tone: updated.tone,
+        signature: updated.signature,
+        monitoringMode: updated.monitoringMode,
+        inApp: updated.inApp,
+        deviceNotifications: updated.deviceNotifications,
+        notifSound: updated.notifSound,
+        highUrgencyOnly: updated.highUrgencyOnly,
+        webhookUrl: updated.webhookUrl,
+        digest: updated.digest,
+        pollInterval: updated.pollInterval
+      });
+
+      try {
+        await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        });
+      } catch {
+        await fetch('http://localhost:3002/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        });
+      }
+    } catch (err) {
+      console.warn('Backend save error:', err);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mailmind:account-switched', { detail: updated }));
+    }
+
+    setSaving(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   const handleToggleDeviceNotifications = async (val) => {
@@ -397,8 +437,23 @@ export default function SettingsPage() {
           <span className="topbar-title">⚙️ Settings</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <ThemeToggle showLabel={true} />
-            {saved && (
-              <span className="badge badge-low fade-in" style={{ fontSize: 11, padding: '3px 8px' }}>✅ Saved</span>
+            {saved ? (
+              <span className="badge badge-low fade-in" style={{ fontSize: 11, padding: '4px 10px' }}>✅ Saved</span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleSave}
+                disabled={saving}
+                style={{ fontSize: 12, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 5 }}
+                title="Save changes to settings"
+              >
+                {saving ? (
+                  <><span className="spinner" style={{ width: 11, height: 11 }} /> Saving…</>
+                ) : (
+                  <>💾 Save</>
+                )}
+              </button>
             )}
             {user && (
               <button
@@ -484,7 +539,7 @@ export default function SettingsPage() {
                       onClick={() => setShowCustomizer(!showCustomizer)}
                       style={{ fontSize: 12, cursor: 'pointer' }}
                     >
-                      📷 {showCustomizer ? 'Hide Photo Options' : 'Customize Profile Picture'}
+                      📷 {showCustomizer ? 'Hide Profile Options' : 'Edit Name & Photo'}
                     </button>
                   </div>
                 </div>
@@ -500,7 +555,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Profile Picture Customizer Box */}
+              {/* Profile Details & Photo Customizer Box */}
               {showCustomizer && (
                 <div style={{
                   marginTop: 20,
@@ -509,9 +564,32 @@ export default function SettingsPage() {
                   borderRadius: 12,
                   border: '1px solid var(--border)'
                 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px 0' }}>
-                    Gmail Profile Picture & Color Options
+                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 14px 0' }}>
+                    Profile Details, Photo &amp; Avatar Color
                   </h3>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                      Display Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      placeholder="e.g. Alex Morgan"
+                      style={{
+                        width: '100%',
+                        maxWidth: 380,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        padding: '8px 12px',
+                        color: 'var(--text)',
+                        fontSize: 13.5,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
                     <div>
@@ -1252,6 +1330,7 @@ export default function SettingsPage() {
                 {tones.map(t => (
                   <button
                     key={t.id}
+                    type="button"
                     onClick={() => setTone(t.id)}
                     className="btn btn-sm"
                     style={{
@@ -1262,6 +1341,31 @@ export default function SettingsPage() {
                   >{t.label}</button>
                 ))}
               </div>
+            </Row>
+
+            <Row
+              label="Email Signature / Sign-off (Optional)"
+              desc="Appended to the bottom of all AI-drafted replies and automated sends"
+            >
+              <textarea
+                value={signature}
+                onChange={e => setSignature(e.target.value)}
+                placeholder="Best regards,&#10;Alex Morgan"
+                rows={3}
+                style={{
+                  width: '100%',
+                  maxWidth: 360,
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  color: 'var(--text)',
+                  fontSize: 13,
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
+                }}
+              />
             </Row>
           </Section>
 
@@ -1279,116 +1383,129 @@ export default function SettingsPage() {
                 </div>
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-secondary btn-sm"
                   onClick={() => setMonitoringModalOpen(true)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    fontSize: 13,
-                    padding: '8px 16px',
-                    fontWeight: 600,
-                    boxShadow: '0 2px 12px var(--accent-glow)'
+                    fontSize: 12.5,
+                    padding: '6px 14px',
+                    fontWeight: 600
                   }}
                   title="Open pop-up bar to switch monitoring mode"
                 >
-                  <span>{(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? '⚡' : '🛡️'}</span>
-                  Change Monitoring Mode
+                  <span>⚙️</span> Open Mode Dialog
                 </button>
               </div>
 
-              {/* Active Mode Overview Card (Clickable to open Pop-up Bar) */}
-              <div
-                onClick={() => setMonitoringModalOpen(true)}
-                style={{
-                  background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
-                    ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, var(--surface2) 100%)'
-                    : 'linear-gradient(135deg, rgba(108, 99, 255, 0.15) 0%, var(--surface2) 100%)',
-                  border: `1.5px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.45)' : 'rgba(108, 99, 255, 0.45)'}`,
-                  borderRadius: 14,
-                  padding: '20px 22px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  position: 'relative',
-                  boxShadow: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
-                    ? '0 4px 20px rgba(168, 85, 247, 0.12)'
-                    : '0 4px 20px rgba(108, 99, 255, 0.12)'
-                }}
-                title="Click to change monitoring mode via pop-up bar"
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.borderColor = (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.8)' : 'var(--accent)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.borderColor = (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.45)' : 'rgba(108, 99, 255, 0.45)';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flex: 1, minWidth: 260 }}>
-                    <div style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 12,
-                      background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.25)' : 'rgba(108, 99, 255, 0.25)',
-                      border: `1px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'rgba(168, 85, 247, 0.5)' : 'rgba(108, 99, 255, 0.5)'}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 22,
-                      flexShrink: 0
-                    }}>
-                      {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? '⚡' : '🛡️'}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>
-                          {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
-                            ? 'Reply Without Permission (Autonomous Mode)'
-                            : 'Ask Permission (Permission-First Mode)'}
-                        </span>
-                        <span
-                          className={(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'badge badge-purple' : 'badge badge-low'}
-                          style={{ fontSize: 11, padding: '2px 8px' }}
-                        >
-                          ● Active Mode
-                        </span>
+              {/* 2 Selectable Mode Cards Directly on Settings Page */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+                {/* Option 1: Ask Permission */}
+                <div
+                  onClick={() => setMonitoringMode('ask_permission')}
+                  style={{
+                    background: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission')
+                      ? 'var(--accent-glow)'
+                      : 'var(--surface2)',
+                    border: `2px solid ${(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 14,
+                    padding: '18px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    boxShadow: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission')
+                      ? '0 4px 18px var(--accent-glow)'
+                      : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 12
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 24 }}>🛡️</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                            Ask Permission
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                            Permission-First Mode
+                          </div>
+                        </div>
                       </div>
-                      <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, margin: '6px 0 0 0', opacity: 0.9 }}>
-                        {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
-                          ? 'The agent continuously monitors your mailbox, analyzes incoming messages, and automatically dispatches AI-drafted replies via SMTP without requiring manual confirmation.'
-                          : 'The agent monitors incoming emails and prepares intelligent draft replies. No reply is sent without your explicit review and one-click approval in your Inbox.'}
-                      </p>
-                      <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? (
-                          <>
-                            <span className="badge badge-purple" style={{ fontSize: 10.5, padding: '2px 7px' }}>⚡ Auto-Pilot Active</span>
-                            <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Instant SMTP Dispatch</span>
-                            <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Hands-Free Inbox</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="badge badge-low" style={{ fontSize: 10.5, padding: '2px 7px' }}>🔒 100% Safe</span>
-                            <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Review Drafts First</span>
-                            <span className="badge" style={{ fontSize: 10.5, padding: '2px 7px', background: 'var(--surface)', border: '1px solid var(--border)' }}>Zero Unapproved Sends</span>
-                          </>
-                        )}
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        border: `2px solid ${(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
+                        background: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', fontSize: 11, fontWeight: 'bold'
+                      }}>
+                        {(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? '✓' : ''}
                       </div>
                     </div>
+                    <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.45 }}>
+                      The AI prepares draft replies. No email is sent without your explicit review and one-click approval in your Inbox.
+                    </p>
                   </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <span className="badge badge-low" style={{ fontSize: 10.5 }}>🔒 100% Safe</span>
+                    <span className="badge" style={{ fontSize: 10.5, background: 'var(--surface)', border: '1px solid var(--border)' }}>Review Drafts First</span>
+                  </div>
+                </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMonitoringModalOpen(true);
-                      }}
-                      style={{ fontSize: 12.5, padding: '6px 14px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <span>⚙️</span> Change Mode (Pop-up) →
-                    </button>
+                {/* Option 2: Reply Without Permission */}
+                <div
+                  onClick={() => setMonitoringMode('auto_reply')}
+                  style={{
+                    background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
+                      ? 'var(--accent-glow)'
+                      : 'var(--surface2)',
+                    border: `2px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 14,
+                    padding: '18px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    boxShadow: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
+                      ? '0 4px 18px var(--accent-glow)'
+                      : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 12
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 24 }}>⚡</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                            Without Permission
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                            Autonomous Mode
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        border: `2px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
+                        background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', fontSize: 11, fontWeight: 'bold'
+                      }}>
+                        {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? '✓' : ''}
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.45 }}>
+                      The AI agent continuously monitors your mailbox, creates responses matching your tone, and automatically dispatches replies via SMTP.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <span className="badge badge-purple" style={{ fontSize: 10.5 }}>⚡ Autonomous</span>
+                    <span className="badge" style={{ fontSize: 10.5, background: 'var(--surface)', border: '1px solid var(--border)' }}>Instant SMTP Send</span>
                   </div>
                 </div>
               </div>
@@ -1514,12 +1631,64 @@ export default function SettingsPage() {
             </Row>
           </Section>
 
+          {/* Sticky Save Bar */}
+          <div style={{
+            position: 'sticky',
+            bottom: 0,
+            padding: '16px 20px 24px',
+            background: 'linear-gradient(to top, var(--bg, #090a10) 80%, transparent)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 14,
+            zIndex: 10,
+            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            marginTop: 10
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {saved ? (
+                <span className="badge badge-low fade-in" style={{ fontSize: 13, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>✅</span> Settings saved successfully!
+                </span>
+              ) : (
+                <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+                  Preferences update your profile and AI agent behavior.
+                </span>
+              )}
+            </div>
 
-          {/* Save button */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 40 }}>
-            <button className="btn btn-primary" onClick={handleSave} style={{ minWidth: 140 }}>
-              Save changes
-            </button>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  minWidth: 150,
+                  padding: '10px 22px',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  boxShadow: '0 4px 18px var(--accent-glow)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                {saving ? (
+                  <>
+                    <span className="spinner" style={{ width: 14, height: 14 }} />
+                    <span>Saving changes…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span>
+                    <span>Save changes</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

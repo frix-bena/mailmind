@@ -300,10 +300,10 @@ function handleDeviceNotifToggle(el) {
 }
 
 function save() {
-  const existing = getUser();
+  const existing = getUser() || {};
   const activeTone = document.querySelector('#tone-group .tone-btn.active')?.dataset.t || existing?.tone || 'professional';
   const activeMode = document.querySelector('#mode-group .tone-btn.active')?.dataset.m || existing?.monitoringMode || 'ask_permission';
-  localStorage.setItem('mailmind_user', JSON.stringify({
+  const updated = {
     ...existing,
     tone: activeTone,
     monitoringMode: activeMode,
@@ -312,7 +312,24 @@ function save() {
     notifSound: document.getElementById('tog-sound')?.classList.contains('on'),
     digest: document.getElementById('tog-digest')?.classList.contains('on'),
     pollInterval: document.getElementById('poll-select')?.value || '3',
-  }));
+  };
+  localStorage.setItem('mailmind_user', JSON.stringify(updated));
+
+  // Sync to backend
+  try {
+    fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    }).catch(function() {
+      fetch('http://localhost:3002/api/auth/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      }).catch(function() {});
+    });
+  } catch (e) {}
+
   const label = document.getElementById('saved-label');
   if (label) {
     label.style.display = '';
