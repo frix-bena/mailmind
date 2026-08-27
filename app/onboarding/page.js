@@ -80,8 +80,8 @@ export default function OnboardingPage() {
       setAuthError('Please enter a valid email address.');
       return;
     }
-    if (!password) {
-      setAuthError('Please enter your email password.');
+    if (!password || !password.trim()) {
+      setAuthError('Password is required. Please enter your email password to sign in.');
       return;
     }
 
@@ -268,13 +268,13 @@ export default function OnboardingPage() {
 
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                  Password
+                  Password <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <input
                   type="password"
                   required
                   className="input"
-                  placeholder="Enter your email password"
+                  placeholder="Enter your email password (required)"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -282,7 +282,7 @@ export default function OnboardingPage() {
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                   <ProviderIcon provider={selectedProvider} size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                   <div>
-                    <span>Enter your {currentProviderObj.name} email password to sign in.</span>
+                    <span>Enter your {currentProviderObj.name} email password to sign in (required).</span>
                   </div>
                 </div>
               </div>
@@ -318,7 +318,7 @@ export default function OnboardingPage() {
                 type="submit"
                 className="btn btn-primary btn-lg"
                 style={{ width: '100%', marginTop: 8 }}
-                disabled={connecting}
+                disabled={connecting || !email || !password.trim()}
               >
                 {connecting ? (
                   <><span className="spinner" style={{ width: 16, height: 16 }} /> Verifying & Connecting…</>

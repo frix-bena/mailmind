@@ -9,7 +9,7 @@ export async function POST(request) {
     const body = await request.json();
     const { email, password, provider, host, port, tone, monitoringMode } = body || {};
 
-    if (!email || !password) {
+    if (!email || !password || !String(password).trim()) {
       return NextResponse.json(
         { error: 'Email and password are required.' },
         { status: 400 }

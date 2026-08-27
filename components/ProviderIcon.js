@@ -238,7 +238,7 @@ export const PROVIDER_LIST = [
     brandName: 'Google Gmail',
     color: '#EA4335',
     bgLight: 'rgba(234, 67, 53, 0.12)',
-    hint: 'Sign in with your Google email and password',
+    hint: 'Sign in with your Google email and password (required)',
     guideUrl: null,
     guideText: 'Google Account'
   },
@@ -249,7 +249,7 @@ export const PROVIDER_LIST = [
     brandName: 'Microsoft Outlook / Office 365',
     color: '#0078D4',
     bgLight: 'rgba(0, 120, 212, 0.12)',
-    hint: 'Sign in with your Outlook / Microsoft email and password',
+    hint: 'Sign in with your Outlook / Microsoft email and password (required)',
     guideUrl: null,
     guideText: 'Microsoft Account'
   },
@@ -260,7 +260,7 @@ export const PROVIDER_LIST = [
     brandName: 'Yahoo Mail',
     color: '#6001D2',
     bgLight: 'rgba(96, 1, 210, 0.12)',
-    hint: 'Sign in with your Yahoo email and password',
+    hint: 'Sign in with your Yahoo email and password (required)',
     guideUrl: null,
     guideText: 'Yahoo Account'
   },
@@ -271,7 +271,7 @@ export const PROVIDER_LIST = [
     brandName: 'Apple iCloud Mail',
     color: '#0284C7',
     bgLight: 'rgba(2, 132, 199, 0.12)',
-    hint: 'Sign in with your Apple iCloud email and password',
+    hint: 'Sign in with your Apple iCloud email and password (required)',
     guideUrl: null,
     guideText: 'Apple ID'
   },
@@ -282,7 +282,7 @@ export const PROVIDER_LIST = [
     brandName: 'Custom IMAP / SMTP Server',
     color: '#6366F1',
     bgLight: 'rgba(99, 102, 241, 0.12)',
-    hint: 'Connect with your email address and password',
+    hint: 'Connect with your email address and password (required)',
     guideUrl: null,
     guideText: 'IMAP / SMTP Settings'
   }

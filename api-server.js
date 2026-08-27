@@ -185,7 +185,7 @@ app.post('/api/auth/switch', (req, res) => {
 app.post('/api/auth/connect', async (req, res) => {
   try {
     const { email, password, provider, host, port, tone, monitoringMode } = req.body || {};
-    if (!email || !password) {
+    if (!email || !password || !String(password).trim()) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 

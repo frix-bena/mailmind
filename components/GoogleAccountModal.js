@@ -199,6 +199,10 @@ export default function GoogleAccountModal({
       setNewAccountError('Please enter a valid email address.');
       return null;
     }
+    if (!newPassword || !newPassword.trim()) {
+      setNewAccountError('Password is required. Please enter your email account password.');
+      return null;
+    }
 
     const cleanEmail = newEmail.trim().toLowerCase();
     const candidateName = newName.trim() || extractDisplayName('', cleanEmail);
@@ -207,7 +211,7 @@ export default function GoogleAccountModal({
       email: cleanEmail,
       name: candidateName,
       provider: newProvider,
-      password: newPassword || undefined,
+      password: newPassword.trim(),
       host: newProvider === 'custom' ? (newHost.trim() || undefined) : undefined,
       port: newProvider === 'custom' ? (newPort.trim() || '993') : undefined,
       tone: newTone,
@@ -250,6 +254,27 @@ export default function GoogleAccountModal({
     setNewAccountError('');
 
     try {
+      const res = await fetch('/api/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: candidate.email,
+          password: candidate.password,
+          provider: candidate.provider,
+          host: candidate.host,
+          port: candidate.port,
+          tone: candidate.tone
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setNewAccountConnecting(false);
+        setNewAccountError(data.error || 'Failed to authenticate with email server. Please check your password.');
+        return;
+      }
+      if (data.name && !newName.trim()) candidate.name = data.name;
+
       addOrUpdateAccount(candidate);
       refreshAccounts();
       setSuccessMsg(`Account ${candidate.email} added!`);
@@ -271,38 +296,32 @@ export default function GoogleAccountModal({
     setNewAccountConnecting(true);
     setNewAccountError('');
 
-    // If password provided, attempt real server connection test
-    if (candidate.password) {
-      try {
-        const res = await fetch('/api/auth/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: candidate.email,
-            password: candidate.password,
-            provider: candidate.provider,
-            host: candidate.host,
-            port: candidate.port,
-            tone: candidate.tone
-          })
-        });
+    try {
+      const res = await fetch('/api/auth/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: candidate.email,
+          password: candidate.password,
+          provider: candidate.provider,
+          host: candidate.host,
+          port: candidate.port,
+          tone: candidate.tone
+        })
+      });
 
-        const data = await res.json();
-        if (res.ok && data.success) {
-          if (data.name && !newName.trim()) candidate.name = data.name;
-        } else {
-          const confirmAdd = window.confirm(
-            `Authentication with ${candidate.email} returned: "${data.error || 'Check password'}".\n\nDo you still want to add this account profile to MailMind?`
-          );
-          if (!confirmAdd) {
-            setNewAccountConnecting(false);
-            setNewAccountError(data.error || 'Failed to authenticate with email server.');
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Backend connect error, proceeding with local switch:', err);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.name && !newName.trim()) candidate.name = data.name;
+      } else {
+        setNewAccountConnecting(false);
+        setNewAccountError(data.error || 'Failed to authenticate with email server. Please check your password.');
+        return;
       }
+    } catch (err) {
+      setNewAccountConnecting(false);
+      setNewAccountError('Connection error: ' + (err.message || 'Unable to connect to email authentication service.'));
+      return;
     }
 
     // Save and switch
@@ -912,11 +931,12 @@ export default function GoogleAccountModal({
                   {/* Password */}
                   <div style={{ marginBottom: 10 }}>
                     <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
-                      Password:
+                      Password <span style={{ color: 'var(--danger)' }}>*</span>:
                     </label>
                     <input
                       type="password"
-                      placeholder="Email account password (or leave empty)"
+                      required
+                      placeholder="Email account password (required)"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       style={{
@@ -931,7 +951,7 @@ export default function GoogleAccountModal({
                       }}
                     />
                     <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3 }}>
-                      {currentProviderObj.hint}
+                      {currentProviderObj.hint} &bull; Password is required
                     </div>
                   </div>
 
@@ -1083,7 +1103,7 @@ export default function GoogleAccountModal({
                     <button
                       type="button"
                       onClick={handleAddAccountOnly}
-                      disabled={newAccountConnecting || !newEmail}
+                      disabled={newAccountConnecting || !newEmail || !newPassword.trim()}
                       className="btn btn-secondary btn-sm"
                       style={{ fontSize: 11.5, padding: '6px 12px' }}
                     >
@@ -1091,7 +1111,7 @@ export default function GoogleAccountModal({
                     </button>
                     <button
                       type="submit"
-                      disabled={newAccountConnecting || !newEmail}
+                      disabled={newAccountConnecting || !newEmail || !newPassword.trim()}
                       className="btn btn-primary btn-sm"
                       style={{ fontSize: 11.5, padding: '6px 14px' }}
                     >
