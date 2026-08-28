@@ -355,9 +355,19 @@ async function submitActualEmail(e, provider) {
   e.preventDefault();
   const inputId = provider === 'google' ? 'google-actual-email' : 'ms-actual-email';
   const passId  = provider === 'google' ? 'google-actual-password' : 'ms-actual-password';
-  const email = document.getElementById(inputId).value.trim();
-  const password = document.getElementById(passId).value.trim();
+  const email = document.getElementById(inputId).value.trim().toLowerCase();
+  const password = document.getElementById(passId).value;
   
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!email || !emailRegex.test(email)) {
+    alert('Please enter a valid email address.');
+    return;
+  }
+  if (!password) {
+    alert('Password is required. Please enter your email password exactly as it is.');
+    return;
+  }
+
   selectedEmail = email;
   selectedName = email.split('@')[0];
   window.selectedPassword = password;
@@ -369,17 +379,33 @@ async function submitActualEmail(e, provider) {
     document.getElementById('google-connecting-msg').textContent = 'Connecting to ' + email + '…';
 
     try {
-      const res = await fetch('http://localhost:3002/api/auth/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, provider: 'google', tone: selectedTone })
-      });
-      const data = await res.json();
-      if (!res.ok && data.error) {
-        // show error
+      let res;
+      try {
+        res = await fetch('/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, provider: 'google', tone: selectedTone })
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, provider: 'google', tone: selectedTone })
+        });
       }
-    } catch {
-      // offline fallback
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        conn.classList.remove('visible');
+        document.getElementById('google-picker-accounts').style.display = '';
+        alert(data.error || 'Authentication failed: Incorrect email address or password.');
+        return;
+      }
+    } catch (err) {
+      conn.classList.remove('visible');
+      document.getElementById('google-picker-accounts').style.display = '';
+      alert('Connection error: ' + (err.message || 'Unable to connect to authentication server.'));
+      return;
     }
 
     closePicker('google-picker');
@@ -388,19 +414,37 @@ async function submitActualEmail(e, provider) {
     goStep('tone');
     document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
   } else {
-    closePicker('ms-picker');
     const arrow = document.getElementById('arrow-microsoft');
-    arrow.innerHTML = '<span class="spinner" style="width:16px;height:16px"></span>';
+    if (arrow) arrow.innerHTML = '<span class="spinner" style="width:16px;height:16px"></span>';
     try {
-      await fetch('http://localhost:3002/api/auth/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, provider: 'microsoft', tone: selectedTone })
-      });
-    } catch {
-      // offline fallback
+      let res;
+      try {
+        res = await fetch('/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, provider: 'microsoft', tone: selectedTone })
+        });
+      } catch {
+        res = await fetch('http://localhost:3002/api/auth/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, provider: 'microsoft', tone: selectedTone })
+        });
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        if (arrow) arrow.innerHTML = '→';
+        alert(data.error || 'Authentication failed: Incorrect email address or password.');
+        return;
+      }
+    } catch (err) {
+      if (arrow) arrow.innerHTML = '→';
+      alert('Connection error: ' + (err.message || 'Unable to connect to authentication server.'));
+      return;
     }
-    arrow.innerHTML = '→';
+    closePicker('ms-picker');
+    if (arrow) arrow.innerHTML = '→';
     goStep('tone');
     document.querySelector('#step-tone div:first-child').textContent = '✅ Connected: ' + email;
   }

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar from '@/components/EmailAvatar';
 import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
-import { extractDisplayName } from '@/lib/avatar-utils';
+import { extractDisplayName, isValidEmail } from '@/lib/avatar-utils';
 import { addOrUpdateAccount } from '@/lib/account-manager';
 import {
   requestDeviceNotificationPermission,
@@ -62,6 +62,8 @@ export default function OnboardingPage() {
   // Auto-detect provider when user types an email address
   const handleEmailChange = (newEmail) => {
     setEmail(newEmail);
+    setAuthError('');
+    setAuthHint('');
     const domain = (newEmail.split('@')[1] || '').toLowerCase();
     if (domain.includes('gmail') || domain.includes('googlemail')) {
       setSelectedProvider('google');
@@ -76,11 +78,12 @@ export default function OnboardingPage() {
 
   const handleConnect = async (e) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) {
-      setAuthError('Please enter a valid email address.');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !isValidEmail(cleanEmail)) {
+      setAuthError('Please enter a valid email address (e.g. yourname@domain.com).');
       return;
     }
-    if (!password || !password.trim()) {
+    if (password == null || password === '') {
       setAuthError('Password is required. Please enter your email password to sign in.');
       return;
     }
@@ -91,41 +94,36 @@ export default function OnboardingPage() {
 
     try {
       let res;
+      const payload = JSON.stringify({
+        email: cleanEmail,
+        password: password,
+        provider: selectedProvider,
+        host: selectedProvider === 'custom' ? imapHost : undefined,
+        port: selectedProvider === 'custom' ? imapPort : undefined,
+        tone
+      });
+
       try {
         res = await fetch('/api/auth/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            password,
-            provider: selectedProvider,
-            host: selectedProvider === 'custom' ? imapHost : undefined,
-            port: selectedProvider === 'custom' ? imapPort : undefined,
-            tone
-          })
+          body: payload
         });
       } catch {
         res = await fetch('http://localhost:3002/api/auth/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            password,
-            provider: selectedProvider,
-            host: selectedProvider === 'custom' ? imapHost : undefined,
-            port: selectedProvider === 'custom' ? imapPort : undefined,
-            tone
-          })
+          body: payload
         });
       }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setConnecting(false);
         setStep('tone');
       } else {
         setConnecting(false);
-        setAuthError(data.error || 'Failed to authenticate with your email server.');
+        setAuthError(data.error || 'Authentication failed. Please verify your email address and password.');
         if (data.hint) setAuthHint(data.hint);
       }
     } catch (err) {
@@ -274,15 +272,19 @@ export default function OnboardingPage() {
                   type="password"
                   required
                   className="input"
-                  placeholder="Enter your email password (required)"
+                  placeholder="Enter your exact email password"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => {
+                    setPassword(e.target.value);
+                    setAuthError('');
+                    setAuthHint('');
+                  }}
                   autoComplete="current-password"
                 />
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                   <ProviderIcon provider={selectedProvider} size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                   <div>
-                    <span>Enter your {currentProviderObj.name} email password to sign in (required).</span>
+                    <span>Enter the exact password for your {currentProviderObj.name} email account to sign in.</span>
                   </div>
                 </div>
               </div>
@@ -318,7 +320,7 @@ export default function OnboardingPage() {
                 type="submit"
                 className="btn btn-primary btn-lg"
                 style={{ width: '100%', marginTop: 8 }}
-                disabled={connecting || !email || !password.trim()}
+                disabled={connecting || !email || !password}
               >
                 {connecting ? (
                   <><span className="spinner" style={{ width: 16, height: 16 }} /> Verifying & Connecting…</>

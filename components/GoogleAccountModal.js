@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
 import MonitoringModeModal from '@/components/MonitoringModeModal';
-import { extractDisplayName } from '@/lib/avatar-utils';
+import { extractDisplayName, isValidEmail } from '@/lib/avatar-utils';
 import {
   getStoredAccounts,
   saveStoredAccounts,
@@ -195,23 +195,23 @@ export default function GoogleAccountModal({
 
   // Helper to validate and construct new candidate account object
   const buildCandidateAccount = () => {
-    if (!newEmail || !newEmail.includes('@')) {
-      setNewAccountError('Please enter a valid email address.');
+    const cleanEmail = newEmail.trim().toLowerCase();
+    if (!cleanEmail || !isValidEmail(cleanEmail)) {
+      setNewAccountError('Please enter a valid email address (e.g. name@domain.com).');
       return null;
     }
-    if (!newPassword || !newPassword.trim()) {
-      setNewAccountError('Password is required. Please enter your email account password.');
+    if (newPassword == null || newPassword === '') {
+      setNewAccountError('Password is required. Please enter the exact password for this email account.');
       return null;
     }
 
-    const cleanEmail = newEmail.trim().toLowerCase();
     const candidateName = newName.trim() || extractDisplayName('', cleanEmail);
 
     return {
       email: cleanEmail,
       name: candidateName,
       provider: newProvider,
-      password: newPassword.trim(),
+      password: newPassword,
       host: newProvider === 'custom' ? (newHost.trim() || undefined) : undefined,
       port: newProvider === 'custom' ? (newPort.trim() || '993') : undefined,
       tone: newTone,

@@ -16,7 +16,8 @@ const {
   clearLocalConfig,
   safeSearch,
   safeIncludes,
-  safeMatch
+  safeMatch,
+  isValidEmail
 } = require('./lib/email-service');
 const {
   sendDeviceNotification,
@@ -185,13 +186,27 @@ app.post('/api/auth/switch', (req, res) => {
 app.post('/api/auth/connect', async (req, res) => {
   try {
     const { email, password, provider, host, port, tone, monitoringMode } = req.body || {};
-    if (!email || !password || !String(password).trim()) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ error: 'Email address is required.' });
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      return res.status(400).json({
+        error: 'Please enter a valid email address (e.g. yourname@domain.com).',
+        hint: 'The email address format you entered is not recognized as a valid email address.'
+      });
+    }
+
+    if (password == null || password === '') {
+      return res.status(400).json({ error: 'Password is required. Please enter your email password to sign in.' });
+    }
+
+    const exactPassword = String(password);
+
     const credentials = {
-      email,
-      password,
+      email: cleanEmail,
+      password: exactPassword,
       provider: provider || 'gmail',
       host,
       port,
@@ -204,12 +219,12 @@ app.post('/api/auth/connect', async (req, res) => {
     const testResult = await testConnection(credentials);
     if (!testResult.success) {
       return res.status(401).json({
-        error: testResult.error || 'Failed to authenticate with email server.',
-        hint: 'Make sure your email address and password are correct, and IMAP access is enabled in your email provider settings.'
+        error: testResult.error || 'Authentication failed: Incorrect email address or password.',
+        hint: 'Please ensure you entered your exact email password and that your email address is spelled correctly.'
       });
     }
 
-    const detectedName = testResult.detectedName || (email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    const detectedName = testResult.detectedName || (cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     credentials.name = detectedName;
 
     saveLocalConfig(credentials);

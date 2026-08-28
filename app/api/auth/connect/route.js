@@ -1,24 +1,45 @@
 import { NextResponse } from 'next/server';
 import {
   testConnection,
-  saveLocalConfig
+  saveLocalConfig,
+  isValidEmail
 } from '@/lib/email-service';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { email, password, provider, host, port, tone, monitoringMode } = body || {};
 
-    if (!email || !password || !String(password).trim()) {
+    if (!email || !String(email).trim()) {
       return NextResponse.json(
-        { error: 'Email and password are required.' },
+        { error: 'Email address is required.' },
         { status: 400 }
       );
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      return NextResponse.json(
+        {
+          error: 'Please enter a valid email address (e.g. yourname@domain.com).',
+          hint: 'The email address format you entered is not recognized as a valid email address.'
+        },
+        { status: 400 }
+      );
+    }
+
+    if (password == null || password === '') {
+      return NextResponse.json(
+        { error: 'Password is required. Please enter your email password to sign in.' },
+        { status: 400 }
+      );
+    }
+
+    const exactPassword = String(password);
+
     const credentials = {
-      email,
-      password,
+      email: cleanEmail,
+      password: exactPassword,
       provider: provider || 'gmail',
       host,
       port,
@@ -32,14 +53,14 @@ export async function POST(request) {
     if (!testResult.success) {
       return NextResponse.json(
         {
-          error: testResult.error || 'Failed to authenticate with email server.',
-          hint: 'Make sure your email address and password are correct, and IMAP access is enabled in your email provider settings.'
+          error: testResult.error || 'Authentication failed: Incorrect email address or password.',
+          hint: 'Please ensure you entered your exact email password and that your email address is spelled correctly.'
         },
         { status: 401 }
       );
     }
 
-    const detectedName = testResult.detectedName || (email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+    const detectedName = testResult.detectedName || (cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
     credentials.name = detectedName;
 
     saveLocalConfig(credentials);
