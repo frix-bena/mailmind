@@ -6,6 +6,7 @@ import {
   generateAppPassword,
   cleanAppPassword,
   formatAppPassword,
+  calculatePasswordStrength,
   PROVIDER_GUIDES,
   getProviderAppPasswordGuide
 } from '@/lib/app-password-generator';
@@ -16,7 +17,7 @@ export default function AppPasswordModal({
   initialProvider = 'google',
   userEmail = '',
   onSelectPassword,
-  initialTab = 'generator' // 'generator' | 'guide' | 'faq'
+  initialTab = 'generator' // 'generator' | 'forgot' | 'guide' | 'faq'
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedProvider, setSelectedProvider] = useState(initialProvider || 'google');
@@ -26,12 +27,18 @@ export default function AppPasswordModal({
   const [copied, setCopied] = useState(false);
   const [appliedMsg, setAppliedMsg] = useState('');
 
-  // Update selected provider if initialProvider prop changes
+  // Update selected provider and active tab if props change
   useEffect(() => {
     if (initialProvider) {
       setSelectedProvider(initialProvider);
     }
   }, [initialProvider]);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Generate an initial password on mount or when format changes
   useEffect(() => {
@@ -65,7 +72,7 @@ export default function AppPasswordModal({
     if (!clean) return;
     if (onSelectPassword) {
       onSelectPassword(clean);
-      setAppliedMsg('Password applied to login form!');
+      setAppliedMsg('New password applied to login form!');
       setTimeout(() => {
         setAppliedMsg('');
         if (onClose) onClose();
@@ -75,6 +82,7 @@ export default function AppPasswordModal({
 
   const guide = PROVIDER_GUIDES[selectedProvider] || PROVIDER_GUIDES.google;
   const currentProviderInfo = getProviderInfo(selectedProvider);
+  const pwdStrength = calculatePasswordStrength(generatedPassword);
 
   if (!isOpen) return null;
 
@@ -96,7 +104,7 @@ export default function AppPasswordModal({
       <div
         className="modal app-password-modal"
         style={{
-          maxWidth: 540,
+          maxWidth: 560,
           width: '100%',
           padding: 0,
           borderRadius: 24,
@@ -121,24 +129,26 @@ export default function AppPasswordModal({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
-              width: 32,
-              height: 32,
+              width: 34,
+              height: 34,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, var(--accent, #6c63ff), #a78bfa)',
+              background: activeTab === 'forgot' ? 'linear-gradient(135deg, #ef4444, #f59e0b)' : 'linear-gradient(135deg, var(--accent, #6c63ff), #a78bfa)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 16,
+              fontSize: 17,
               boxShadow: '0 2px 8px rgba(108, 99, 255, 0.3)'
             }}>
-              🔑
+              {activeTab === 'forgot' ? '🆘' : '🔑'}
             </span>
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-                App Password Generator &amp; Guide
+                {activeTab === 'forgot' ? 'Forgot Password & Generate New One' : 'App Password Generator & Assistant'}
               </h2>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                Create or fetch 16-character passwords for 2FA-secured inboxes
+                {activeTab === 'forgot' 
+                  ? 'Generate a fresh new password or recover your email credentials'
+                  : 'Create or fetch 16-character passwords for 2FA-secured inboxes'}
               </div>
             </div>
           </div>
@@ -164,13 +174,15 @@ export default function AppPasswordModal({
         {/* Modal Tabs Navigation */}
         <div style={{
           display: 'flex',
-          padding: '8px 20px 0',
+          padding: '8px 16px 0',
           borderBottom: '1px solid var(--border)',
-          gap: 6,
-          background: 'rgba(0,0,0,0.1)'
+          gap: 4,
+          background: 'rgba(0,0,0,0.1)',
+          overflowX: 'auto'
         }}>
           {[
             { id: 'generator', label: '⚡ Instant Generator', icon: '⚡' },
+            { id: 'forgot', label: '🆘 Forgot Password?', icon: '🆘' },
             { id: 'guide', label: '📖 Step-by-Step Guide', icon: '📖' },
             { id: 'faq', label: '🛡️ Security & FAQ', icon: '🛡️' }
           ].map((tab) => {
@@ -181,8 +193,8 @@ export default function AppPasswordModal({
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  padding: '9px 14px',
-                  fontSize: 12.5,
+                  padding: '9px 12px',
+                  fontSize: 12,
                   fontWeight: isTabActive ? 700 : 500,
                   border: 'none',
                   background: 'none',
@@ -192,7 +204,8 @@ export default function AppPasswordModal({
                   transition: 'all 0.15s ease',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6
+                  gap: 5,
+                  whiteSpace: 'nowrap'
                 }}
               >
                 <span>{tab.icon}</span>
@@ -277,8 +290,19 @@ export default function AppPasswordModal({
                 marginBottom: 18,
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <span>Generated 16-Character App Password ({guide.shortName || 'Standard'} Format):</span>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Generated 16-Character Password ({guide.shortName || 'Standard'} Format):</span>
+                  <span style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: pwdStrength.color,
+                    background: 'var(--surface)',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    border: '1px solid var(--border)'
+                  }}>
+                    🛡️ {pwdStrength.label} Entropy
+                  </span>
                 </div>
 
                 {/* Password Display Box */}
@@ -323,7 +347,7 @@ export default function AppPasswordModal({
                     title="Generate a different random password"
                   >
                     <span>🔄</span>
-                    <span>Regenerate</span>
+                    <span>Generate New One</span>
                   </button>
 
                   {onSelectPassword && (
@@ -376,6 +400,35 @@ export default function AppPasswordModal({
                 </div>
               </div>
 
+              {/* Forgot Password Helper Banner */}
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap',
+                marginBottom: 12
+              }}>
+                <div style={{ fontSize: 12, color: 'var(--text)', flex: 1, minWidth: 200 }}>
+                  <strong>Forgot your account password?</strong>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                    Generate an App Password above or view official {guide.shortName} recovery options.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('forgot')}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                >
+                  <span>🆘 Recovery Guide</span>
+                </button>
+              </div>
+
               {/* Direct Provider Quick-Link Callout */}
               {guide.appPasswordUrl && (
                 <div style={{
@@ -399,14 +452,190 @@ export default function AppPasswordModal({
                     href={guide.appPasswordUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-secondary btn-sm"
+                    className="btn btn-primary btn-sm"
                     style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
                   >
-                    <span>Open {guide.shortName} App Passwords</span>
+                    <span>Open {guide.shortName} Console</span>
                     <span>↗</span>
                   </a>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ══════════════════ TAB: FORGOT PASSWORD & RECOVERY ══════════════════ */}
+          {activeTab === 'forgot' && (
+            <div className="fade-in">
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.08))',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: 14,
+                padding: '14px 16px',
+                marginBottom: 16
+              }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span>🆘</span> Forgot your password for {guide.name}?
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+                  {guide.forgotPasswordTips || 'You can instantly generate a brand new 16-character App Password to connect MailMind without needing to change your main master email password.'}
+                </div>
+              </div>
+
+              {/* Option 1: Instant Generator for New Password (Recommended) */}
+              <div style={{
+                background: 'var(--surface2)',
+                borderRadius: 14,
+                padding: '16px',
+                border: '1.5px solid var(--accent)',
+                marginBottom: 14
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span className="badge badge-low" style={{ fontSize: 10 }}>Recommended</span>
+                    <span>Option 1: Generate a New 16-Char App Password</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRegenerate}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    🔄 Generate Another
+                  </button>
+                </div>
+
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.4 }}>
+                  Instead of changing your email password, use a dedicated 16-character passcode for MailMind:
+                </div>
+
+                {/* Instant Generated Code Box */}
+                <div style={{
+                  background: 'var(--surface)',
+                  border: '1.5px dashed var(--accent)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  fontFamily: 'monospace',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: 'var(--text)',
+                  marginBottom: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  userSelect: 'all'
+                }}>
+                  <span>{generatedPassword}</span>
+                  <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>New Password</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(cleanAppPassword(generatedPassword))}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
+                  >
+                    <span>{copied ? '✅' : '📋'}</span>
+                    <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+                  </button>
+
+                  {onSelectPassword && (
+                    <button
+                      type="button"
+                      onClick={() => handleApply(generatedPassword)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, fontWeight: 700 }}
+                    >
+                      Apply New Password to Form →
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Option 2: Official Provider Password Reset / Recovery Link */}
+              <div style={{
+                background: 'var(--surface2)',
+                borderRadius: 14,
+                padding: '16px',
+                border: '1px solid var(--border)',
+                marginBottom: 14
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  Option 2: Reset your {guide.name} Master Password
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.4 }}>
+                  If you need to recover or change your main email account login credentials:
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {guide.recoveryUrl && (
+                    <a
+                      href={guide.recoveryUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <span>🔄 Open {guide.shortName} Password Recovery</span>
+                      <span>↗</span>
+                    </a>
+                  )}
+
+                  {guide.appPasswordUrl && (
+                    <a
+                      href={guide.appPasswordUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 12, padding: '7px 12px', borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                    >
+                      <span>🔑 {guide.shortName} App Passwords Page</span>
+                      <span>↗</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Paste Form */}
+              <div style={{
+                background: 'var(--surface2)',
+                borderRadius: 12,
+                padding: 14,
+                border: '1px solid var(--border)'
+              }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>
+                  Have your new password or code ready? Paste it here:
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    placeholder={`e.g. ${guide.formatExample || 'abcd efgh ijkl mnop'}`}
+                    value={pastedPassword}
+                    onChange={(e) => setPastedPassword(e.target.value)}
+                    style={{
+                      flex: 1,
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      color: 'var(--text)',
+                      fontSize: 13,
+                      fontFamily: 'monospace'
+                    }}
+                  />
+                  {onSelectPassword && (
+                    <button
+                      type="button"
+                      disabled={!pastedPassword.trim()}
+                      onClick={() => handleApply(pastedPassword)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                    >
+                      Apply to Form
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -561,6 +790,20 @@ export default function AppPasswordModal({
                   border: '1px solid var(--border)'
                 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+                    🆘 What if I forgot my main email password?
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+                    You don't need to panic! You can generate a dedicated 16-character App Password using the Instant Generator or via your email provider's security console. This connects MailMind immediately without needing to remember or reset your master account password.
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'var(--surface2)',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
                     🔒 Why do Google, Outlook, Yahoo &amp; Apple require them?
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
@@ -611,7 +854,7 @@ export default function AppPasswordModal({
               Close
             </button>
 
-            {onSelectPassword && activeTab === 'generator' && (
+            {onSelectPassword && (activeTab === 'generator' || activeTab === 'forgot') && (
               <button
                 type="button"
                 onClick={() => handleApply(generatedPassword)}
@@ -627,3 +870,4 @@ export default function AppPasswordModal({
     </div>
   );
 }
+

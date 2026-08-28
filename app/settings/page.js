@@ -97,11 +97,16 @@ export default function SettingsPage() {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState('overview');
   const [monitoringModalOpen, setMonitoringModalOpen] = useState(false);
-  const [showCustomizer, setShowCustomizer] = useState(false);
   const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
+  const [appPasswordModalTab, setAppPasswordModalTab] = useState('generator');
   const [genFormat, setGenFormat] = useState('spaced');
   const [generatedPwd, setGeneratedPwd] = useState(() => generateAppPassword({ format: 'spaced' }));
   const [copiedPwd, setCopiedPwd] = useState(false);
+
+  const openAppPasswordModal = (tab = 'generator') => {
+    setAppPasswordModalTab(tab);
+    setAppPasswordModalOpen(true);
+  };
 
   const refreshAccountsList = () => {
     try {
@@ -1338,16 +1343,57 @@ export default function SettingsPage() {
                     App Password Generator &amp; Setup Assistant
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
-                    Generate secure 16-character passwords or view step-by-step guides for Gmail, Outlook, Yahoo, Apple &amp; IMAP.
+                    Generate secure 16-character passwords, recover forgotten passwords, or view step-by-step guides for Gmail, Outlook, Yahoo, Apple &amp; IMAP.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => openAppPasswordModal('forgot')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 12px' }}
+                  >
+                    <span>🆘</span> Forgot Password?
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => openAppPasswordModal('generator')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                  >
+                    <span>🔑</span> Open Generator &amp; Assistant
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot Password Callout Box */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.06))',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: 14,
+                padding: '14px 18px',
+                marginBottom: 18,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>🆘</span> Forgot your mailbox or App Password?
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, lineHeight: 1.4 }}>
+                    Generate a fresh new 16-character passcode right now to keep MailMind synced without changing your master email password.
                   </div>
                 </div>
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setAppPasswordModalOpen(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                  onClick={() => openAppPasswordModal('forgot')}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
                 >
-                  <span>🔑</span> Open Full Assistant
+                  <span>⚡ Generate New Password Now</span>
                 </button>
               </div>
 
@@ -1435,7 +1481,7 @@ export default function SettingsPage() {
                     title="Generate another password"
                   >
                     <span>🔄</span>
-                    <span>New</span>
+                    <span>Generate New One</span>
                   </button>
                 </div>
               </div>
@@ -1443,7 +1489,7 @@ export default function SettingsPage() {
               {/* Direct Provider Links Grid */}
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                  Official Provider App Password Consoles:
+                  Official Provider App Password Consoles &amp; Recovery:
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
                   {PROVIDER_LIST.filter(p => p.appPasswordUrl).map((p) => (
@@ -1891,6 +1937,7 @@ export default function SettingsPage() {
         <AppPasswordModal
           isOpen={appPasswordModalOpen}
           initialProvider={user?.provider || 'google'}
+          initialTab={appPasswordModalTab}
           userEmail={user?.email}
           onClose={() => setAppPasswordModalOpen(false)}
           onSelectPassword={(pwd) => {

@@ -275,7 +275,7 @@ body{background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(124,109,250,.18
           <input type="password" id="google-actual-password" autocomplete="current-password" placeholder="Enter your password" required
                  style="width:100%; padding:13px 15px; border:1px solid #dadce0; border-radius:4px; font-size:16px; margin-bottom:32px; color:#202124;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <button type="button" class="picker-footer-link" style="font-size:14px; font-weight:500;">Create account</button>
+            <button type="button" class="picker-footer-link" onclick="window.open('https://accounts.google.com/signin/recovery', '_blank')" style="font-size:14px; font-weight:500;">Forgot password?</button>
             <button type="submit" style="background:#1a73e8; color:#fff; border:none; border-radius:4px; padding:10px 24px; font-weight:500; font-size:14px; cursor:pointer;">Next</button>
           </div>
         </form>
@@ -283,7 +283,7 @@ body{background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(124,109,250,.18
       <div class="picker-footer">
         <button class="picker-footer-link" onclick="closePicker('google-picker')">Cancel</button>
         <div style="display:flex;gap:16px">
-          <button class="picker-footer-link">Help</button>
+          <button class="picker-footer-link" onclick="window.open('https://myaccount.google.com/apppasswords', '_blank')">App Passwords</button>
           <button class="picker-footer-link">Privacy</button>
           <button class="picker-footer-link">Terms</button>
         </div>
@@ -318,7 +318,10 @@ body{background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(124,109,250,.18
                style="width:100%; padding:8px 0; border:none; border-bottom:1px solid #000; font-size:15px; margin-bottom:16px; color:#171717;">
         <input type="password" id="ms-actual-password" autocomplete="current-password" placeholder="Password" required
                style="width:100%; padding:8px 0; border:none; border-bottom:1px solid #000; font-size:15px; margin-bottom:24px; color:#171717;">
-        <div style="font-size:13px; margin-bottom:24px;">No account? <a href="#" style="color:#0078d4">Create one!</a></div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:24px;">
+          <span>No account? <a href="#" style="color:#0078d4">Create one!</a></span>
+          <a href="https://account.live.com/password/reset" target="_blank" style="color:#0078d4">Forgot password?</a>
+        </div>
         <div style="display:flex; justify-content:flex-end; gap:8px;">
           <button type="button" class="ms-btn ms-btn-ghost" onclick="closePicker('ms-picker')">Back</button>
           <button type="submit" class="ms-btn ms-btn-primary">Next</button>

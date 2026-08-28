@@ -48,11 +48,17 @@ export default function OnboardingPage() {
   const [authError, setAuthError] = useState('');
   const [authHint, setAuthHint] = useState('');
   const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
+  const [appPasswordModalTab, setAppPasswordModalTab] = useState('generator');
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
   const [deviceNotifications, setDeviceNotifications] = useState(true);
   const [notifSound, setNotifSound] = useState(true);
   const [digest, setDigest] = useState(false);
+
+  const openAppPasswordModal = (tab = 'generator') => {
+    setAppPasswordModalTab(tab);
+    setAppPasswordModalOpen(true);
+  };
 
   const handleToggleDevice = async (val) => {
     setDeviceNotifications(val);
@@ -248,6 +254,28 @@ export default function OnboardingPage() {
                   <div style={{ fontWeight: 600 }}>⚠️ Authentication Failed</div>
                   <div>{authError}</div>
                   {authHint && <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9 }}>💡 {authHint}</div>}
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text)' }}>Forgot your password?</span>
+                    <button
+                      type="button"
+                      onClick={() => openAppPasswordModal('forgot')}
+                      style={{
+                        background: 'var(--danger)',
+                        border: 'none',
+                        color: '#fff',
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        borderRadius: 6,
+                        padding: '4px 10px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span>🆘</span> Generate a New Password or Reset →
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -267,28 +295,49 @@ export default function OnboardingPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
                   <label style={{ fontSize: 13, fontWeight: 600 }}>
                     Password <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setAppPasswordModalOpen(true)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--accent)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 4px'
-                    }}
-                  >
-                    <span>🔑</span> Generate / How to get App Password
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => openAppPasswordModal('forgot')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        padding: '2px 4px'
+                      }}
+                    >
+                      <span>🆘</span> Forgot password? Generate new
+                    </button>
+                    <span style={{ color: 'var(--border2, #444)' }}>|</span>
+                    <button
+                      type="button"
+                      onClick={() => openAppPasswordModal('generator')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--muted)',
+                        fontSize: 11.5,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        padding: '2px 4px'
+                      }}
+                    >
+                      <span>🔑</span> App Passwords
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="password"
@@ -303,27 +352,27 @@ export default function OnboardingPage() {
                   }}
                   autoComplete="current-password"
                 />
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                  <ProviderIcon provider={selectedProvider} size={14} style={{ marginTop: 2, flexShrink: 0 }} />
-                  <div>
-                    <span>Enter your {currentProviderObj.name} password or 16-character App Password. </span>
-                    <button
-                      type="button"
-                      onClick={() => setAppPasswordModalOpen(true)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent)',
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        padding: 0,
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      Need an App Password?
-                    </button>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ProviderIcon provider={selectedProvider} size={14} style={{ flexShrink: 0 }} />
+                    <span>Enter your {currentProviderObj.name} password or App Password.</span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => openAppPasswordModal('forgot')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent)',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0,
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Forgot password? Generate new one
+                  </button>
                 </div>
               </div>
 
@@ -486,6 +535,7 @@ export default function OnboardingPage() {
         <AppPasswordModal
           isOpen={appPasswordModalOpen}
           initialProvider={selectedProvider}
+          initialTab={appPasswordModalTab}
           userEmail={email}
           onClose={() => setAppPasswordModalOpen(false)}
           onSelectPassword={(pwd) => {
