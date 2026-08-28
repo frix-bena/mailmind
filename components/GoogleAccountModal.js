@@ -15,6 +15,13 @@ import {
 
 import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
 import AppPasswordModal from '@/components/AppPasswordModal';
+import {
+  generateAppPassword,
+  generateSecurePassword,
+  cleanAppPassword,
+  calculatePasswordStrength,
+  PROVIDER_GUIDES
+} from '@/lib/app-password-generator';
 
 const PROVIDERS = PROVIDER_LIST;
 
@@ -50,9 +57,16 @@ export default function GoogleAccountModal({
 
   // Add new account form state
   const [showAddForm, setShowAddForm] = useState(false);
+  const [newAccountMode, setNewAccountMode] = useState('new'); // 'new' | 'existing'
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newConfirmPassword, setNewConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showNewConfirmPassword, setShowNewConfirmPassword] = useState(false);
+  const [showNewForgotDrawer, setShowNewForgotDrawer] = useState(false);
+  const [inlineNewGeneratedPassword, setInlineNewGeneratedPassword] = useState('');
+  const [copiedNewInline, setCopiedNewInline] = useState(false);
   const [newProvider, setNewProvider] = useState('google');
   const [newHost, setNewHost] = useState('');
   const [newPort, setNewPort] = useState('993');
@@ -209,7 +223,12 @@ export default function GoogleAccountModal({
       return null;
     }
     if (newPassword == null || newPassword === '') {
-      setNewAccountError('Password is required. Please enter the exact password for this email account.');
+      setNewAccountError('Password is required. Please enter or generate a password for this email account.');
+      return null;
+    }
+
+    if (newAccountMode === 'new' && newConfirmPassword && newPassword !== newConfirmPassword) {
+      setNewAccountError('Passwords do not match. Please make sure both password fields match.');
       return null;
     }
 
@@ -233,9 +252,15 @@ export default function GoogleAccountModal({
 
   const resetAddForm = () => {
     setShowAddForm(false);
+    setNewAccountMode('new');
     setNewName('');
     setNewEmail('');
     setNewPassword('');
+    setNewConfirmPassword('');
+    setShowNewPassword(false);
+    setShowNewConfirmPassword(false);
+    setShowNewForgotDrawer(false);
+    setInlineNewGeneratedPassword('');
     setNewHost('');
     setNewPort('993');
     setNewTone('professional');
@@ -861,6 +886,69 @@ export default function GoogleAccountModal({
                     </span>
                   </div>
 
+                  {/* Mode Selector: New Account vs Existing Account */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 4,
+                    background: 'var(--surface, #181824)',
+                    padding: 3,
+                    borderRadius: 8,
+                    marginBottom: 14,
+                    border: '1px solid var(--border)'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewAccountMode('new');
+                        setNewAccountError('');
+                        setShowNewForgotDrawer(false);
+                      }}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 6,
+                        border: 'none',
+                        fontSize: 11.5,
+                        fontWeight: newAccountMode === 'new' ? 700 : 500,
+                        background: newAccountMode === 'new' ? 'var(--accent)' : 'transparent',
+                        color: newAccountMode === 'new' ? '#fff' : 'var(--muted)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span>🆕</span>
+                      <span>New Account &bull; Create Password</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewAccountMode('existing');
+                        setNewAccountError('');
+                      }}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 6,
+                        border: 'none',
+                        fontSize: 11.5,
+                        fontWeight: newAccountMode === 'existing' ? 700 : 500,
+                        background: newAccountMode === 'existing' ? 'var(--accent)' : 'transparent',
+                        color: newAccountMode === 'existing' ? '#fff' : 'var(--muted)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <span>👤</span>
+                      <span>Existing Account &bull; Sign In</span>
+                    </button>
+                  </div>
+
                   {newAccountError && (
                     <div style={{
                       background: 'rgba(239, 68, 68, 0.15)',
@@ -876,7 +964,14 @@ export default function GoogleAccountModal({
                         <span style={{ fontSize: 11.5 }}>Forgot this account's password?</span>
                         <button
                           type="button"
-                          onClick={() => openAppPasswordModal('forgot')}
+                          onClick={() => {
+                            setShowNewForgotDrawer(true);
+                            setNewAccountMode('existing');
+                            if (!inlineNewGeneratedPassword) {
+                              const fmt = newProvider === 'icloud' ? 'dashed' : 'spaced';
+                              setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
+                            }
+                          }}
                           style={{
                             background: 'var(--danger)',
                             border: 'none',
@@ -902,7 +997,11 @@ export default function GoogleAccountModal({
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => setNewProvider(p.id)}
+                          onClick={() => {
+                            setNewProvider(p.id);
+                            const fmt = p.id === 'icloud' ? 'dashed' : 'spaced';
+                            setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
+                          }}
                           style={{
                             flex: 1,
                             minWidth: 70,
@@ -977,89 +1076,329 @@ export default function GoogleAccountModal({
                     />
                   </div>
 
-                  {/* Password */}
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 4 }}>
-                      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
-                        Password / App Password <span style={{ color: 'var(--danger)' }}>*</span>:
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <button
-                          type="button"
-                          onClick={() => openAppPasswordModal('forgot')}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--accent)',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                            padding: '1px 4px'
-                          }}
-                        >
-                          <span>🆘</span> Forgot password? Generate new
-                        </button>
-                        <span style={{ color: 'var(--border2, #444)', fontSize: 10 }}>|</span>
-                        <button
-                          type="button"
-                          onClick={() => openAppPasswordModal('generator')}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--muted)',
-                            fontSize: 11,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                            padding: '1px 4px'
-                          }}
-                        >
-                          <span>🔑</span> App Passwords
-                        </button>
+                  {/* ══════════ NEW ACCOUNT: CREATE PASSWORD ══════════ */}
+                  {newAccountMode === 'new' ? (
+                    <div>
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 4 }}>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
+                            Create Password <span style={{ color: 'var(--danger)' }}>*</span>:
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const strong = generateSecurePassword({ length: 16 });
+                              setNewPassword(strong);
+                              setNewConfirmPassword(strong);
+                              setShowNewPassword(true);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--accent)',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                              padding: '1px 4px'
+                            }}
+                          >
+                            <span>✨</span> Suggest Strong Password
+                          </button>
+                        </div>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showNewPassword ? 'text' : 'password'}
+                            required
+                            placeholder="Create a secure password (min 8 chars)"
+                            value={newPassword}
+                            onChange={e => {
+                              setNewPassword(e.target.value);
+                              setNewAccountError('');
+                            }}
+                            style={{
+                              width: '100%',
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 8,
+                              padding: '8px 36px 8px 10px',
+                              color: 'var(--text)',
+                              fontSize: 12.5,
+                              fontFamily: showNewPassword ? 'monospace' : 'inherit',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: 8,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              color: 'var(--muted)',
+                              padding: 2
+                            }}
+                          >
+                            {showNewPassword ? '🙈' : '👁️'}
+                          </button>
+                        </div>
+
+                        {/* Strength meter */}
+                        {newPassword && (
+                          <div style={{ marginTop: 6 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, marginBottom: 2 }}>
+                              <span style={{ color: 'var(--muted)' }}>Strength:</span>
+                              <span style={{ fontWeight: 700, color: calculatePasswordStrength(newPassword).color }}>
+                                {calculatePasswordStrength(newPassword).label}
+                              </span>
+                            </div>
+                            <div style={{ width: '100%', height: 3, background: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{
+                                height: '100%',
+                                width: calculatePasswordStrength(newPassword).width,
+                                background: calculatePasswordStrength(newPassword).color,
+                                transition: 'all 0.3s ease'
+                              }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
+                            Confirm Password <span style={{ color: 'var(--danger)' }}>*</span>:
+                          </label>
+                          {newConfirmPassword && (
+                            <span style={{
+                              fontSize: 10.5,
+                              fontWeight: 600,
+                              color: newPassword === newConfirmPassword ? '#22c55e' : '#ef4444'
+                            }}>
+                              {newPassword === newConfirmPassword ? '✓ Passwords match' : '⚠️ Do not match'}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type={showNewConfirmPassword ? 'text' : 'password'}
+                            required
+                            placeholder="Re-enter password to confirm"
+                            value={newConfirmPassword}
+                            onChange={e => setNewConfirmPassword(e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'var(--surface)',
+                              border: `1px solid ${newConfirmPassword ? (newPassword === newConfirmPassword ? '#22c55e' : '#ef4444') : 'var(--border)'}`,
+                              borderRadius: 8,
+                              padding: '8px 36px 8px 10px',
+                              color: 'var(--text)',
+                              fontSize: 12.5,
+                              fontFamily: showNewConfirmPassword ? 'monospace' : 'inherit',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewConfirmPassword(!showNewConfirmPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: 8,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              color: 'var(--muted)',
+                              padding: 2
+                            }}
+                          >
+                            {showNewConfirmPassword ? '🙈' : '👁️'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Account password or 16-char App Password (required)"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      style={{
-                        width: '100%',
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        padding: '8px 10px',
-                        color: 'var(--text)',
-                        fontSize: 12.5,
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-                      <span>{currentProviderObj.hint}</span>
-                      <button
-                        type="button"
-                        onClick={() => openAppPasswordModal('forgot')}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--accent)',
-                          fontSize: 10.5,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          padding: 0,
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        Forgot password? Generate new
-                      </button>
+                  ) : (
+                    /* ══════════ EXISTING ACCOUNT: SIGN IN & FORGOT PASSWORD ══════════ */
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 4 }}>
+                        <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
+                          Password / App Password <span style={{ color: 'var(--danger)' }}>*</span>:
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewForgotDrawer(!showNewForgotDrawer);
+                              if (!inlineNewGeneratedPassword) {
+                                const fmt = newProvider === 'icloud' ? 'dashed' : 'spaced';
+                                setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
+                              }
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#ef4444',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                              padding: '1px 4px'
+                            }}
+                          >
+                            <span>🆘</span> Forgot password? Generate new
+                          </button>
+                          <span style={{ color: 'var(--border2, #444)', fontSize: 10 }}>|</span>
+                          <button
+                            type="button"
+                            onClick={() => openAppPasswordModal('generator')}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--muted)',
+                              fontSize: 11,
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                              padding: '1px 4px'
+                            }}
+                          >
+                            <span>🔑</span> App Passwords
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          required
+                          placeholder="Account password or 16-char App Password (required)"
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 8,
+                            padding: '8px 36px 8px 10px',
+                            color: 'var(--text)',
+                            fontSize: 12.5,
+                            fontFamily: showNewPassword ? 'monospace' : 'inherit',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: 8,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: 13,
+                            color: 'var(--muted)',
+                            padding: 2
+                          }}
+                        >
+                          {showNewPassword ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+
+                      {/* Expandable Forgot Password Generator Drawer for Add Account */}
+                      {showNewForgotDrawer && (
+                        <div style={{
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.08))',
+                          border: '1.5px solid rgba(239, 68, 68, 0.3)',
+                          borderRadius: 10,
+                          padding: '10px 12px',
+                          marginTop: 8,
+                          marginBottom: 8
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text)' }}>
+                              🆘 Instant Password Generator:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowNewForgotDrawer(false)}
+                              style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div style={{
+                            background: 'var(--surface)',
+                            border: '1px dashed var(--accent)',
+                            borderRadius: 6,
+                            padding: '6px 10px',
+                            fontFamily: 'monospace',
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: 'var(--text)',
+                            marginBottom: 8,
+                            textAlign: 'center',
+                            userSelect: 'all'
+                          }}>
+                            {inlineNewGeneratedPassword || 'Generating…'}
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const clean = cleanAppPassword(inlineNewGeneratedPassword);
+                                setNewPassword(clean);
+                                setShowNewForgotDrawer(false);
+                              }}
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6 }}
+                            >
+                              ⚡ Apply to Password Field
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const fmt = newProvider === 'icloud' ? 'dashed' : 'spaced';
+                                setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
+                              }}
+                              className="btn btn-ghost btn-sm"
+                              style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6 }}
+                            >
+                              🔄 Regenerate
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                  navigator.clipboard.writeText(cleanAppPassword(inlineNewGeneratedPassword));
+                                  setCopiedNewInline(true);
+                                  setTimeout(() => setCopiedNewInline(false), 2000);
+                                }
+                              }}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6 }}
+                            >
+                              {copiedNewInline ? '✓ Copied' : '📋 Copy'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Custom IMAP Host & Port */}
                   {newProvider === 'custom' && (

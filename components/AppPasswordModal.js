@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
 import {
   generateAppPassword,
+  generateSecurePassword,
   cleanAppPassword,
   formatAppPassword,
   calculatePasswordStrength,
@@ -17,13 +18,15 @@ export default function AppPasswordModal({
   initialProvider = 'google',
   userEmail = '',
   onSelectPassword,
-  initialTab = 'generator' // 'generator' | 'forgot' | 'guide' | 'faq'
+  initialTab = 'generator' // 'generator' | 'forgot' | 'create' | 'guide' | 'faq'
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedProvider, setSelectedProvider] = useState(initialProvider || 'google');
   const [formatType, setFormatType] = useState('spaced'); // 'spaced' | 'dashed' | 'alphanumeric' | 'token'
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [pastedPassword, setPastedPassword] = useState('');
+  const [customPassword, setCustomPassword] = useState('');
+  const [showCustomPassword, setShowCustomPassword] = useState(false);
   const [copied, setCopied] = useState(false);
   const [appliedMsg, setAppliedMsg] = useState('');
 
@@ -83,6 +86,7 @@ export default function AppPasswordModal({
   const guide = PROVIDER_GUIDES[selectedProvider] || PROVIDER_GUIDES.google;
   const currentProviderInfo = getProviderInfo(selectedProvider);
   const pwdStrength = calculatePasswordStrength(generatedPassword);
+  const customPwdStrength = calculatePasswordStrength(customPassword);
 
   if (!isOpen) return null;
 
@@ -132,23 +136,33 @@ export default function AppPasswordModal({
               width: 34,
               height: 34,
               borderRadius: 10,
-              background: activeTab === 'forgot' ? 'linear-gradient(135deg, #ef4444, #f59e0b)' : 'linear-gradient(135deg, var(--accent, #6c63ff), #a78bfa)',
+              background: activeTab === 'forgot'
+                ? 'linear-gradient(135deg, #ef4444, #f59e0b)'
+                : activeTab === 'create'
+                  ? 'linear-gradient(135deg, #10b981, #06b6d4)'
+                  : 'linear-gradient(135deg, var(--accent, #6c63ff), #a78bfa)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 17,
               boxShadow: '0 2px 8px rgba(108, 99, 255, 0.3)'
             }}>
-              {activeTab === 'forgot' ? '🆘' : '🔑'}
+              {activeTab === 'forgot' ? '🆘' : activeTab === 'create' ? '🆕' : '🔑'}
             </span>
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-                {activeTab === 'forgot' ? 'Forgot Password & Generate New One' : 'App Password Generator & Assistant'}
+                {activeTab === 'forgot'
+                  ? 'Forgot Password & Generate New One'
+                  : activeTab === 'create'
+                    ? 'Create New Password & Check Strength'
+                    : 'App Password Generator & Assistant'}
               </h2>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
                 {activeTab === 'forgot' 
                   ? 'Generate a fresh new password or recover your email credentials'
-                  : 'Create or fetch 16-character passwords for 2FA-secured inboxes'}
+                  : activeTab === 'create'
+                    ? 'Craft a strong password or generate a high-entropy passphrase'
+                    : 'Create or fetch 16-character passwords for 2FA-secured inboxes'}
               </div>
             </div>
           </div>
@@ -183,6 +197,7 @@ export default function AppPasswordModal({
           {[
             { id: 'generator', label: '⚡ Instant Generator', icon: '⚡' },
             { id: 'forgot', label: '🆘 Forgot Password?', icon: '🆘' },
+            { id: 'create', label: '🆕 Create Password', icon: '🆕' },
             { id: 'guide', label: '📖 Step-by-Step Guide', icon: '📖' },
             { id: 'faq', label: '🛡️ Security & FAQ', icon: '🛡️' }
           ].map((tab) => {
@@ -639,6 +654,196 @@ export default function AppPasswordModal({
             </div>
           )}
 
+          {/* ══════════════════ TAB: CREATE PASSWORD (NEW USER) ══════════════════ */}
+          {activeTab === 'create' && (
+            <div className="fade-in">
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.08))',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: 14,
+                padding: '14px 16px',
+                marginBottom: 16
+              }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span>🆕</span> New User &bull; Create a Secure Password
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+                  Set up your email credentials with a secure password or generate a random high-entropy password for maximum mailbox safety.
+                </div>
+              </div>
+
+              {/* Password Creation Form Card */}
+              <div style={{
+                background: 'var(--surface2)',
+                borderRadius: 14,
+                padding: '18px',
+                border: '1px solid var(--border)',
+                marginBottom: 16
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>
+                    Type or Create Your Password:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const suggested = generateSecurePassword({ length: 16 });
+                      setCustomPassword(suggested);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    <span>✨</span> Auto-Generate Strong Password
+                  </button>
+                </div>
+
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <input
+                    type={showCustomPassword ? 'text' : 'password'}
+                    placeholder="Enter or generate a new password"
+                    value={customPassword}
+                    onChange={(e) => setCustomPassword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'var(--surface)',
+                      border: `1.5px solid ${customPassword ? customPwdStrength.color : 'var(--border)'}`,
+                      borderRadius: 10,
+                      padding: '10px 42px 10px 14px',
+                      color: 'var(--text)',
+                      fontSize: 14,
+                      fontFamily: showCustomPassword ? 'monospace' : 'inherit',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomPassword(!showCustomPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 15,
+                      padding: '4px 6px',
+                      color: 'var(--muted)'
+                    }}
+                    title={showCustomPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showCustomPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
+
+                {/* Strength Meter Bar */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, fontSize: 11.5 }}>
+                    <span style={{ color: 'var(--muted)' }}>Password Strength:</span>
+                    <span style={{ fontWeight: 700, color: customPwdStrength.color }}>
+                      {customPwdStrength.label}
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: 5, background: 'var(--surface)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: customPwdStrength.width,
+                      background: customPwdStrength.color,
+                      transition: 'all 0.3s ease',
+                      borderRadius: 3
+                    }} />
+                  </div>
+                </div>
+
+                {/* Requirements Checklist */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 6,
+                  padding: '10px 12px',
+                  background: 'var(--surface)',
+                  borderRadius: 10,
+                  fontSize: 11.5,
+                  marginBottom: 16
+                }}>
+                  <div style={{ color: customPwdStrength.hasLength ? '#22c55e' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{customPwdStrength.hasLength ? '✓' : '○'}</span> At least 8 characters
+                  </div>
+                  <div style={{ color: customPwdStrength.hasUpper ? '#22c55e' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{customPwdStrength.hasUpper ? '✓' : '○'}</span> Uppercase letter (A-Z)
+                  </div>
+                  <div style={{ color: customPwdStrength.hasLower ? '#22c55e' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{customPwdStrength.hasLower ? '✓' : '○'}</span> Lowercase letter (a-z)
+                  </div>
+                  <div style={{ color: (customPwdStrength.hasNumber || customPwdStrength.hasSpecial) ? '#22c55e' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{(customPwdStrength.hasNumber || customPwdStrength.hasSpecial) ? '✓' : '○'}</span> Number or symbol
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {onSelectPassword && (
+                    <button
+                      type="button"
+                      disabled={!customPassword.trim()}
+                      onClick={() => handleApply(customPassword)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12.5, padding: '8px 18px', borderRadius: 8, fontWeight: 700, flex: 1 }}
+                    >
+                      Apply Password to Login Form →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={!customPassword.trim()}
+                    onClick={() => handleCopy(customPassword)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 12, padding: '8px 14px', borderRadius: 8 }}
+                  >
+                    <span>{copied ? '✅ Copied' : '📋 Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2FA Provider Tip */}
+              <div style={{
+                background: 'rgba(108, 99, 255, 0.08)',
+                border: '1px solid rgba(108, 99, 255, 0.25)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ fontSize: 12, color: 'var(--text)', flex: 1, minWidth: 200 }}>
+                  <strong>Using Gmail or Outlook 2-Step Verification?</strong>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                    You can also create a dedicated 16-character App Password.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('generator')}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                >
+                  ⚡ App Password Generator →
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ══════════════════ TAB: STEP-BY-STEP GUIDE ══════════════════ */}
           {activeTab === 'guide' && (
             <div className="fade-in">
@@ -854,14 +1059,20 @@ export default function AppPasswordModal({
               Close
             </button>
 
-            {onSelectPassword && (activeTab === 'generator' || activeTab === 'forgot') && (
+            {onSelectPassword && (
               <button
                 type="button"
-                onClick={() => handleApply(generatedPassword)}
+                onClick={() => {
+                  if (activeTab === 'create' && customPassword.trim()) {
+                    handleApply(customPassword);
+                  } else {
+                    handleApply(generatedPassword);
+                  }
+                }}
                 className="btn btn-primary btn-sm"
                 style={{ fontSize: 12, padding: '5px 14px', borderRadius: 8 }}
               >
-                Use Generated Password
+                {activeTab === 'create' && customPassword.trim() ? 'Use Created Password' : 'Use Generated Password'}
               </button>
             )}
           </div>

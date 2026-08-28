@@ -8,7 +8,13 @@ import GoogleAccountModal from '@/components/GoogleAccountModal';
 import MonitoringModeModal from '@/components/MonitoringModeModal';
 import AppPasswordModal from '@/components/AppPasswordModal';
 import ProviderIcon, { getProviderInfo, PROVIDER_LIST } from '@/components/ProviderIcon';
-import { generateAppPassword, cleanAppPassword, PROVIDER_GUIDES } from '@/lib/app-password-generator';
+import {
+  generateAppPassword,
+  generateSecurePassword,
+  cleanAppPassword,
+  calculatePasswordStrength,
+  PROVIDER_GUIDES
+} from '@/lib/app-password-generator';
 import { extractDisplayName } from '@/lib/avatar-utils';
 import {
   getActiveUser,
@@ -16,6 +22,7 @@ import {
   removeStoredAccount,
   switchActiveAccount,
   addOrUpdateAccount,
+  updateAccountPassword,
   isDemoAccount
 } from '@/lib/account-manager';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -102,6 +109,14 @@ export default function SettingsPage() {
   const [genFormat, setGenFormat] = useState('spaced');
   const [generatedPwd, setGeneratedPwd] = useState(() => generateAppPassword({ format: 'spaced' }));
   const [copiedPwd, setCopiedPwd] = useState(false);
+
+  // Password Management States for Settings
+  const [newAccountPassword, setNewAccountPassword] = useState('');
+  const [confirmNewAccountPassword, setConfirmNewAccountPassword] = useState('');
+  const [showNewAccountPassword, setShowNewAccountPassword] = useState(false);
+  const [pwdUpdateSuccess, setPwdUpdateSuccess] = useState('');
+  const [pwdUpdateError, setPwdUpdateError] = useState('');
+  const [savingNewPassword, setSavingNewPassword] = useState(false);
 
   const openAppPasswordModal = (tab = 'generator') => {
     setAppPasswordModalTab(tab);
@@ -1483,8 +1498,78 @@ export default function SettingsPage() {
                     <span>🔄</span>
                     <span>Generate New One</span>
                   </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={async () => {
+                      const clean = cleanAppPassword(generatedPwd);
+                      if (!clean || !user) return;
+                      setSavingNewPassword(true);
+                      setPwdUpdateError('');
+                      setPwdUpdateSuccess('');
+                      try {
+                        const updatedUser = { ...user, password: clean };
+                        setUser(updatedUser);
+                        localStorage.setItem('mailmind_user', JSON.stringify(updatedUser));
+                        addOrUpdateAccount(updatedUser);
+                        updateAccountPassword(user.email, clean);
+
+                        await fetch('/api/auth/profile', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ password: clean })
+                        }).catch(() => {});
+
+                        setPwdUpdateSuccess(`Applied new password (${clean.slice(0, 4)}••••) to ${user.email}!`);
+                        setTimeout(() => setPwdUpdateSuccess(''), 3500);
+                      } catch (err) {
+                        setPwdUpdateError('Failed to apply password: ' + err.message);
+                      } finally {
+                        setSavingNewPassword(false);
+                      }
+                    }}
+                    disabled={savingNewPassword}
+                    style={{ fontSize: 12, padding: '9px 16px', borderRadius: 8, fontWeight: 700 }}
+                  >
+                    {savingNewPassword ? 'Applying…' : '⚡ Apply & Save to Active Account'}
+                  </button>
                 </div>
               </div>
+
+              {/* Password Feedback Banners */}
+              {pwdUpdateSuccess && (
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  border: '1px solid var(--success)',
+                  color: '#86efac',
+                  fontSize: 12.5,
+                  padding: '9px 14px',
+                  borderRadius: 10,
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <span>✅</span> {pwdUpdateSuccess}
+                </div>
+              )}
+              {pwdUpdateError && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid var(--danger)',
+                  color: '#fca5a5',
+                  fontSize: 12.5,
+                  padding: '9px 14px',
+                  borderRadius: 10,
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <span>⚠️</span> {pwdUpdateError}
+                </div>
+              )}
 
               {/* Direct Provider Links Grid */}
               <div style={{ marginBottom: 12 }}>

@@ -19,7 +19,8 @@ export async function POST(request) {
       webhookUrl,
       digest,
       pollInterval,
-      signature
+      signature,
+      password
     } = body || {};
 
     const existing = loadLocalConfig() || {};
@@ -31,6 +32,7 @@ export async function POST(request) {
       avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
       color: color !== undefined ? color : (avatarColor !== undefined ? avatarColor : existing.color),
       tone: tone !== undefined ? tone : existing.tone,
+      password: password !== undefined ? String(password) : existing.password,
       monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
       inApp: inApp !== undefined ? inApp : existing.inApp,
       deviceNotifications: deviceNotifications !== undefined ? deviceNotifications : existing.deviceNotifications,
