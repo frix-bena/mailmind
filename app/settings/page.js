@@ -105,10 +105,7 @@ export default function SettingsPage() {
   const [userModalTab, setUserModalTab] = useState('overview');
   const [monitoringModalOpen, setMonitoringModalOpen] = useState(false);
   const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
-  const [appPasswordModalTab, setAppPasswordModalTab] = useState('generator');
-  const [genFormat, setGenFormat] = useState('spaced');
-  const [generatedPwd, setGeneratedPwd] = useState(() => generateAppPassword({ format: 'spaced' }));
-  const [copiedPwd, setCopiedPwd] = useState(false);
+  const [appPasswordModalTab, setAppPasswordModalTab] = useState('guide');
 
   // Password Management States for Settings
   const [newAccountPassword, setNewAccountPassword] = useState('');
@@ -118,7 +115,7 @@ export default function SettingsPage() {
   const [pwdUpdateError, setPwdUpdateError] = useState('');
   const [savingNewPassword, setSavingNewPassword] = useState(false);
 
-  const openAppPasswordModal = (tab = 'generator') => {
+  const openAppPasswordModal = (tab = 'guide') => {
     setAppPasswordModalTab(tab);
     setAppPasswordModalOpen(true);
   };
@@ -1355,36 +1352,36 @@ export default function SettingsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
-                    App Password Generator &amp; Setup Assistant
+                    Manual App Password Setup &amp; Security Assistant
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
-                    Generate secure 16-character passwords, recover forgotten passwords, or view step-by-step guides for Gmail, Outlook, Yahoo, Apple &amp; IMAP.
+                    Generate a 16-character App Password manually inside Google Account Security to keep MailMind connected without errors.
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => openAppPasswordModal('forgot')}
+                    onClick={() => openAppPasswordModal('recovery')}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 12px' }}
                   >
-                    <span>🆘</span> Forgot Password?
+                    <span>🔄</span> Account Recovery
                   </button>
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
-                    onClick={() => openAppPasswordModal('generator')}
+                    onClick={() => openAppPasswordModal('guide')}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
                   >
-                    <span>🔑</span> Open Generator &amp; Assistant
+                    <span>📖</span> Setup Instructions &amp; Guide
                   </button>
                 </div>
               </div>
 
-              {/* Forgot Password Callout Box */}
+              {/* Google App Passwords Direct Banner */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.06))',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
+                background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(234, 67, 53, 0.06))',
+                border: '1px solid rgba(66, 133, 244, 0.3)',
                 borderRadius: 14,
                 padding: '14px 18px',
                 marginBottom: 18,
@@ -1396,23 +1393,24 @@ export default function SettingsPage() {
               }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🆘</span> Forgot your mailbox or App Password?
+                    <span>🔑</span> Generate Google App Password Manually
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, lineHeight: 1.4 }}>
-                    Generate a fresh new 16-character passcode right now to keep MailMind synced without changing your master email password.
+                    Visit your Google Account Security page to create a 16-character App Password for MailMind, then update your password below.
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openAppPasswordModal('forgot')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: 12, padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary btn-sm"
+                  style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontWeight: 700 }}
                 >
-                  <span>⚡ Generate New Password Now</span>
-                </button>
+                  <span>Open Google App Passwords ↗</span>
+                </a>
               </div>
 
-              {/* Embedded Generator Card */}
+              {/* Manual Password Update Form */}
               <div style={{
                 background: 'var(--surface2)',
                 borderRadius: 14,
@@ -1420,91 +1418,61 @@ export default function SettingsPage() {
                 border: '1px solid var(--border)',
                 marginBottom: 20
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    Quick 16-Character App Password Generator:
-                  </span>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {['spaced', 'dashed', 'alphanumeric'].map((fmt) => (
-                      <button
-                        key={fmt}
-                        type="button"
-                        onClick={() => {
-                          setGenFormat(fmt);
-                          setGeneratedPwd(generateAppPassword({ format: fmt }));
-                        }}
-                        style={{
-                          fontSize: 11,
-                          padding: '3px 8px',
-                          borderRadius: 6,
-                          background: genFormat === fmt ? 'var(--accent)' : 'var(--surface)',
-                          color: genFormat === fmt ? '#fff' : 'var(--muted)',
-                          border: `1px solid ${genFormat === fmt ? 'var(--accent)' : 'var(--border)'}`,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {fmt === 'spaced' ? '4x4 Spaced' : fmt === 'dashed' ? 'Dashed' : 'Alphanumeric'}
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  Update Password / App Password for Active Account ({user?.email || 'Current Account'}):
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+                  Paste the 16-character App Password generated from Google or your provider (spaces like <code style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>abcd efgh ijkl mnop</code> will be normalized automatically).
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{
-                    flex: 1,
-                    minWidth: 240,
-                    background: 'var(--surface)',
-                    border: '1.5px dashed var(--accent)',
-                    borderRadius: 10,
-                    padding: '10px 16px',
-                    fontFamily: 'monospace',
-                    fontSize: 17,
-                    fontWeight: 700,
-                    color: 'var(--text)',
-                    letterSpacing: '1px',
-                    userSelect: 'all',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <span>{generatedPwd}</span>
-                    <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>16-char code</span>
+                  <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
+                    <input
+                      type={showNewAccountPassword ? 'text' : 'password'}
+                      placeholder="Paste 16-character code (e.g. abcd efgh ijkl mnop)"
+                      value={newAccountPassword}
+                      onChange={(e) => setNewAccountPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 8,
+                        padding: '9px 36px 9px 12px',
+                        color: 'var(--text)',
+                        fontSize: 13.5,
+                        fontFamily: showNewAccountPassword ? 'monospace' : 'inherit',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewAccountPassword(!showNewAccountPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        color: 'var(--muted)',
+                        padding: 2
+                      }}
+                    >
+                      {showNewAccountPassword ? '🙈' : '👁️'}
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(cleanAppPassword(generatedPwd));
-                      setCopiedPwd(true);
-                      setTimeout(() => setCopiedPwd(false), 2500);
-                    }}
-                    style={{ fontSize: 12, padding: '9px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
-                  >
-                    <span>{copiedPwd ? '✅' : '📋'}</span>
-                    <span>{copiedPwd ? 'Copied!' : 'Copy Code'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      setGeneratedPwd(generateAppPassword({ format: genFormat }));
-                      setCopiedPwd(false);
-                    }}
-                    style={{ fontSize: 12, padding: '9px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
-                    title="Generate another password"
-                  >
-                    <span>🔄</span>
-                    <span>Generate New One</span>
-                  </button>
 
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={async () => {
-                      const clean = cleanAppPassword(generatedPwd);
-                      if (!clean || !user) return;
+                      const clean = cleanAppPassword(newAccountPassword);
+                      if (!clean || !user) {
+                        setPwdUpdateError('Please enter a valid password or App Password.');
+                        return;
+                      }
                       setSavingNewPassword(true);
                       setPwdUpdateError('');
                       setPwdUpdateSuccess('');
@@ -1521,7 +1489,8 @@ export default function SettingsPage() {
                           body: JSON.stringify({ password: clean })
                         }).catch(() => {});
 
-                        setPwdUpdateSuccess(`Applied new password (${clean.slice(0, 4)}••••) to ${user.email}!`);
+                        setPwdUpdateSuccess(`Applied new App Password (${clean.slice(0, 4)}••••) to ${user.email}!`);
+                        setNewAccountPassword('');
                         setTimeout(() => setPwdUpdateSuccess(''), 3500);
                       } catch (err) {
                         setPwdUpdateError('Failed to apply password: ' + err.message);
@@ -1529,10 +1498,10 @@ export default function SettingsPage() {
                         setSavingNewPassword(false);
                       }
                     }}
-                    disabled={savingNewPassword}
+                    disabled={savingNewPassword || !newAccountPassword.trim()}
                     style={{ fontSize: 12, padding: '9px 16px', borderRadius: 8, fontWeight: 700 }}
                   >
-                    {savingNewPassword ? 'Applying…' : '⚡ Apply & Save to Active Account'}
+                    {savingNewPassword ? 'Updating…' : '⚡ Save to Active Account'}
                   </button>
                 </div>
               </div>
@@ -2026,10 +1995,9 @@ export default function SettingsPage() {
           userEmail={user?.email}
           onClose={() => setAppPasswordModalOpen(false)}
           onSelectPassword={(pwd) => {
-            setGeneratedPwd(pwd);
-            navigator.clipboard?.writeText(cleanAppPassword(pwd));
-            setCopiedPwd(true);
-            setTimeout(() => setCopiedPwd(false), 2500);
+            setNewAccountPassword(pwd);
+            setPwdUpdateSuccess('App Password applied to field! Click Save to apply.');
+            setTimeout(() => setPwdUpdateSuccess(''), 3000);
           }}
         />
       )}

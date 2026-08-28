@@ -222,9 +222,13 @@ app.post('/api/auth/connect', async (req, res) => {
 
     const testResult = await testConnection(credentials);
     if (!testResult.success) {
+      const isGoogle = credentials.provider === 'google' || credentials.provider === 'gmail' || cleanEmail.includes('gmail');
+      const hint = isGoogle
+        ? 'Google requires a 16-character App Password. Visit https://myaccount.google.com/apppasswords to generate one manually and paste it into the password field.'
+        : 'Please ensure you entered your exact email password or 16-character App Password and that your email address is spelled correctly.';
       return res.status(401).json({
         error: testResult.error || 'Authentication failed: Incorrect email address or password.',
-        hint: 'Please ensure you entered your exact email password and that your email address is spelled correctly.'
+        hint
       });
     }
 
@@ -261,18 +265,15 @@ app.post('/api/auth/disconnect', (req, res) => {
 app.get('/api/auth/app-password', (req, res) => {
   try {
     const provider = req.query.provider || 'google';
-    const format = req.query.format || (provider === 'icloud' ? 'dashed' : 'spaced');
-    const password = generateAppPassword({ format, length: 16 });
     const guide = getProviderAppPasswordGuide(provider);
 
     res.json({
       success: true,
-      appPassword: password,
-      cleanPassword: cleanAppPassword(password),
-      format,
       provider: guide.id,
       providerName: guide.name,
       appPasswordUrl: guide.appPasswordUrl,
+      securityUrl: guide.securityUrl,
+      recoveryUrl: guide.recoveryUrl,
       guide,
       allGuides: PROVIDER_GUIDES
     });
@@ -283,19 +284,14 @@ app.get('/api/auth/app-password', (req, res) => {
 
 app.post('/api/auth/app-password', (req, res) => {
   try {
-    const { provider = 'google', format = 'spaced', length = 16 } = req.body || {};
-    const password = generateAppPassword({
-      format,
-      length: Math.min(64, Math.max(8, parseInt(length, 10) || 16))
-    });
+    const { provider = 'google', password = '' } = req.body || {};
     const guide = getProviderAppPasswordGuide(provider);
 
     res.json({
       success: true,
-      appPassword: password,
-      cleanPassword: cleanAppPassword(password),
-      format,
       provider: guide.id,
+      cleanPassword: cleanAppPassword(password),
+      appPasswordUrl: guide.appPasswordUrl,
       guide
     });
   } catch (err) {

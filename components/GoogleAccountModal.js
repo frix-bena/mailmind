@@ -48,9 +48,9 @@ export default function GoogleAccountModal({
   const [switchingTo, setSwitchingTo] = useState(null);
   const [showMonitoringModal, setShowMonitoringModal] = useState(false);
   const [showAppPasswordModal, setShowAppPasswordModal] = useState(false);
-  const [appPasswordModalTab, setAppPasswordModalTab] = useState('generator');
+  const [appPasswordModalTab, setAppPasswordModalTab] = useState('guide');
 
-  const openAppPasswordModal = (tab = 'generator') => {
+  const openAppPasswordModal = (tab = 'guide') => {
     setAppPasswordModalTab(tab);
     setShowAppPasswordModal(true);
   };
@@ -64,9 +64,6 @@ export default function GoogleAccountModal({
   const [newConfirmPassword, setNewConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showNewConfirmPassword, setShowNewConfirmPassword] = useState(false);
-  const [showNewForgotDrawer, setShowNewForgotDrawer] = useState(false);
-  const [inlineNewGeneratedPassword, setInlineNewGeneratedPassword] = useState('');
-  const [copiedNewInline, setCopiedNewInline] = useState(false);
   const [newProvider, setNewProvider] = useState('google');
   const [newHost, setNewHost] = useState('');
   const [newPort, setNewPort] = useState('993');
@@ -259,8 +256,6 @@ export default function GoogleAccountModal({
     setNewConfirmPassword('');
     setShowNewPassword(false);
     setShowNewConfirmPassword(false);
-    setShowNewForgotDrawer(false);
-    setInlineNewGeneratedPassword('');
     setNewHost('');
     setNewPort('993');
     setNewTone('professional');
@@ -959,33 +954,28 @@ export default function GoogleAccountModal({
                       borderRadius: 8,
                       marginBottom: 12
                     }}>
-                      <div style={{ fontWeight: 600 }}>&#9888;&#65039; {newAccountError}</div>
-                      <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                        <span style={{ fontSize: 11.5 }}>Forgot this account's password?</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowNewForgotDrawer(true);
-                            setNewAccountMode('existing');
-                            if (!inlineNewGeneratedPassword) {
-                              const fmt = newProvider === 'icloud' ? 'dashed' : 'spaced';
-                              setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
-                            }
-                          }}
-                          style={{
-                            background: 'var(--danger)',
-                            border: 'none',
-                            color: '#fff',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            borderRadius: 6,
-                            padding: '3px 8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          🆘 Generate New Password →
-                        </button>
-                      </div>
+                      <div style={{ fontWeight: 600 }}>⚠️ {newAccountError}</div>
+                      {newProvider === 'google' && (
+                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                          <span style={{ fontSize: 11.5 }}>Need a Google App Password?</span>
+                          <a
+                            href="https://myaccount.google.com/apppasswords"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              background: '#EA4335',
+                              color: '#fff',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              borderRadius: 6,
+                              padding: '3px 8px',
+                              textDecoration: 'none'
+                            }}
+                          >
+                            Open Google Console ↗
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -997,11 +987,7 @@ export default function GoogleAccountModal({
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => {
-                            setNewProvider(p.id);
-                            const fmt = p.id === 'icloud' ? 'dashed' : 'spaced';
-                            setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
-                          }}
+                          onClick={() => setNewProvider(p.id)}
                           style={{
                             flex: 1,
                             minWidth: 70,
@@ -1228,63 +1214,54 @@ export default function GoogleAccountModal({
                       </div>
                     </div>
                   ) : (
-                    /* ══════════ EXISTING ACCOUNT: SIGN IN & FORGOT PASSWORD ══════════ */
+                    /* ══════════ EXISTING ACCOUNT: SIGN IN & APP PASSWORD ══════════ */
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 4 }}>
                         <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
-                          Password / App Password <span style={{ color: 'var(--danger)' }}>*</span>:
+                          {newProvider === 'google' ? 'Google 16-Char App Password' : 'Password / App Password'} <span style={{ color: 'var(--danger)' }}>*</span>:
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowNewForgotDrawer(!showNewForgotDrawer);
-                              if (!inlineNewGeneratedPassword) {
-                                const fmt = newProvider === 'icloud' ? 'dashed' : 'spaced';
-                                setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
-                              }
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#ef4444',
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 3,
-                              padding: '1px 4px'
-                            }}
-                          >
-                            <span>🆘</span> Forgot password? Generate new
-                          </button>
-                          <span style={{ color: 'var(--border2, #444)', fontSize: 10 }}>|</span>
-                          <button
-                            type="button"
-                            onClick={() => openAppPasswordModal('generator')}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--muted)',
-                              fontSize: 11,
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 3,
-                              padding: '1px 4px'
-                            }}
-                          >
-                            <span>🔑</span> App Passwords
-                          </button>
+                          {newProvider === 'google' ? (
+                            <a
+                              href="https://myaccount.google.com/apppasswords"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: '#EA4335',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                textDecoration: 'underline'
+                              }}
+                            >
+                              Get Google App Password ↗
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openAppPasswordModal('guide')}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--muted)',
+                                fontSize: 11,
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 3,
+                                padding: '1px 4px'
+                              }}
+                            >
+                              <span>🔑</span> App Password Guide
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div style={{ position: 'relative' }}>
                         <input
                           type={showNewPassword ? 'text' : 'password'}
                           required
-                          placeholder="Account password or 16-char App Password (required)"
+                          placeholder={newProvider === 'google' ? 'Paste 16-character Google App Password' : 'Account password or 16-char App Password (required)'}
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
                           style={{
@@ -1318,85 +1295,6 @@ export default function GoogleAccountModal({
                           {showNewPassword ? '🙈' : '👁️'}
                         </button>
                       </div>
-
-                      {/* Expandable Forgot Password Generator Drawer for Add Account */}
-                      {showNewForgotDrawer && (
-                        <div style={{
-                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.08))',
-                          border: '1.5px solid rgba(239, 68, 68, 0.3)',
-                          borderRadius: 10,
-                          padding: '10px 12px',
-                          marginTop: 8,
-                          marginBottom: 8
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text)' }}>
-                              🆘 Instant Password Generator:
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setShowNewForgotDrawer(false)}
-                              style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          <div style={{
-                            background: 'var(--surface)',
-                            border: '1px dashed var(--accent)',
-                            borderRadius: 6,
-                            padding: '6px 10px',
-                            fontFamily: 'monospace',
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: 'var(--text)',
-                            marginBottom: 8,
-                            textAlign: 'center',
-                            userSelect: 'all'
-                          }}>
-                            {inlineNewGeneratedPassword || 'Generating…'}
-                          </div>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const clean = cleanAppPassword(inlineNewGeneratedPassword);
-                                setNewPassword(clean);
-                                setShowNewForgotDrawer(false);
-                              }}
-                              className="btn btn-primary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6 }}
-                            >
-                              ⚡ Apply to Password Field
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const fmt = newProvider === 'icloud' ? 'dashed' : 'spaced';
-                                setInlineNewGeneratedPassword(generateAppPassword({ format: fmt, length: 16 }));
-                              }}
-                              className="btn btn-ghost btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6 }}
-                            >
-                              🔄 Regenerate
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                                  navigator.clipboard.writeText(cleanAppPassword(inlineNewGeneratedPassword));
-                                  setCopiedNewInline(true);
-                                  setTimeout(() => setCopiedNewInline(false), 2000);
-                                }
-                              }}
-                              className="btn btn-secondary btn-sm"
-                              style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6 }}
-                            >
-                              {copiedNewInline ? '✓ Copied' : '📋 Copy'}
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
 

@@ -51,10 +51,14 @@ export async function POST(request) {
 
     const testResult = await testConnection(credentials);
     if (!testResult.success) {
+      const isGoogle = credentials.provider === 'google' || credentials.provider === 'gmail' || cleanEmail.includes('gmail');
+      const hint = isGoogle
+        ? 'Google requires a 16-character App Password. Visit https://myaccount.google.com/apppasswords to generate one manually and paste it into the password field.'
+        : 'Please ensure you entered your exact email password or 16-character App Password and that your email address is spelled correctly.';
       return NextResponse.json(
         {
           error: testResult.error || 'Authentication failed: Incorrect email address or password.',
-          hint: 'Please ensure you entered your exact email password and that your email address is spelled correctly.'
+          hint
         },
         { status: 401 }
       );
