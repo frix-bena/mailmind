@@ -238,9 +238,10 @@ export const PROVIDER_LIST = [
     brandName: 'Google Gmail',
     color: '#EA4335',
     bgLight: 'rgba(234, 67, 53, 0.12)',
-    hint: 'Sign in with your Google email and password (required)',
-    guideUrl: null,
-    guideText: 'Google Account'
+    hint: 'Sign in with your Google email and 16-character App Password (or account password)',
+    appPasswordUrl: 'https://myaccount.google.com/apppasswords',
+    guideUrl: 'https://myaccount.google.com/apppasswords',
+    guideText: 'Google App Passwords'
   },
   {
     id: 'microsoft',
@@ -249,9 +250,10 @@ export const PROVIDER_LIST = [
     brandName: 'Microsoft Outlook / Office 365',
     color: '#0078D4',
     bgLight: 'rgba(0, 120, 212, 0.12)',
-    hint: 'Sign in with your Outlook / Microsoft email and password (required)',
-    guideUrl: null,
-    guideText: 'Microsoft Account'
+    hint: 'Sign in with your Outlook / Microsoft email and App Password (or account password)',
+    appPasswordUrl: 'https://account.live.com/proofs/AppPassword',
+    guideUrl: 'https://account.live.com/proofs/AppPassword',
+    guideText: 'Microsoft App Passwords'
   },
   {
     id: 'yahoo',
@@ -260,9 +262,10 @@ export const PROVIDER_LIST = [
     brandName: 'Yahoo Mail',
     color: '#6001D2',
     bgLight: 'rgba(96, 1, 210, 0.12)',
-    hint: 'Sign in with your Yahoo email and password (required)',
-    guideUrl: null,
-    guideText: 'Yahoo Account'
+    hint: 'Sign in with your Yahoo email and generated App Password',
+    appPasswordUrl: 'https://login.yahoo.com/account/security/app-passwords',
+    guideUrl: 'https://login.yahoo.com/account/security/app-passwords',
+    guideText: 'Yahoo App Passwords'
   },
   {
     id: 'icloud',
@@ -271,9 +274,10 @@ export const PROVIDER_LIST = [
     brandName: 'Apple iCloud Mail',
     color: '#0284C7',
     bgLight: 'rgba(2, 132, 199, 0.12)',
-    hint: 'Sign in with your Apple iCloud email and password (required)',
-    guideUrl: null,
-    guideText: 'Apple ID'
+    hint: 'Sign in with your Apple iCloud email and App-Specific Password',
+    appPasswordUrl: 'https://appleid.apple.com/account/manage',
+    guideUrl: 'https://appleid.apple.com/account/manage',
+    guideText: 'Apple ID Security'
   },
   {
     id: 'custom',
@@ -282,7 +286,8 @@ export const PROVIDER_LIST = [
     brandName: 'Custom IMAP / SMTP Server',
     color: '#6366F1',
     bgLight: 'rgba(99, 102, 241, 0.12)',
-    hint: 'Connect with your email address and password (required)',
+    hint: 'Connect with your email address and secure password or generated app key',
+    appPasswordUrl: null,
     guideUrl: null,
     guideText: 'IMAP / SMTP Settings'
   }

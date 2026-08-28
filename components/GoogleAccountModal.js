@@ -14,6 +14,7 @@ import {
 } from '@/lib/account-manager';
 
 import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
+import AppPasswordModal from '@/components/AppPasswordModal';
 
 const PROVIDERS = PROVIDER_LIST;
 
@@ -39,6 +40,7 @@ export default function GoogleAccountModal({
   const [accounts, setAccounts] = useState([]);
   const [switchingTo, setSwitchingTo] = useState(null);
   const [showMonitoringModal, setShowMonitoringModal] = useState(false);
+  const [showAppPasswordModal, setShowAppPasswordModal] = useState(false);
 
   // Add new account form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -530,6 +532,28 @@ export default function GoogleAccountModal({
                 >
                   <span>&#128247;</span> Customize Photo
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAppPasswordModal(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'transparent',
+                    border: '1px solid var(--border2, #3b3b54)',
+                    color: 'var(--accent)',
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    padding: '7px 14px',
+                    borderRadius: 100,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Generate or view App Password guides"
+                >
+                  <span>🔑</span> App Passwords
+                </button>
               </div>
 
               {/* Quick Google-Style Account Switcher Strip */}
@@ -930,13 +954,33 @@ export default function GoogleAccountModal({
 
                   {/* Password */}
                   <div style={{ marginBottom: 10 }}>
-                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
-                      Password <span style={{ color: 'var(--danger)' }}>*</span>:
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>
+                        Password / App Password <span style={{ color: 'var(--danger)' }}>*</span>:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowAppPasswordModal(true)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent)',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          padding: '1px 4px'
+                        }}
+                      >
+                        <span>🔑</span> Generate App Password
+                      </button>
+                    </div>
                     <input
                       type="password"
                       required
-                      placeholder="Email account password (required)"
+                      placeholder="Account password or 16-char App Password (required)"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       style={{
@@ -950,8 +994,24 @@ export default function GoogleAccountModal({
                         boxSizing: 'border-box'
                       }}
                     />
-                    <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3 }}>
-                      {currentProviderObj.hint} &bull; Password is required
+                    <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                      <span>{currentProviderObj.hint}</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAppPasswordModal(true)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent)',
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        Need an App Password?
+                      </button>
                     </div>
                   </div>
 
@@ -1480,6 +1540,19 @@ export default function GoogleAccountModal({
             }
             setSuccessMsg(`Mode changed to: ${nextMode === 'auto_reply' ? 'Reply without permission' : 'Ask permission'}`);
             setTimeout(() => setSuccessMsg(''), 2500);
+          }}
+        />
+      )}
+
+      {showAppPasswordModal && (
+        <AppPasswordModal
+          isOpen={showAppPasswordModal}
+          initialProvider={newProvider || user?.provider || 'google'}
+          userEmail={newEmail || user?.email}
+          onClose={() => setShowAppPasswordModal(false)}
+          onSelectPassword={(pwd) => {
+            setNewPassword(pwd);
+            setNewAccountError('');
           }}
         />
       )}

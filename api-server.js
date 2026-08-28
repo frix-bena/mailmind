@@ -17,7 +17,11 @@ const {
   safeSearch,
   safeIncludes,
   safeMatch,
-  isValidEmail
+  isValidEmail,
+  generateAppPassword,
+  cleanAppPassword,
+  getProviderAppPasswordGuide,
+  PROVIDER_GUIDES
 } = require('./lib/email-service');
 const {
   sendDeviceNotification,
@@ -249,6 +253,51 @@ app.post('/api/auth/disconnect', (req, res) => {
   try {
     clearLocalConfig();
     res.json({ success: true, connected: false });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/auth/app-password', (req, res) => {
+  try {
+    const provider = req.query.provider || 'google';
+    const format = req.query.format || (provider === 'icloud' ? 'dashed' : 'spaced');
+    const password = generateAppPassword({ format, length: 16 });
+    const guide = getProviderAppPasswordGuide(provider);
+
+    res.json({
+      success: true,
+      appPassword: password,
+      cleanPassword: cleanAppPassword(password),
+      format,
+      provider: guide.id,
+      providerName: guide.name,
+      appPasswordUrl: guide.appPasswordUrl,
+      guide,
+      allGuides: PROVIDER_GUIDES
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/auth/app-password', (req, res) => {
+  try {
+    const { provider = 'google', format = 'spaced', length = 16 } = req.body || {};
+    const password = generateAppPassword({
+      format,
+      length: Math.min(64, Math.max(8, parseInt(length, 10) || 16))
+    });
+    const guide = getProviderAppPasswordGuide(provider);
+
+    res.json({
+      success: true,
+      appPassword: password,
+      cleanPassword: cleanAppPassword(password),
+      format,
+      provider: guide.id,
+      guide
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

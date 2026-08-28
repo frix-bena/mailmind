@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar from '@/components/EmailAvatar';
 import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
+import AppPasswordModal from '@/components/AppPasswordModal';
 import { extractDisplayName, isValidEmail } from '@/lib/avatar-utils';
 import { addOrUpdateAccount } from '@/lib/account-manager';
 import {
@@ -46,6 +47,7 @@ export default function OnboardingPage() {
   const [connecting, setConnecting] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authHint, setAuthHint] = useState('');
+  const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
   const [deviceNotifications, setDeviceNotifications] = useState(true);
@@ -265,14 +267,34 @@ export default function OnboardingPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                  Password <span style={{ color: 'var(--danger)' }}>*</span>
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>
+                    Password <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setAppPasswordModalOpen(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 4px'
+                    }}
+                  >
+                    <span>🔑</span> Generate / How to get App Password
+                  </button>
+                </div>
                 <input
                   type="password"
                   required
                   className="input"
-                  placeholder="Enter your exact email password"
+                  placeholder="Enter your email account or 16-character App Password"
                   value={password}
                   onChange={e => {
                     setPassword(e.target.value);
@@ -284,7 +306,23 @@ export default function OnboardingPage() {
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                   <ProviderIcon provider={selectedProvider} size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                   <div>
-                    <span>Enter the exact password for your {currentProviderObj.name} email account to sign in.</span>
+                    <span>Enter your {currentProviderObj.name} password or 16-character App Password. </span>
+                    <button
+                      type="button"
+                      onClick={() => setAppPasswordModalOpen(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Need an App Password?
+                    </button>
                   </div>
                 </div>
               </div>
@@ -443,6 +481,20 @@ export default function OnboardingPage() {
           </div>
         )}
       </div>
+
+      {appPasswordModalOpen && (
+        <AppPasswordModal
+          isOpen={appPasswordModalOpen}
+          initialProvider={selectedProvider}
+          userEmail={email}
+          onClose={() => setAppPasswordModalOpen(false)}
+          onSelectPassword={(pwd) => {
+            setPassword(pwd);
+            setAuthError('');
+            setAuthHint('');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -6,7 +6,9 @@ import Sidebar from '@/components/Sidebar';
 import EmailAvatar, { GMAIL_AVATAR_PALETTE } from '@/components/EmailAvatar';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import MonitoringModeModal from '@/components/MonitoringModeModal';
-import ProviderIcon, { getProviderInfo } from '@/components/ProviderIcon';
+import AppPasswordModal from '@/components/AppPasswordModal';
+import ProviderIcon, { getProviderInfo, PROVIDER_LIST } from '@/components/ProviderIcon';
+import { generateAppPassword, cleanAppPassword, PROVIDER_GUIDES } from '@/lib/app-password-generator';
 import { extractDisplayName } from '@/lib/avatar-utils';
 import {
   getActiveUser,
@@ -96,6 +98,10 @@ export default function SettingsPage() {
   const [userModalTab, setUserModalTab] = useState('overview');
   const [monitoringModalOpen, setMonitoringModalOpen] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
+  const [genFormat, setGenFormat] = useState('spaced');
+  const [generatedPwd, setGeneratedPwd] = useState(() => generateAppPassword({ format: 'spaced' }));
+  const [copiedPwd, setCopiedPwd] = useState(false);
 
   const refreshAccountsList = () => {
     try {
@@ -1323,6 +1329,156 @@ export default function SettingsPage() {
             )}
           </Section>
 
+          {/* App Passwords & Security Helper Section */}
+          <Section title="🔐 App Passwords & Mailbox Security">
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                    App Password Generator &amp; Setup Assistant
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                    Generate secure 16-character passwords or view step-by-step guides for Gmail, Outlook, Yahoo, Apple &amp; IMAP.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setAppPasswordModalOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                >
+                  <span>🔑</span> Open Full Assistant
+                </button>
+              </div>
+
+              {/* Embedded Generator Card */}
+              <div style={{
+                background: 'var(--surface2)',
+                borderRadius: 14,
+                padding: '18px 20px',
+                border: '1px solid var(--border)',
+                marginBottom: 20
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Quick 16-Character App Password Generator:
+                  </span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {['spaced', 'dashed', 'alphanumeric'].map((fmt) => (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => {
+                          setGenFormat(fmt);
+                          setGeneratedPwd(generateAppPassword({ format: fmt }));
+                        }}
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          background: genFormat === fmt ? 'var(--accent)' : 'var(--surface)',
+                          color: genFormat === fmt ? '#fff' : 'var(--muted)',
+                          border: `1px solid ${genFormat === fmt ? 'var(--accent)' : 'var(--border)'}`,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {fmt === 'spaced' ? '4x4 Spaced' : fmt === 'dashed' ? 'Dashed' : 'Alphanumeric'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{
+                    flex: 1,
+                    minWidth: 240,
+                    background: 'var(--surface)',
+                    border: '1.5px dashed var(--accent)',
+                    borderRadius: 10,
+                    padding: '10px 16px',
+                    fontFamily: 'monospace',
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: 'var(--text)',
+                    letterSpacing: '1px',
+                    userSelect: 'all',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span>{generatedPwd}</span>
+                    <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>16-char code</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(cleanAppPassword(generatedPwd));
+                      setCopiedPwd(true);
+                      setTimeout(() => setCopiedPwd(false), 2500);
+                    }}
+                    style={{ fontSize: 12, padding: '9px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
+                  >
+                    <span>{copiedPwd ? '✅' : '📋'}</span>
+                    <span>{copiedPwd ? 'Copied!' : 'Copy Code'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      setGeneratedPwd(generateAppPassword({ format: genFormat }));
+                      setCopiedPwd(false);
+                    }}
+                    style={{ fontSize: 12, padding: '9px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
+                    title="Generate another password"
+                  >
+                    <span>🔄</span>
+                    <span>New</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Direct Provider Links Grid */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                  Official Provider App Password Consoles:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+                  {PROVIDER_LIST.filter(p => p.appPasswordUrl).map((p) => (
+                    <a
+                      key={p.id}
+                      href={p.appPasswordUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: 'var(--surface2)',
+                        borderRadius: 10,
+                        border: '1px solid var(--border)',
+                        color: 'var(--text)',
+                        textDecoration: 'none',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <ProviderIcon provider={p.id} size={18} />
+                        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{p.shortName || p.name}</span>
+                      </div>
+                      <span style={{ fontSize: 11, color: 'var(--accent)' }}>Open ↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Section>
+
           {/* Reply Preferences */}
           <Section title="AI Reply Preferences">
             <Row label="Reply tone" desc="Applied to all AI-drafted replies">
@@ -1728,6 +1884,21 @@ export default function SettingsPage() {
           user={user}
           onClose={() => setMonitoringModalOpen(false)}
           onSave={handleSaveMonitoringMode}
+        />
+      )}
+
+      {appPasswordModalOpen && (
+        <AppPasswordModal
+          isOpen={appPasswordModalOpen}
+          initialProvider={user?.provider || 'google'}
+          userEmail={user?.email}
+          onClose={() => setAppPasswordModalOpen(false)}
+          onSelectPassword={(pwd) => {
+            setGeneratedPwd(pwd);
+            navigator.clipboard?.writeText(cleanAppPassword(pwd));
+            setCopiedPwd(true);
+            setTimeout(() => setCopiedPwd(false), 2500);
+          }}
         />
       )}
     </div>

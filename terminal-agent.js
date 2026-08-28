@@ -11,7 +11,11 @@ const {
   sendEmailReply,
   loadLocalConfig,
   saveLocalConfig,
-  clearLocalConfig
+  clearLocalConfig,
+  generateAppPassword,
+  cleanAppPassword,
+  getProviderAppPasswordGuide,
+  PROVIDER_GUIDES
 } = require('./lib/email-service');
 const {
   sendDeviceNotification,
@@ -463,6 +467,38 @@ async function watchInboxLive(config) {
   console.log(`Stopped monitoring.`);
 }
 
+async function generateAndShowAppPassword(config) {
+  console.log(`\n${c.cyan}--- 🔑 App Password Generator & Setup Guide ---${c.reset}`);
+  console.log(`${c.dim}Generate 16-character secure App Passwords or get official provider instructions.${c.reset}\n`);
+
+  const prov = config?.provider || 'gmail';
+  const guide = getProviderAppPasswordGuide(prov);
+
+  console.log(`${c.bright}Provider:${c.reset} ${c.green}${guide.name}${c.reset}`);
+  if (guide.appPasswordUrl) {
+    console.log(`${c.bright}Official URL:${c.reset} ${c.cyan}${guide.appPasswordUrl}${c.reset}`);
+  }
+
+  console.log(`\n${c.yellow}Step-by-Step Instructions:${c.reset}`);
+  guide.steps.forEach(s => {
+    console.log(`  ${c.bright}${s.step}.${c.reset} ${s.title}: ${c.dim}${s.desc}${c.reset}`);
+  });
+
+  const pwdSpaced = generateAppPassword({ format: 'spaced' });
+  const pwdDashed = generateAppPassword({ format: 'dashed' });
+  const pwdAlpha = generateAppPassword({ format: 'alphanumeric' });
+
+  console.log(`\n${c.green}Generated Sample App Passwords:${c.reset}`);
+  console.log(` • 4x4 Spaced (Google/Yahoo): ${c.bright}${c.magenta}${pwdSpaced}${c.reset}`);
+  console.log(` • 4x4 Dashed (Apple iCloud):  ${c.bright}${c.magenta}${pwdDashed}${c.reset}`);
+  console.log(` • Alphanumeric (Microsoft):   ${c.bright}${c.magenta}${pwdAlpha}${c.reset}`);
+  console.log(` • Clean 16-char code:         ${c.bright}${c.cyan}${cleanAppPassword(pwdSpaced)}${c.reset}`);
+
+  console.log(`\n${c.dim}Note: Use the generated code or your provider's official 16-character code in place of your normal password.${c.reset}\n`);
+
+  await askQuestion(`Press Enter to return to main menu...`);
+}
+
 async function main() {
   printBanner();
 
@@ -475,6 +511,7 @@ async function main() {
   node terminal-agent.js --login       # Connect / Log in real email
   node terminal-agent.js --logout      # Disconnect active email
   node terminal-agent.js --status      # Check current connection status
+  node terminal-agent.js --app-password # Generate App Password / Setup guide
   node terminal-agent.js --inbox       # Fetch live inbox directly
   node terminal-agent.js --history 50  # Fetch history (N emails)
   node terminal-agent.js --search "q"  # Search email history
@@ -483,6 +520,12 @@ async function main() {
   node terminal-agent.js --notify "T" "M" # Send custom notification to device
   node terminal-agent.js --exec "cmd"  # Execute terminal command
 `);
+    process.exit(0);
+  }
+
+  if (args.includes('--app-password') || args.includes('--gen-password') || args.includes('--apppassword')) {
+    const config = loadLocalConfig() || {};
+    await generateAndShowAppPassword(config);
     process.exit(0);
   }
 
@@ -616,12 +659,13 @@ async function main() {
     console.log(` ${c.bright}[6]${c.reset} 🔄 Live Watch / Polling Mode (With Device Alerts)`);
     console.log(` ${c.bright}[7]${c.reset} 🛡️ Toggle Monitoring Mode (Current: ${isAuto ? '⚡ Reply Without Permission' : '🛡️ Ask Permission'})`);
     console.log(` ${c.bright}[8]${c.reset} 🔔 Send Test Device Notification (Verify OS Alerts)`);
-    console.log(` ${c.bright}[9]${c.reset} ⚙️ Reconfigure / Switch Account`);
-    console.log(` ${c.bright}[10]${c.reset} 🚪 Log out / Disconnect Account`);
+    console.log(` ${c.bright}[9]${c.reset} 🔑 Generate / Guide App Password (16-char code & 2FA setup)`);
+    console.log(` ${c.bright}[10]${c.reset} ⚙️ Reconfigure / Switch Account`);
+    console.log(` ${c.bright}[11]${c.reset} 🚪 Log out / Disconnect Account`);
     console.log(` ${c.bright}[0]${c.reset} 🚪 Exit`);
     console.log(`${c.cyan}======================================================${c.reset}`);
 
-    const choice = (await askQuestion(`${c.bright}Select option [0-10]: ${c.reset}`)).trim();
+    const choice = (await askQuestion(`${c.bright}Select option [0-11]: ${c.reset}`)).trim();
 
     if (choice === '1') {
       await viewLiveInbox(config);
@@ -648,9 +692,11 @@ async function main() {
       });
       console.log(`${c.green}✔ Device notification sent via ${testRes.method} on ${testRes.platform}!${c.reset}`);
     } else if (choice === '9') {
+      await generateAndShowAppPassword(config);
+    } else if (choice === '10') {
       const newConfig = await promptForCredentials();
       if (newConfig) config = newConfig;
-    } else if (choice === '10') {
+    } else if (choice === '11') {
       clearLocalConfig();
       console.log(`\n${c.yellow}Logged out of ${config.email}.${c.reset}`);
       const reLogin = (await askQuestion(`Log in with a new email account now? (y/n): `)).toLowerCase();
@@ -665,7 +711,7 @@ async function main() {
       console.log(`\n${c.green}Goodbye! MailMind Agent session ended.${c.reset}\n`);
       break;
     } else {
-      console.log(`${c.red}Invalid option. Please choose from 0 to 10.${c.reset}`);
+      console.log(`${c.red}Invalid option. Please choose from 0 to 11.${c.reset}`);
     }
   }
 
