@@ -39,7 +39,34 @@ export default function TerminalPage() {
   const terminalEndRef = useRef(null);
 
   useEffect(() => {
-    router.replace('/inbox');
+    const stored = getActiveUser();
+    if (stored && stored.connected && stored.email && !isDemoAccount(stored)) {
+      setUser(stored);
+      setHistory(prev => [
+        ...prev,
+        { type: 'system', text: `Agent connected to: ${stored.email} (${stored.provider || 'email'}). Accessing live messages.` }
+      ]);
+    } else {
+      router.replace('/onboarding');
+      return;
+    }
+
+    const handleAccountSwitched = (e) => {
+      if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
+        setUser(e.detail);
+        setHistory(h => [
+          ...h,
+          { type: 'output', text: `Active account switched to ${e.detail.email}. Agent now accessing messages for ${e.detail.email}.` }
+        ]);
+      } else {
+        router.replace('/onboarding');
+      }
+    };
+    window.addEventListener('mailmind:account-switched', handleAccountSwitched);
+
+    return () => {
+      window.removeEventListener('mailmind:account-switched', handleAccountSwitched);
+    };
   }, [router]);
 
   useEffect(() => {
@@ -339,7 +366,7 @@ export default function TerminalPage() {
             const res = await fetch('/api/fetch-emails', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: user.email, password: user.password, limit: 15 })
+              body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider, tone: user.tone, limit: 15 })
             });
             const data = await res.json();
             if (data.emails && Array.isArray(data.emails)) emailList = data.emails;
@@ -386,7 +413,7 @@ export default function TerminalPage() {
             const res = await fetch('/api/fetch-emails', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: user.email, password: user.password, limit: 10 })
+              body: JSON.stringify({ email: user.email, password: user.password, provider: user.provider, tone: user.tone, limit: 10 })
             });
             const data = await res.json();
             if (data.emails && Array.isArray(data.emails)) emailList = data.emails;

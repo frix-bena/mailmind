@@ -1,13 +1,6 @@
 'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import TerminalPage from '@/app/terminal/page';
 
 export default function AgentPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/inbox');
-  }, [router]);
-
-  return null;
+  return <TerminalPage />;
 }

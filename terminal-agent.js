@@ -12,6 +12,11 @@ const {
   loadLocalConfig,
   saveLocalConfig,
   clearLocalConfig,
+  loadLocalAccounts,
+  saveLocalAccounts,
+  addOrUpdateSavedAccount,
+  findSavedAccount,
+  removeSavedAccount,
   generateAppPassword,
   cleanAppPassword,
   getProviderAppPasswordGuide,
@@ -429,8 +434,9 @@ async function watchInboxLive(config) {
   // Robust monitoring interval with error recovery
   const pollInterval = setInterval(async () => {
     try {
-      process.stdout.write(`\r${c.dim}[${new Date().toLocaleTimeString()}] Checking for new emails...${c.reset}  `);
-      const res = await fetchEmails(config, { limit: 5, tone: config?.tone || 'professional' });
+      const activeConfig = loadLocalConfig() || config;
+      process.stdout.write(`\r${c.dim}[${new Date().toLocaleTimeString()}] Checking for new emails for ${activeConfig?.email}...${c.reset}  `);
+      const res = await fetchEmails(activeConfig, { limit: 5, tone: activeConfig?.tone || 'professional' });
       if (res && res.success && Array.isArray(res.emails) && res.emails.length > 0) {
         const newEmails = res.emails.filter(e => {
           const rawDate = e?.receivedAt || e?.received_at;
@@ -447,7 +453,7 @@ async function watchInboxLive(config) {
 
             // Send native device desktop notification to user's OS
             try {
-              const notifPayload = formatEmailNotification(e, { agentMode: config?.monitoringMode });
+              const notifPayload = formatEmailNotification(e, { agentMode: activeConfig?.monitoringMode });
               await sendDeviceNotification(notifPayload);
             } catch (nErr) {
               console.log(`${c.dim}Notification delivery note: ${nErr.message}${c.reset}`);
@@ -573,9 +579,9 @@ async function main() {
     process.exit(0);
   }
 
-  // Support direct CLI credential pass: --email <email> --password <pass> [--provider <p>]
-  if (args.includes('--email')) {
-    const eIdx = args.indexOf('--email');
+  // Support direct CLI credential pass: --email <email> [--password <pass>] or --user <email>
+  if (args.includes('--email') || args.includes('--user') || args.includes('--account')) {
+    const eIdx = args.includes('--email') ? args.indexOf('--email') : (args.includes('--user') ? args.indexOf('--user') : args.indexOf('--account'));
     const pIdx = args.indexOf('--password');
     const email = args[eIdx + 1];
     const password = pIdx !== -1 ? args[pIdx + 1] : '';
@@ -594,6 +600,16 @@ async function main() {
         console.log(`${c.green}✔ Logged in as ${email}${c.reset}`);
       } else {
         console.log(`${c.red}❌ Login failed: ${testRes.error}${c.reset}`);
+        process.exit(1);
+      }
+    } else if (email) {
+      const matched = findSavedAccount(email);
+      if (matched && matched.password) {
+        saveLocalConfig(matched);
+        config = matched;
+        console.log(`${c.green}✔ Selected saved account ${email}${c.reset}`);
+      } else {
+        console.log(`${c.red}❌ No saved credentials found for ${email}. Pass --password or run --login.${c.reset}`);
         process.exit(1);
       }
     }
@@ -650,6 +666,13 @@ async function main() {
 
   // Main interactive loop
   while (true) {
+    // Dynamically refresh active config so if any user logs in or switches via the web app,
+    // the CLI agent automatically accesses that user's messages without restarting!
+    const diskConfig = loadLocalConfig();
+    if (diskConfig && diskConfig.email) {
+      config = { ...config, ...diskConfig };
+    }
+
     const isAuto = config.monitoringMode === 'auto_reply' || config.monitoringMode === 'without_permission';
     console.log(`\n${c.cyan}======================================================${c.reset}`);
     console.log(`${c.bright}Active Account:${c.reset} ${c.green}${config.email}${c.reset} (${config.provider}) | ${c.dim}Tone: ${config.tone}${c.reset} | ${isAuto ? `${c.magenta}⚡ Auto-Reply (No Permission)${c.reset}` : `${c.green}🛡️ Ask Permission${c.reset}`}`);
@@ -663,8 +686,8 @@ async function main() {
     console.log(` ${c.bright}[7]${c.reset} 🛡️ Toggle Monitoring Mode (Current: ${isAuto ? '⚡ Reply Without Permission' : '🛡️ Ask Permission'})`);
     console.log(` ${c.bright}[8]${c.reset} 🔔 Send Test Device Notification (Verify OS Alerts)`);
     console.log(` ${c.bright}[9]${c.reset} 🔑 Generate / Guide App Password (16-char code & 2FA setup)`);
-    console.log(` ${c.bright}[10]${c.reset} ⚙️ Reconfigure / Switch Account`);
-    console.log(` ${c.bright}[11]${c.reset} 🚪 Log out / Disconnect Account`);
+    console.log(` ${c.bright}[10]${c.reset} ⚙️ Reconfigure / Switch Account (Select Any Saved User)`);
+    console.log(` ${c.bright}[11]${c.reset} 🚪 Log out / Disconnect Current Account`);
     console.log(` ${c.bright}[0]${c.reset} 🚪 Exit`);
     console.log(`${c.cyan}======================================================${c.reset}`);
 
@@ -697,18 +720,56 @@ async function main() {
     } else if (choice === '9') {
       await generateAndShowAppPassword(config);
     } else if (choice === '10') {
-      const newConfig = await promptForCredentials();
-      if (newConfig) config = newConfig;
-    } else if (choice === '11') {
-      clearLocalConfig();
-      console.log(`\n${c.yellow}Logged out of ${config.email}.${c.reset}`);
-      const reLogin = (await askQuestion(`Log in with a new email account now? (y/n): `)).toLowerCase();
-      if (reLogin.startsWith('y')) {
+      const savedAccounts = loadLocalAccounts();
+      if (savedAccounts && savedAccounts.length > 0) {
+        console.log(`\n${c.cyan}--- 👥 Connected / Saved Accounts ---${c.reset}`);
+        console.log(`${c.dim}The agent can access messages for any of the following users:${c.reset}\n`);
+        savedAccounts.forEach((acc, idx) => {
+          const isCurrent = config && config.email && acc.email.toLowerCase() === config.email.toLowerCase();
+          console.log(` ${c.bright}[${idx + 1}]${c.reset} ${acc.email} (${acc.provider || 'gmail'})${isCurrent ? ` ${c.green}● Active${c.reset}` : ''}`);
+        });
+        console.log(` ${c.bright}[N]${c.reset} Connect a new email account`);
+        console.log(` ${c.bright}[C]${c.reset} Cancel / Return`);
+
+        const accChoice = (await askQuestion(`\nSelect account [1-${savedAccounts.length}, N, C]: `)).trim();
+        if (accChoice.toLowerCase() === 'n') {
+          const newConfig = await promptForCredentials();
+          if (newConfig) config = newConfig;
+        } else if (accChoice.toLowerCase() !== 'c' && accChoice !== '') {
+          const pickedIdx = parseInt(accChoice, 10) - 1;
+          if (!isNaN(pickedIdx) && savedAccounts[pickedIdx]) {
+            const picked = savedAccounts[pickedIdx];
+            saveLocalConfig(picked);
+            config = picked;
+            console.log(`\n${c.green}✔ Switched active agent account to: ${picked.email}${c.reset}`);
+          }
+        }
+      } else {
         const newConfig = await promptForCredentials();
         if (newConfig) config = newConfig;
+      }
+    } else if (choice === '11') {
+      if (config && config.email) {
+        removeSavedAccount(config.email);
+        console.log(`\n${c.yellow}Disconnected ${config.email}.${c.reset}`);
       } else {
-        console.log(`${c.green}Goodbye!${c.reset}\n`);
-        break;
+        clearLocalConfig();
+      }
+      const remaining = loadLocalAccounts();
+      if (remaining.length > 0) {
+        config = remaining[0];
+        saveLocalConfig(config);
+        console.log(`${c.green}Switched active agent to: ${config.email}${c.reset}`);
+      } else {
+        clearLocalConfig();
+        const reLogin = (await askQuestion(`Log in with a new email account now? (y/n): `)).toLowerCase();
+        if (reLogin.startsWith('y')) {
+          const newConfig = await promptForCredentials();
+          if (newConfig) config = newConfig;
+        } else {
+          console.log(`${c.green}Goodbye!${c.reset}\n`);
+          break;
+        }
       }
     } else if (choice === '0' || choice.toLowerCase() === 'exit' || choice.toLowerCase() === 'q') {
       console.log(`\n${c.green}Goodbye! MailMind Agent session ended.${c.reset}\n`);

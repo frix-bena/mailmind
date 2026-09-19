@@ -14,6 +14,11 @@ const {
   loadLocalConfig,
   saveLocalConfig,
   clearLocalConfig,
+  loadLocalAccounts,
+  saveLocalAccounts,
+  addOrUpdateSavedAccount,
+  findSavedAccount,
+  removeSavedAccount,
   safeSearch,
   safeIncludes,
   safeMatch,
@@ -34,11 +39,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Helper to get credentials from request body or fallback to local config
+// Helper to get credentials from request body or fallback to local config or saved accounts
 function resolveCredentials(req) {
   const { email, password, provider, host, port, tone } = req.body || {};
   if (email && password) {
     return { email, password, provider: provider || 'gmail', host, port, tone: tone || 'professional' };
+  }
+  if (email) {
+    const savedAcc = findSavedAccount(email);
+    if (savedAcc && savedAcc.password) {
+      return {
+        ...savedAcc,
+        tone: tone || savedAcc.tone || 'professional'
+      };
+    }
   }
   const saved = loadLocalConfig();
   if (saved && saved.email && saved.password) {
@@ -257,8 +271,32 @@ app.post('/api/auth/connect', async (req, res) => {
 
 app.post('/api/auth/disconnect', (req, res) => {
   try {
-    clearLocalConfig();
+    const { email } = req.body || {};
+    if (email) {
+      removeSavedAccount(email);
+    } else {
+      clearLocalConfig();
+    }
     res.json({ success: true, connected: false });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/auth/accounts', (req, res) => {
+  try {
+    const accounts = loadLocalAccounts();
+    res.json({
+      success: true,
+      accounts: accounts.map(a => ({
+        email: a.email,
+        name: a.name || null,
+        provider: a.provider || 'gmail',
+        tone: a.tone || 'professional',
+        monitoringMode: a.monitoringMode || 'ask_permission',
+        savedAt: a.savedAt
+      }))
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

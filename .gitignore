@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 .mailmind-config.json
+.mailmind-accounts.json
 
 # vercel
 .vercel

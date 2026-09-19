@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
-import { askEmailHistory, fetchEmailHistory, loadLocalConfig } from '@/lib/email-service';
+import { askEmailHistory, fetchEmailHistory, loadLocalConfig, findSavedAccount } from '@/lib/email-service';
 
 function resolveCredentials(body) {
   const { email, password, provider, host, port, tone } = body || {};
   if (email && password) {
     return { email, password, provider: provider || 'gmail', host, port, tone: tone || 'professional' };
+  }
+  if (email) {
+    const savedAcc = findSavedAccount(email);
+    if (savedAcc && savedAcc.password) {
+      return {
+        ...savedAcc,
+        tone: tone || savedAcc.tone || 'professional'
+      };
+    }
   }
   const saved = loadLocalConfig();
   if (saved && saved.email && saved.password) {

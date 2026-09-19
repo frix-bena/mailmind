@@ -23,7 +23,8 @@ import {
   SunIcon,
   MoonIcon,
   PaletteIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  TerminalIcon
 } from '@/components/Icons';
 
 export default function Sidebar({ user: propUser }) {
@@ -96,6 +97,7 @@ export default function Sidebar({ user: propUser }) {
   // Prefetch main routes so clicks are instant
   useEffect(() => {
     router.prefetch('/inbox');
+    router.prefetch('/terminal');
     router.prefetch('/search');
     router.prefetch('/settings');
   }, [router]);
@@ -109,6 +111,7 @@ export default function Sidebar({ user: propUser }) {
 
   const nav = [
     { href: '/inbox',    icon: InboxIcon,    label: 'Inbox',    badge: null },
+    { href: '/terminal', icon: TerminalIcon, label: 'AI Agent', badge: 'Live' },
     { href: '/search',   icon: SearchIcon,   label: 'Ask AI',   badge: null },
     { href: '/settings', icon: SettingsIcon, label: 'Settings', badge: null },
   ];
@@ -367,6 +370,18 @@ export default function Sidebar({ user: propUser }) {
           </span>
           <span className="mobile-bottom-label">Inbox</span>
           {unread > 0 && <span className="mobile-bottom-dot" />}
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-bottom-item${pathname === '/terminal' || pathname === '/agent' ? ' active' : ''}`}
+          onClick={() => router.push('/terminal')}
+          aria-label="AI Agent"
+        >
+          <span className="mobile-bottom-icon">
+            <TerminalIcon size={17} />
+          </span>
+          <span className="mobile-bottom-label">Agent</span>
         </button>
 
         <button
