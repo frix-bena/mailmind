@@ -897,7 +897,6 @@ export default function GoogleAccountModal({
                       onClick={() => {
                         setNewAccountMode('new');
                         setNewAccountError('');
-                        setShowNewForgotDrawer(false);
                       }}
                       style={{
                         padding: '6px 10px',

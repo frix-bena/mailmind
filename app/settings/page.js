@@ -115,6 +115,9 @@ export default function SettingsPage() {
   const [pwdUpdateError, setPwdUpdateError] = useState('');
   const [savingNewPassword, setSavingNewPassword] = useState(false);
 
+  // Profile details and avatar customizer toggle
+  const [showCustomizer, setShowCustomizer] = useState(false);
+
   const openAppPasswordModal = (tab = 'guide') => {
     setAppPasswordModalTab(tab);
     setAppPasswordModalOpen(true);
@@ -355,13 +358,20 @@ export default function SettingsPage() {
     } catch {}
 
     try {
-      await fetch('/api/auth/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          monitoringMode: newMode
-        })
-      });
+      const modePayload = JSON.stringify({ monitoringMode: newMode });
+      try {
+        await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: modePayload
+        });
+      } catch {
+        await fetch('http://localhost:3002/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: modePayload
+        });
+      }
     } catch {}
 
     if (typeof window !== 'undefined') {
@@ -400,11 +410,12 @@ export default function SettingsPage() {
         });
       }
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTestResult({ success: true, message: `Connected! Server responded with ${data.total || 0} total messages.` });
+      const data = await res.json().catch(() => ({ success: false, error: 'Server returned an invalid response.' }));
+      if (res && res.ok && data.success) {
+        const count = data.total || data.totalMessages || (Array.isArray(data.emails) ? data.emails.length : 0);
+        setTestResult({ success: true, message: `Connected! Server responded with ${count} total messages.` });
       } else {
-        setTestResult({ success: false, message: data.error || 'Connection check failed.' });
+        setTestResult({ success: false, message: (data && data.error) || 'Connection check failed.' });
       }
     } catch (err) {
       setTestResult({ success: false, message: 'Connection test failed: ' + err.message });
@@ -1254,7 +1265,8 @@ export default function SettingsPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {accounts.map(acc => {
-                    const isActive = acc.email.toLowerCase() === user?.email?.toLowerCase();
+                    if (!acc || !acc.email) return null;
+                    const isActive = user?.email && acc.email.toLowerCase() === user.email.toLowerCase();
                     const accName = extractDisplayName(acc.name, acc.email);
                     return (
                       <div
@@ -1305,8 +1317,12 @@ export default function SettingsPage() {
                               className="btn btn-secondary btn-sm"
                               style={{ fontSize: 11.5, padding: '4px 10px' }}
                               onClick={async () => {
-                                await switchActiveAccount(acc);
-                                refreshAccountsList();
+                                try {
+                                  await switchActiveAccount(acc);
+                                  refreshAccountsList();
+                                } catch (switchErr) {
+                                  console.error('Failed to switch account:', switchErr);
+                                }
                               }}
                             >
                               Switch to this
@@ -1483,11 +1499,19 @@ export default function SettingsPage() {
                         addOrUpdateAccount(updatedUser);
                         updateAccountPassword(user.email, clean);
 
-                        await fetch('/api/auth/profile', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ password: clean })
-                        }).catch(() => {});
+                        try {
+                          await fetch('/api/auth/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: clean })
+                          });
+                        } catch {
+                          await fetch('http://localhost:3002/api/auth/profile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: clean })
+                          });
+                        }
 
                         setPwdUpdateSuccess(`Applied new App Password (${clean.slice(0, 4)}••••) to ${user.email}!`);
                         setNewAccountPassword('');
@@ -1659,7 +1683,7 @@ export default function SettingsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
                 {/* Option 1: Ask Permission */}
                 <div
-                  onClick={() => setMonitoringMode('ask_permission')}
+                  onClick={() => handleSaveMonitoringMode('ask_permission')}
                   style={{
                     background: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission')
                       ? 'var(--accent-glow)'
@@ -1713,7 +1737,7 @@ export default function SettingsPage() {
 
                 {/* Option 2: Reply Without Permission */}
                 <div
-                  onClick={() => setMonitoringMode('auto_reply')}
+                  onClick={() => handleSaveMonitoringMode('auto_reply')}
                   style={{
                     background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
                       ? 'var(--accent-glow)'

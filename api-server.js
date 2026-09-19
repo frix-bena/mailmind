@@ -93,7 +93,8 @@ app.post('/api/auth/profile', (req, res) => {
       webhookUrl,
       digest,
       pollInterval,
-      signature
+      signature,
+      password
     } = req.body || {};
     const existing = loadLocalConfig() || {};
     const updated = {
@@ -104,6 +105,7 @@ app.post('/api/auth/profile', (req, res) => {
       avatarColor: avatarColor !== undefined ? avatarColor : existing.avatarColor,
       color: color !== undefined ? color : (avatarColor !== undefined ? avatarColor : existing.color),
       tone: tone !== undefined ? tone : existing.tone,
+      password: password !== undefined ? String(password) : existing.password,
       monitoringMode: monitoringMode !== undefined ? monitoringMode : (existing.monitoringMode || 'ask_permission'),
       inApp: inApp !== undefined ? inApp : existing.inApp,
       deviceNotifications: deviceNotifications !== undefined ? deviceNotifications : existing.deviceNotifications,
