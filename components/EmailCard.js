@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import SenderProfileModal from '@/components/SenderProfileModal';
@@ -10,6 +11,20 @@ import {
   extractDomain,
   formatEmailDate
 } from '@/lib/avatar-utils';
+import {
+  StarIcon,
+  CopyIcon,
+  PrinterIcon,
+  CheckIcon,
+  CloseIcon,
+  SendIcon,
+  ComposeIcon,
+  LockIcon,
+  CalendarIcon,
+  UserIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
+} from '@/components/Icons';
 
 function UrgencyBadge({ urgency, onClick }) {
   const map = { high: 'badge-high', medium: 'badge-medium', low: 'badge-low' };
@@ -27,14 +42,14 @@ function UrgencyBadge({ urgency, onClick }) {
 
 function CategoryChip({ category, onClick }) {
   const labels = {
-    direct_question: '❓ Question',
-    action_request:  '⚡ Action',
-    direct_message:  '💬 Direct',
-    newsletter:      '📰 Newsletter',
-    receipt:         '🧾 Receipt',
-    notification:    '🔔 Notification',
-    social:          '👥 Social',
-    other:           '📌 Other',
+    direct_question: 'Question',
+    action_request:  'Action Required',
+    direct_message:  'Direct Message',
+    newsletter:      'Newsletter',
+    receipt:         'Receipt',
+    notification:    'Notification',
+    social:          'Social',
+    other:           'General',
   };
   return (
     <button
@@ -43,7 +58,7 @@ function CategoryChip({ category, onClick }) {
       style={{ cursor: onClick ? 'pointer' : 'default', background: 'var(--surface2)' }}
       title={`Category: ${category || 'Email'}`}
     >
-      {labels[category] || category || '📌 Email'}
+      {labels[category] || category || 'Email'}
     </button>
   );
 }
@@ -72,8 +87,12 @@ function EditModal({ email, onClose, onSend }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 620 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div className="modal-header" style={{ margin: 0 }}>✏️ Edit reply to {senderName}</div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
+          <div className="modal-header" style={{ margin: 0 }}>
+            Edit reply for {senderName}
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>
+            <CloseIcon size={14} />
+          </button>
         </div>
         <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
           Re: {email.subject}
@@ -84,18 +103,18 @@ function EditModal({ email, onClose, onSend }) {
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            style={{ fontSize: 11, padding: '3px 8px' }}
+            style={{ fontSize: 11.5, padding: '3px 8px' }}
             onClick={insertGreeting}
           >
-            👋 Insert Greeting
+            Insert Greeting
           </button>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            style={{ fontSize: 11, padding: '3px 8px' }}
+            style={{ fontSize: 11.5, padding: '3px 8px' }}
             onClick={insertClosing}
           >
-            ✍️ Insert Closing
+            Insert Closing
           </button>
         </div>
 
@@ -106,11 +125,13 @@ function EditModal({ email, onClose, onSend }) {
           style={{ minHeight: 220, fontFamily: 'inherit', lineHeight: 1.7 }}
         />
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-          💡 Tip: Replace any <code style={{ background: 'var(--surface2)', padding: '1px 5px', borderRadius: 4 }}>{'{{PLACEHOLDER}}'}</code> text before sending.
+          Tip: Replace any <code style={{ background: 'var(--surface2)', padding: '1px 5px', borderRadius: 4 }}>{'{{PLACEHOLDER}}'}</code> tokens before sending.
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost btn-sm" onClick={onClose}>Discard</button>
-          <button className="btn btn-primary btn-sm" onClick={handleSend}>Send Reply 🚀</button>
+          <button className="btn btn-primary btn-sm" onClick={handleSend} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <SendIcon size={14} /> Send Reply
+          </button>
         </div>
       </div>
     </div>
@@ -143,7 +164,9 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
           <div className="modal-header" style={{ margin: 0, fontSize: 18, flex: 1, paddingRight: 12, lineHeight: 1.4 }}>
             {email.subject}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>
+            <CloseIcon size={14} />
+          </button>
         </div>
 
         {/* Real Email Client Sender Header Bar */}
@@ -151,14 +174,14 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
           marginBottom: 16,
           background: 'var(--surface2)',
           padding: '14px 16px',
-          borderRadius: 12,
+          borderRadius: 8,
           border: '1px solid var(--border)'
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div
               onClick={onOpenProfile}
               style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flexShrink: 0 }}
-              title="Click to view full sender profile"
+              title="View full sender profile"
             >
               <EmailAvatar name={senderName} email={senderEmail} size={40} showVerifiedBadge={true} />
               <div>
@@ -172,25 +195,25 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: 16,
-                        height: 16,
+                        width: 15,
+                        height: 15,
                         borderRadius: '50%',
-                        background: '#1a73e8',
+                        background: 'var(--info)',
                         color: '#ffffff',
                         flexShrink: 0
                       }}
-                      title="Google verified sender (BIMI / Authenticated Domain)"
+                      title="Verified sender (BIMI / Authenticated Domain)"
                     >
-                      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </span>
                   )}
                   <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 500 }}>
-                    (👤 Profile)
+                    Profile
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'monospace', marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: 1 }}>
                   &lt;{senderEmail}&gt;
                 </div>
               </div>
@@ -203,7 +226,7 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
                 style={{ fontSize: 11, padding: '4px 8px' }}
                 title="Copy email message text"
               >
-                {copied ? '✅ Copied' : '📋 Copy Text'}
+                {copied ? <><CheckIcon size={12} /> Copied</> : <><CopyIcon size={12} /> Copy Text</>}
               </button>
               <button
                 className="btn btn-ghost btn-sm"
@@ -211,7 +234,7 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
                 style={{ fontSize: 11, padding: '4px 8px' }}
                 title="Print email"
               >
-                🖨️ Print
+                <PrinterIcon size={12} /> Print
               </button>
             </div>
           </div>
@@ -223,26 +246,29 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
             justifyContent: 'space-between',
             marginTop: 10,
             paddingTop: 8,
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: '1px solid var(--border)',
             fontSize: 11.5,
             color: 'var(--muted)',
             flexWrap: 'wrap',
             gap: 8
           }}>
-            <div>
-              <span>📅 {dateInfo.full || 'Recent'}</span>
-              {dateInfo.relative && <span style={{ marginLeft: 6 }}>({dateInfo.relative})</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <CalendarIcon size={13} />
+              <span>{dateInfo.full || 'Recent'}</span>
+              {dateInfo.relative && <span style={{ marginLeft: 4 }}>({dateInfo.relative})</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span>to: <strong>me</strong></span>
-              <span style={{ color: 'var(--success)' }}>🔒 TLS Encrypted</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--success)' }}>
+                <LockIcon size={12} /> TLS Encrypted
+              </span>
             </div>
           </div>
         </div>
 
         {/* Email Body */}
         <div style={{
-          background: 'var(--surface2)', borderRadius: 10, padding: 20,
+          background: 'var(--surface2)', borderRadius: 8, padding: 20,
           fontSize: 14, lineHeight: 1.75, whiteSpace: 'pre-wrap', color: 'var(--text)',
           maxHeight: 420, overflowY: 'auto', border: '1px solid var(--border)'
         }}>
@@ -256,8 +282,9 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
               onClose();
               onReply && onReply(email);
             }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            ✉️ Reply to Sender
+            <SendIcon size={14} /> Reply to Sender
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
         </div>
@@ -315,24 +342,23 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
       <div
         className="card card-hover fade-in"
         style={{
-          marginBottom: 16,
-          borderLeft: needsReply ? '3px solid var(--accent)' : '3px solid transparent',
+          marginBottom: 14,
           opacity: isDone ? 0.6 : 1,
-          transition: 'all 0.3s ease',
+          transition: 'border-color 0.15s ease, background 0.15s ease',
           position: 'relative'
         }}
       >
-        {/* Header row: Real sender profile with avatar and verified status */}
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        {/* Header row: Sender profile with avatar and verified status */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
           <div
             onClick={() => setProfileOpen(true)}
             style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}
-            title={`Click to view ${senderName}'s full profile`}
+            title={`View ${senderName}'s full profile`}
           >
             <EmailAvatar
               name={senderName}
               email={senderEmail}
-              size={40}
+              size={38}
               showTooltip={true}
               showVerifiedBadge={true}
             />
@@ -350,9 +376,9 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
                   cursor: 'pointer',
                   flexWrap: 'wrap'
                 }}
-                title={`Click to view sender profile for ${senderName}`}
+                title={`View sender profile for ${senderName}`}
               >
-                <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)', letterSpacing: '-0.2px' }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', letterSpacing: '-0.1px' }}>
                   {senderName}
                 </span>
 
@@ -362,30 +388,30 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: 16,
-                      height: 16,
+                      width: 14,
+                      height: 14,
                       borderRadius: '50%',
-                      background: '#1a73e8',
+                      background: 'var(--info)',
                       color: '#ffffff',
                       flexShrink: 0
                     }}
                     title="Google verified sender (BIMI / Authenticated Domain)"
                   >
-                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </span>
                 )}
 
                 {senderEmail && senderName !== senderEmail && (
-                  <span style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
                     &lt;{senderEmail}&gt;
                   </span>
                 )}
 
                 {organization && (
-                  <span className="badge badge-purple" style={{ fontSize: 10, padding: '1px 7px' }}>
-                    🏢 {organization}
+                  <span className="badge badge-purple" style={{ fontSize: 10, padding: '1px 6px' }}>
+                    {organization}
                   </span>
                 )}
               </div>
@@ -397,18 +423,19 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
                   style={{
                     background: 'none',
                     border: 'none',
-                    fontSize: 16,
                     cursor: 'pointer',
-                    color: starred ? '#f59e0b' : 'var(--muted)',
-                    padding: '2px 4px',
-                    lineHeight: 1
+                    color: starred ? '#b8860b' : 'var(--muted2)',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
-                  title={starred ? 'Unstar email' : 'Star this email'}
+                  title={starred ? 'Unstar message' : 'Star this message'}
                 >
-                  {starred ? '★' : '☆'}
+                  <StarIcon size={15} filled={starred} />
                 </button>
                 <span
-                  style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0 }}
+                  style={{ fontSize: 11.5, color: 'var(--muted)', flexShrink: 0 }}
                   title={dateInfo.full || ''}
                 >
                   {dateInfo.relative || 'recently'}
@@ -418,7 +445,7 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
 
             <div style={{
               fontSize: 13.5,
-              fontWeight: 500,
+              fontWeight: 600,
               color: 'var(--text)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -430,21 +457,24 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
           </div>
         </div>
 
-        {/* Tags row */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0 0', alignItems: 'center' }}>
+        {/* Tags row: clean, intentional status tags instead of colored left stripe */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '10px 0 0', alignItems: 'center' }}>
           <UrgencyBadge urgency={email.urgency} onClick={() => onFilterTag && onFilterTag(email.urgency)} />
           <CategoryChip category={email.category} onClick={() => onFilterTag && onFilterTag(email.category)} />
-          {needsReply && !isDone && <span className="badge badge-purple">💬 Needs reply</span>}
-          {status === 'sent' && <span className="badge badge-low">✅ Replied</span>}
-          {status === 'declined' && <span className="badge badge-info">✗ Skipped</span>}
+          {needsReply && !isDone && (
+            <span className="badge badge-purple">
+              Action Required
+            </span>
+          )}
+          {status === 'sent' && <span className="badge badge-low">Replied</span>}
+          {status === 'declined' && <span className="badge badge-info">Skipped</span>}
         </div>
 
         {/* Divider */}
-        <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
+        <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0' }} />
 
-        {/* AI Summary Section with Copy and Ask AI buttons */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>🤖</span>
+        {/* Digest Section: Clean editorial presentation without cliché robot icons */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
             <div style={{
               display: 'flex',
@@ -452,39 +482,39 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
               alignItems: 'center',
               marginBottom: 4
             }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                AI Summary
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Summary &amp; Context
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button
                   onClick={handleCopySummary}
                   className="btn btn-ghost btn-sm"
-                  style={{ fontSize: 10, padding: '2px 6px', height: 20 }}
+                  style={{ fontSize: 10.5, padding: '2px 7px', height: 22 }}
                   title="Copy summary"
                 >
-                  {copiedSummary ? '✅ Copied' : '📋 Copy'}
+                  {copiedSummary ? <><CheckIcon size={11} /> Copied</> : <><CopyIcon size={11} /> Copy</>}
                 </button>
               </div>
             </div>
-            <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--text)' }}>{summary}</p>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text)' }}>{summary}</p>
           </div>
         </div>
 
         {/* Action bar: View original email & Profile shortcuts */}
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
           <button
             onClick={() => setViewOpen(true)}
             style={{
               background: 'none',
               color: 'var(--muted)',
               fontSize: 12,
-              padding: '4px 0',
+              padding: '2px 0',
               cursor: 'pointer',
               textDecoration: 'underline',
               textDecorationStyle: 'dotted'
             }}
           >
-            View original email →
+            View original message
           </button>
 
           <button
@@ -493,26 +523,27 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
               background: 'none',
               color: 'var(--accent)',
               fontSize: 12,
-              padding: '4px 0',
+              padding: '2px 0',
               cursor: 'pointer',
               textDecoration: 'underline',
               textDecorationStyle: 'dotted'
             }}
           >
-            👤 View Sender Profile & History →
+            Sender profile &amp; history
           </button>
         </div>
 
         {/* Draft section */}
         {draftBody && !isDone && (
           <>
-            <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
+            <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0' }} />
             <div
               onClick={() => setExpanded(e => !e)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: expanded ? 12 : 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginBottom: expanded ? 10 : 0 }}
             >
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {expanded ? '▼' : '▶'} Suggested Reply
+              {expanded ? <ChevronDownIcon size={13} style={{ color: 'var(--accent)' }} /> : <ChevronRightIcon size={13} style={{ color: 'var(--accent)' }} />}
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Suggested Reply Draft
               </span>
             </div>
 
@@ -520,26 +551,31 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
               <div className="fade-in">
                 <div style={{
                   background: 'var(--surface2)', border: '1px solid var(--border)',
-                  borderRadius: 8, padding: 16, fontSize: 14, lineHeight: 1.75,
+                  borderRadius: 'var(--radius-sm)', padding: 14, fontSize: 13.5, lineHeight: 1.7,
                   whiteSpace: 'pre-wrap', color: 'var(--text)', fontStyle: 'normal',
                 }}>
                   {draftBody}
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                   <button
                     className="btn btn-success btn-sm"
                     onClick={() => handleSend(email.id, draftBody)}
                     disabled={sending}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                   >
-                    {sending ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Sending…</> : '✅ Send as-is'}
+                    {sending ? (
+                      <><span className="spinner" style={{ width: 13, height: 13 }} /> Sending…</>
+                    ) : (
+                      <><SendIcon size={13} /> Approve &amp; Send</>
+                    )}
                   </button>
-                  <button className="btn btn-warning btn-sm" onClick={() => setEditOpen(true)}>
-                    ✏️ Edit & send
+                  <button className="btn btn-warning btn-sm" onClick={() => setEditOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ComposeIcon size={13} /> Edit Draft
                   </button>
-                  <button className="btn btn-danger btn-sm" onClick={handleDecline}>
-                    ✗ Don't send
+                  <button className="btn btn-danger btn-sm" onClick={handleDecline} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <CloseIcon size={13} /> Skip Draft
                   </button>
                 </div>
               </div>
@@ -549,7 +585,7 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
 
         {/* No-reply dismiss */}
         {!needsReply && (
-          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost btn-sm" onClick={() => onAction && onAction(email.id, 'dismissed')}>
               Dismiss
             </button>
@@ -579,4 +615,3 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
     </>
   );
 }
-

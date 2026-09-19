@@ -2,6 +2,16 @@
 import { useState } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import { getSenderProfile } from '@/lib/avatar-utils';
+import {
+  CloseIcon,
+  CheckIcon,
+  CopyIcon,
+  SearchIcon,
+  MailIcon,
+  ShieldCheckIcon,
+  LockIcon,
+  StarIcon
+} from '@/components/Icons';
 
 export default function SenderProfileModal({ email, onClose, onReply, onSearchSender }) {
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -37,29 +47,27 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
           maxWidth: 540,
           padding: 0,
           overflow: 'hidden',
-          borderRadius: 20,
+          borderRadius: 16,
           border: '1px solid var(--border2)',
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.65)'
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)'
         }}
       >
-        {/* Colorful Gradient Header Banner */}
+        {/* Subtle Header Banner */}
         <div
           style={{
-            background: profile.color?.gradient
-              ? `linear-gradient(135deg, ${profile.color.hex}44 0%, var(--surface2) 100%)`
-              : 'linear-gradient(135deg, var(--accent-glow) 0%, var(--surface2) 100%)',
-            height: 90,
+            background: 'var(--surface2)',
+            height: 80,
             position: 'relative',
             padding: '16px 20px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+            borderBottom: '1px solid var(--border)'
           }}
         >
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)' }}>
-              Sender Profile & Identity
+            <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)' }}>
+              Sender Profile &amp; Identity
             </span>
           </div>
 
@@ -69,31 +77,37 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
               className="btn btn-ghost btn-sm"
               style={{
                 padding: '4px 10px',
-                fontSize: 13,
-                background: 'rgba(0,0,0,0.3)',
-                borderColor: isVip ? '#f59e0b' : 'rgba(255,255,255,0.15)',
+                fontSize: 12,
+                background: 'var(--surface)',
+                borderColor: isVip ? '#f59e0b' : 'var(--border)',
                 color: isVip ? '#f59e0b' : 'var(--text)',
-                borderRadius: 20
+                borderRadius: 20,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5
               }}
               title={isVip ? 'Sender marked as VIP' : 'Mark sender as VIP'}
             >
-              {isVip ? '★ VIP Sender' : '☆ Star VIP'}
+              <StarIcon size={12} fill={isVip ? '#f59e0b' : 'none'} style={{ color: isVip ? '#f59e0b' : 'var(--muted)' }} />
+              <span>{isVip ? 'VIP Contact' : 'Mark VIP'}</span>
             </button>
 
             <button
               onClick={onClose}
               className="btn btn-ghost btn-sm"
               style={{
-                padding: '4px 10px',
-                fontSize: 13,
-                background: 'rgba(0,0,0,0.3)',
-                borderColor: 'rgba(255,255,255,0.15)',
-                color: 'var(--text)',
-                borderRadius: 20
+                padding: '5px 8px',
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--muted)',
+                borderRadius: 20,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
               title="Close modal"
             >
-              ✕
+              <CloseIcon size={13} />
             </button>
           </div>
         </div>
@@ -135,14 +149,14 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
                       gap: 4
                     }}
                   >
-                    ✓ Verified Sender
+                    <CheckIcon size={11} /> Verified Sender
                   </span>
                 )}
               </div>
 
               {profile.organization && (
                 <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)' }}>
-                  <span style={{ fontWeight: 600 }}>🏢 {profile.organization}</span>
+                  <span style={{ fontWeight: 600 }}>{profile.organization}</span>
                   {profile.websiteUrl && (
                     <a
                       href={profile.websiteUrl}
@@ -178,7 +192,7 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-              <span style={{ fontSize: 14 }}>✉️</span>
+              <MailIcon size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />
               <span style={{ fontFamily: 'monospace', fontSize: 13, color: 'var(--text)', wordBreak: 'break-all' }}>
                 {profile.email}
               </span>
@@ -196,11 +210,19 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
               }}
               title="Copy clean email address"
             >
-              {copiedEmail ? '✅ Copied!' : '📋 Copy'}
+              {copiedEmail ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CheckIcon size={12} /> Copied
+                </span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CopyIcon size={12} /> Copy
+                </span>
+              )}
             </button>
           </div>
 
-          {/* Gmail-Style Security & Message Authentication Trust Details */}
+          {/* Message Security & Authentication Trust Details */}
           <div
             style={{
               background: 'var(--surface2)',
@@ -211,8 +233,9 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
               fontSize: 12
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: 8 }}>
-              🛡️ Message Security & Authentication
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ShieldCheckIcon size={13} style={{ color: 'var(--accent)' }} />
+              <span>Message Security &amp; Authentication</span>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -225,15 +248,17 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--muted)' }}>Signed-by (DKIM):</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: profile.isVerified ? 'var(--info)' : 'var(--text)' }}>
-                  {profile.security?.signedBy || profile.domain} {profile.isVerified && '✓'}
+                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: profile.isVerified ? 'var(--info)' : 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {profile.security?.signedBy || profile.domain}
+                  {profile.isVerified && <CheckIcon size={11} />}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--muted)' }}>Security:</span>
-                <span style={{ color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  🔒 TLS Encrypted
+                <span style={{ color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <LockIcon size={12} />
+                  <span>TLS Encrypted</span>
                 </span>
               </div>
 
@@ -264,7 +289,7 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--muted)' }}>Received At:</span>
                 <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 12 }}>
-                  📅 {profile.dateInfo.full} ({profile.dateInfo.relative})
+                  {profile.dateInfo.full} ({profile.dateInfo.relative})
                 </span>
               </div>
             )}
@@ -306,14 +331,14 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
               <div style={{
                 marginTop: 4,
                 padding: '10px 12px',
-                background: 'rgba(0,0,0,0.2)',
+                background: 'var(--surface)',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.05)',
+                border: '1px solid var(--border)',
                 fontSize: 12.5,
                 lineHeight: 1.55,
                 color: 'var(--text)'
               }}>
-                <span style={{ fontWeight: 700, color: 'var(--accent)', marginRight: 6 }}>🤖 AI Note:</span>
+                <span style={{ fontWeight: 700, color: 'var(--accent)', marginRight: 6 }}>Context:</span>
                 {profile.aiSummary}
               </div>
             )}
@@ -327,9 +352,10 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
                 onClose();
                 onReply && onReply(email);
               }}
-              style={{ fontSize: 13, padding: '9px 14px', borderRadius: 8 }}
+              style={{ fontSize: 13, padding: '9px 14px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
-              ✉️ Reply / Compose
+              <MailIcon size={13} />
+              <span>Reply or Compose</span>
             </button>
 
             <button
@@ -338,17 +364,26 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
                 onClose();
                 onSearchSender && onSearchSender(profile.email || profile.name);
               }}
-              style={{ fontSize: 13, padding: '9px 14px', borderRadius: 8 }}
+              style={{ fontSize: 13, padding: '9px 14px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
-              🔍 Search All Emails
+              <SearchIcon size={13} />
+              <span>Search Emails</span>
             </button>
 
             <button
               className="btn btn-ghost btn-sm"
               onClick={handleCopyContact}
-              style={{ fontSize: 12, padding: '8px 12px', borderRadius: 8 }}
+              style={{ fontSize: 12, padding: '8px 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
-              {copiedCard ? '✅ Contact Copied!' : '📋 Copy Contact Card'}
+              {copiedCard ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CheckIcon size={12} /> Contact Copied
+                </span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <CopyIcon size={12} /> Copy Contact Card
+                </span>
+              )}
             </button>
 
             {profile.websiteUrl ? (
@@ -359,7 +394,7 @@ export default function SenderProfileModal({ email, onClose, onReply, onSearchSe
                 className="btn btn-ghost btn-sm"
                 style={{ fontSize: 12, padding: '8px 12px', borderRadius: 8, textDecoration: 'none', textAlign: 'center' }}
               >
-                🌐 Visit {profile.domain} ↗
+                Visit {profile.domain} ↗
               </a>
             ) : (
               <button

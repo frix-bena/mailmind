@@ -12,7 +12,7 @@ export async function GET(request) {
 
     if (isTest) {
       const result = await testDeviceNotification({
-        title: searchParams.get('title') || '🔔 MailMind Device Notification Test',
+        title: searchParams.get('title') || 'MailMind Device Notification Test',
         message: searchParams.get('message') || 'Device notifications are active and verified.'
       });
       return NextResponse.json(result);
@@ -40,14 +40,14 @@ export async function POST(request) {
 
     if (isTest) {
       const testResult = await testDeviceNotification({
-        title: title || '🔔 MailMind Agent Active',
+        title: title || 'MailMind Agent Active',
         message: message || altBody || 'Device notifications are working correctly.'
       });
       return NextResponse.json(testResult);
     }
 
     const result = await sendDeviceNotification({
-      title: title || '📧 MailMind Alert',
+      title: title || 'MailMind Alert',
       message: message || altBody || 'New message update.',
       urgency: urgency || 'normal',
       category: category || 'email',

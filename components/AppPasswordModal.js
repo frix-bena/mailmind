@@ -3,6 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
 import {
+  KeyIcon,
+  CheckIcon,
+  CloseIcon,
+  CopyIcon,
+  RefreshIcon,
+  ShieldCheckIcon,
+  DocumentIcon
+} from '@/components/Icons';
+import {
   generateAppPassword,
   cleanAppPassword,
   formatAppPassword,
@@ -125,30 +134,30 @@ export default function AppPasswordModal({
           borderBottom: '1px solid var(--border, #2a2a3c)',
           flexShrink: 0
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{
               width: 36,
               height: 36,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #EA4335, #4285F4)',
+              borderRadius: 8,
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 18,
-              boxShadow: '0 2px 8px rgba(66, 133, 244, 0.3)'
+              color: 'var(--accent)'
             }}>
-              🔑
+              <KeyIcon size={18} />
             </span>
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>
                 {activeTab === 'generator'
-                  ? '⚡ App Password Generator (Any Email Supported)'
+                  ? 'App Password Generator'
                   : `${guide.name} App Password Setup Guide`}
               </h2>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
                 {userEmail
-                  ? `Target Account: ${userEmail} • Generate standard 16-character App Passwords with no email restrictions`
-                  : 'Generate a 16-character App Password for any email account without domain restrictions'}
+                  ? `Target Account: ${userEmail} · Generate standard 16-character App Passwords`
+                  : 'Generate a 16-character App Password for any email account'}
               </div>
             </div>
           </div>
@@ -156,18 +165,10 @@ export default function AppPasswordModal({
           <button
             onClick={onClose}
             aria-label="Close"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--muted)',
-              fontSize: 18,
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '50%',
-              lineHeight: 1
-            }}
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '4px 8px' }}
           >
-            ✕
+            <CloseIcon size={14} />
           </button>
         </div>
 
@@ -177,15 +178,15 @@ export default function AppPasswordModal({
           padding: '8px 16px 0',
           borderBottom: '1px solid var(--border)',
           gap: 4,
-          background: 'rgba(0,0,0,0.1)',
+          background: 'var(--surface2)',
           overflowX: 'auto'
         }}>
           {[
-            { id: 'generator', label: '⚡ Generate App Password', icon: '⚡' },
-            { id: 'guide', label: '📖 Step-by-Step Guide', icon: '📖' },
-            { id: 'paste', label: '📋 Paste & Apply', icon: '📋' },
-            { id: 'faq', label: '🛡️ Security & 2FA FAQ', icon: '🛡️' },
-            { id: 'recovery', label: '🔄 Account Recovery', icon: '🔄' }
+            { id: 'generator', label: 'Generate Password' },
+            { id: 'guide', label: 'Step-by-Step Guide' },
+            { id: 'paste', label: 'Paste and Apply' },
+            { id: 'faq', label: 'Security & 2FA FAQ' },
+            { id: 'recovery', label: 'Account Recovery' }
           ].map((tab) => {
             const isTabActive = activeTab === tab.id;
             return (
@@ -196,21 +197,17 @@ export default function AppPasswordModal({
                 style={{
                   padding: '9px 12px',
                   fontSize: 12,
-                  fontWeight: isTabActive ? 700 : 500,
+                  fontWeight: isTabActive ? 600 : 500,
                   border: 'none',
                   background: 'none',
                   color: isTabActive ? 'var(--accent)' : 'var(--muted)',
                   borderBottom: isTabActive ? '2px solid var(--accent)' : '2px solid transparent',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
                   whiteSpace: 'nowrap'
                 }}
               >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
+                {tab.label}
               </button>
             );
           })}
@@ -221,8 +218,8 @@ export default function AppPasswordModal({
 
           {appliedMsg && (
             <div style={{
-              background: 'rgba(34, 197, 94, 0.15)',
-              border: '1px solid var(--success)',
+              background: 'rgba(34, 197, 94, 0.12)',
+              border: '1px solid var(--success, #22c55e)',
               color: '#86efac',
               fontSize: 13,
               padding: '9px 14px',
@@ -234,7 +231,8 @@ export default function AppPasswordModal({
               justifyContent: 'center',
               gap: 8
             }}>
-              <span>✅</span> {appliedMsg}
+              <CheckIcon size={14} style={{ color: 'var(--success, #22c55e)' }} />
+              <span>{appliedMsg}</span>
             </div>
           )}
 
@@ -283,8 +281,8 @@ export default function AppPasswordModal({
             <div className="fade-in">
               {/* Unrestricted email callout */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.12), rgba(34, 197, 94, 0.1))',
-                border: '1px solid rgba(66, 133, 244, 0.35)',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
                 borderRadius: 14,
                 padding: '14px 16px',
                 marginBottom: 16,
@@ -296,7 +294,7 @@ export default function AppPasswordModal({
               }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                    <span>✨</span> Universal 16-Character App Password Generator
+                    <KeyIcon size={14} style={{ color: 'var(--accent)' }} /> Universal 16-Character App Password Generator
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>
                     No email is restricted. You can generate a standard 16-character Google-compatible App Password for <strong>any email address</strong> (Gmail, Google Workspace, custom domains, or any mail host).
@@ -306,14 +304,14 @@ export default function AppPasswordModal({
                   <div style={{
                     padding: '4px 10px',
                     borderRadius: 8,
-                    background: 'rgba(66, 133, 244, 0.2)',
-                    border: '1px solid rgba(66, 133, 244, 0.4)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     fontSize: 11.5,
                     fontWeight: 600,
-                    color: '#93c5fd',
+                    color: 'var(--text)',
                     whiteSpace: 'nowrap'
                   }}>
-                    📧 {userEmail}
+                    {userEmail}
                   </div>
                 )}
               </div>
@@ -336,9 +334,12 @@ export default function AppPasswordModal({
                     background: 'var(--surface)',
                     padding: '2px 8px',
                     borderRadius: 12,
-                    border: '1px solid var(--border)'
+                    border: '1px solid var(--border)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4
                   }}>
-                    🛡️ {calculatePasswordStrength(generatedPassword).label} Entropy
+                    <ShieldCheckIcon size={11} /> {calculatePasswordStrength(generatedPassword).label} Entropy
                   </span>
                 </div>
 
@@ -372,8 +373,8 @@ export default function AppPasswordModal({
                     className="btn btn-secondary btn-sm"
                     style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
                   >
-                    <span>{copied ? '✅' : '📋'}</span>
-                    <span>{copied ? 'Copied to Clipboard!' : 'Copy Password'}</span>
+                    {copied ? <CheckIcon size={13} style={{ color: 'var(--success, #22c55e)' }} /> : <CopyIcon size={13} />}
+                    <span>{copied ? 'Copied to Clipboard' : 'Copy Password'}</span>
                   </button>
 
                   <button
@@ -383,7 +384,7 @@ export default function AppPasswordModal({
                     style={{ fontSize: 12, padding: '7px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
                     title="Generate another 16-character password"
                   >
-                    <span>🔄</span>
+                    <RefreshIcon size={13} />
                     <span>Generate New One</span>
                   </button>
 
@@ -480,8 +481,8 @@ export default function AppPasswordModal({
             <div className="fade-in">
               {/* Direct Provider Action Banner */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.12), rgba(234, 67, 53, 0.08))',
-                border: '1px solid rgba(66, 133, 244, 0.3)',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
                 borderRadius: 14,
                 padding: '16px',
                 marginBottom: 16,
@@ -493,7 +494,7 @@ export default function AppPasswordModal({
               }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <span>🔐</span> Generate Password Manually on {guide.name}
+                    <KeyIcon size={15} style={{ color: 'var(--accent)' }} /> Generate Password Manually on {guide.name}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>
                     Google and major email providers require a dedicated 16-character App Password for IMAP access when 2-Step Verification is enabled.
@@ -569,16 +570,16 @@ export default function AppPasswordModal({
               {/* Tip Box */}
               {guide.tips && (
                 <div style={{
-                  background: 'rgba(251, 191, 36, 0.1)',
-                  border: '1px solid rgba(251, 191, 36, 0.3)',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
                   borderRadius: 10,
                   padding: '10px 14px',
                   fontSize: 11.5,
-                  color: '#fbbf24',
+                  color: 'var(--muted)',
                   marginBottom: 16,
                   lineHeight: 1.4
                 }}>
-                  💡 <strong>Note:</strong> {guide.tips}
+                  <strong style={{ color: 'var(--text)' }}>Note:</strong> {guide.tips}
                 </div>
               )}
 
@@ -639,8 +640,8 @@ export default function AppPasswordModal({
                 border: '1px solid var(--border)',
                 marginBottom: 16
               }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                  📋 Enter Generated App Password
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <DocumentIcon size={14} style={{ color: 'var(--accent)' }} /> Enter Generated App Password
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.4 }}>
                   Paste the password code generated from your {guide.name} security settings page:
@@ -723,7 +724,7 @@ export default function AppPasswordModal({
                   border: '1px solid var(--border)'
                 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                    ❓ Why does Google require an App Password?
+                    Why does Google require an App Password?
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
                     Google has enhanced account security. When 2-Step Verification is turned on, standard mail clients cannot complete a 2FA prompt during automated background IMAP synchronization. Google provides dedicated 16-character App Passwords to allow third-party apps like MailMind to sync securely without sharing your master account password.
@@ -737,7 +738,7 @@ export default function AppPasswordModal({
                   border: '1px solid var(--border)'
                 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                    🔒 Is it safer than my normal password?
+                    Is it safer than my normal password?
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
                     Yes! An App Password only grants access to sync your mailbox via IMAP/SMTP. It does not allow anyone to change your Google Account recovery options, billing, or security settings.
@@ -751,7 +752,7 @@ export default function AppPasswordModal({
                   border: '1px solid var(--border)'
                 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                    🛡️ How do I revoke or delete an App Password?
+                    How do I revoke or delete an App Password?
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
                     You can visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Google App Passwords</a> at any time and click the trash can icon next to &ldquo;MailMind&rdquo;. MailMind will immediately lose access without affecting your main Google Account.
@@ -771,7 +772,7 @@ export default function AppPasswordModal({
                 border: '1px solid var(--border)'
               }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                  🔄 Official Master Password Reset Links
+                  Official Master Password Reset Links
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.4 }}>
                   If you need to reset or recover your master email account password, visit your provider&apos;s official account recovery page:
@@ -820,8 +821,9 @@ export default function AppPasswordModal({
           alignItems: 'center',
           flexShrink: 0
         }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            🔒 Safe &amp; 100% Encrypted IMAP/SMTP Connection
+          <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ShieldCheckIcon size={13} style={{ color: 'var(--accent)' }} />
+            <span>Encrypted IMAP and SMTP Connection</span>
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>

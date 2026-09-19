@@ -15,6 +15,18 @@ import {
 
 import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
 import AppPasswordModal from '@/components/AppPasswordModal';
+import LegalModal from '@/components/LegalModal';
+import {
+  KeyIcon,
+  ShieldCheckIcon,
+  SlidersIcon,
+  CheckIcon,
+  CloseIcon,
+  SendIcon,
+  SettingsIcon,
+  RefreshIcon,
+  DocumentIcon
+} from '@/components/Icons';
 import {
   generateAppPassword,
   generateSecurePassword,
@@ -49,6 +61,8 @@ export default function GoogleAccountModal({
   const [showMonitoringModal, setShowMonitoringModal] = useState(false);
   const [showAppPasswordModal, setShowAppPasswordModal] = useState(false);
   const [appPasswordModalTab, setAppPasswordModalTab] = useState('guide');
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState('privacy');
 
   const openAppPasswordModal = (tab = 'guide') => {
     setAppPasswordModalTab(tab);
@@ -556,7 +570,7 @@ export default function GoogleAccountModal({
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <span>&#128247;</span> Customize Photo
+                  Customize Photo
                 </button>
 
                 <button
@@ -578,7 +592,7 @@ export default function GoogleAccountModal({
                   }}
                   title="Generate or view App Password guides"
                 >
-                  <span>🔑</span> App Passwords
+                  <KeyIcon size={14} /> App Passwords
                 </button>
               </div>
 
@@ -755,7 +769,7 @@ export default function GoogleAccountModal({
                       color: (user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission') ? 'var(--accent)' : '#86efac',
                       fontSize: 12
                     }}>
-                      {(user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission') ? '⚡ Autonomous' : '🛡️ Permission-First'}
+                      {(user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission') ? 'Autonomous' : 'Permission-First'}
                     </span>
                     <button
                       type="button"
@@ -773,9 +787,9 @@ export default function GoogleAccountModal({
                         alignItems: 'center',
                         gap: 4
                       }}
-                      title="Open pop-up bar to change monitoring mode"
+                      title="Change monitoring mode"
                     >
-                      <span>⚙️</span> Change ⇄
+                      <SlidersIcon size={11} /> Change
                     </button>
                   </div>
                 </div>
@@ -913,7 +927,6 @@ export default function GoogleAccountModal({
                         gap: 4
                       }}
                     >
-                      <span>🆕</span>
                       <span>New Account &bull; Create Password</span>
                     </button>
 
@@ -938,7 +951,6 @@ export default function GoogleAccountModal({
                         gap: 4
                       }}
                     >
-                      <span>👤</span>
                       <span>Existing Account &bull; Sign In</span>
                     </button>
                   </div>
@@ -953,7 +965,10 @@ export default function GoogleAccountModal({
                       borderRadius: 8,
                       marginBottom: 12
                     }}>
-                      <div style={{ fontWeight: 600 }}>⚠️ {newAccountError}</div>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <CloseIcon size={13} />
+                        <span>{newAccountError}</span>
+                      </div>
                       {newProvider === 'google' && (
                         <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                           <span style={{ fontSize: 11.5 }}>Need a Google App Password?</span>
@@ -1091,7 +1106,7 @@ export default function GoogleAccountModal({
                                 padding: '1px 4px'
                               }}
                             >
-                              <span>✨</span> Strong Password
+                              <KeyIcon size={12} /> Strong Password
                             </button>
                             <button
                               type="button"
@@ -1106,15 +1121,15 @@ export default function GoogleAccountModal({
                                 border: 'none',
                                 color: 'var(--accent)',
                                 fontSize: 11,
-                                fontWeight: 700,
+                                fontWeight: 600,
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: 3,
+                                gap: 4,
                                 padding: '1px 4px'
                               }}
                             >
-                              <span>⚡</span> 16-Char Google Format
+                              <KeyIcon size={12} /> 16-Char Google Format
                             </button>
                           </div>
                         </div>
@@ -1133,10 +1148,10 @@ export default function GoogleAccountModal({
                               background: 'var(--surface)',
                               border: '1px solid var(--border)',
                               borderRadius: 8,
-                              padding: '8px 36px 8px 10px',
+                              padding: '8px 44px 8px 10px',
                               color: 'var(--text)',
                               fontSize: 12.5,
-                              fontFamily: showNewPassword ? 'monospace' : 'inherit',
+                              fontFamily: showNewPassword ? 'var(--font-mono, monospace)' : 'inherit',
                               boxSizing: 'border-box'
                             }}
                           />
@@ -1151,12 +1166,13 @@ export default function GoogleAccountModal({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              fontSize: 13,
+                              fontSize: 10.5,
+                              fontWeight: 700,
                               color: 'var(--muted)',
                               padding: 2
                             }}
                           >
-                            {showNewPassword ? '🙈' : '👁️'}
+                            {showNewPassword ? 'HIDE' : 'SHOW'}
                           </button>
                         </div>
 
@@ -1191,9 +1207,22 @@ export default function GoogleAccountModal({
                             <span style={{
                               fontSize: 10.5,
                               fontWeight: 600,
-                              color: newPassword === newConfirmPassword ? '#22c55e' : '#ef4444'
+                              color: newPassword === newConfirmPassword ? 'var(--success, #22c55e)' : 'var(--danger, #ef4444)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3
                             }}>
-                              {newPassword === newConfirmPassword ? '✓ Passwords match' : '⚠️ Do not match'}
+                              {newPassword === newConfirmPassword ? (
+                                <>
+                                  <CheckIcon size={11} />
+                                  <span>Passwords match</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CloseIcon size={11} />
+                                  <span>Do not match</span>
+                                </>
+                              )}
                             </span>
                           )}
                         </div>
@@ -1209,10 +1238,10 @@ export default function GoogleAccountModal({
                               background: 'var(--surface)',
                               border: `1px solid ${newConfirmPassword ? (newPassword === newConfirmPassword ? '#22c55e' : '#ef4444') : 'var(--border)'}`,
                               borderRadius: 8,
-                              padding: '8px 36px 8px 10px',
+                              padding: '8px 44px 8px 10px',
                               color: 'var(--text)',
                               fontSize: 12.5,
-                              fontFamily: showNewConfirmPassword ? 'monospace' : 'inherit',
+                              fontFamily: showNewConfirmPassword ? 'var(--font-mono, monospace)' : 'inherit',
                               boxSizing: 'border-box'
                             }}
                           />
@@ -1227,12 +1256,13 @@ export default function GoogleAccountModal({
                               background: 'none',
                               border: 'none',
                               cursor: 'pointer',
-                              fontSize: 13,
+                              fontSize: 10.5,
+                              fontWeight: 700,
                               color: 'var(--muted)',
                               padding: 2
                             }}
                           >
-                            {showNewConfirmPassword ? '🙈' : '👁️'}
+                            {showNewConfirmPassword ? 'HIDE' : 'SHOW'}
                           </button>
                         </div>
                       </div>
@@ -1262,11 +1292,11 @@ export default function GoogleAccountModal({
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: 3,
+                              gap: 4,
                               padding: '1px 4px'
                             }}
                           >
-                            <span>✨</span> Generate Google Password
+                            <KeyIcon size={12} /> Generate Google Password
                           </button>
 
                           <button
@@ -1281,11 +1311,11 @@ export default function GoogleAccountModal({
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: 3,
+                              gap: 4,
                               padding: '1px 4px'
                             }}
                           >
-                            <span>🔑</span> Generator &amp; Guide
+                            <DocumentIcon size={12} /> Generator and Guide
                           </button>
 
                           <a
@@ -1315,10 +1345,10 @@ export default function GoogleAccountModal({
                             background: 'var(--surface)',
                             border: '1px solid var(--border)',
                             borderRadius: 8,
-                            padding: '8px 36px 8px 10px',
+                            padding: '8px 44px 8px 10px',
                             color: 'var(--text)',
                             fontSize: 12.5,
-                            fontFamily: showNewPassword ? 'monospace' : 'inherit',
+                            fontFamily: showNewPassword ? 'var(--font-mono, monospace)' : 'inherit',
                             boxSizing: 'border-box'
                           }}
                         />
@@ -1333,12 +1363,13 @@ export default function GoogleAccountModal({
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            fontSize: 13,
+                            fontSize: 10.5,
+                            fontWeight: 700,
                             color: 'var(--muted)',
                             padding: 2
                           }}
                         >
-                          {showNewPassword ? '🙈' : '👁️'}
+                          {showNewPassword ? 'HIDE' : 'SHOW'}
                         </button>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
@@ -1353,7 +1384,7 @@ export default function GoogleAccountModal({
                           }}
                           style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
                         >
-                          ⚡ Quick Generate
+                          Quick Generate
                         </button>
                       </div>
                     </div>
@@ -1435,7 +1466,9 @@ export default function GoogleAccountModal({
                           cursor: 'pointer'
                         }}
                       >
-                        🛡️ Ask Permission
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <ShieldCheckIcon size={12} /> Ask Permission
+                        </span>
                         <div style={{ fontSize: 9.5, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}>
                           Human approval required
                         </div>
@@ -1455,7 +1488,9 @@ export default function GoogleAccountModal({
                           cursor: 'pointer'
                         }}
                       >
-                        ⚡ Without Permission
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <SendIcon size={12} /> Without Permission
+                        </span>
                         <div style={{ fontSize: 9.5, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}>
                           Auto-reply immediately
                         </div>
@@ -1663,7 +1698,9 @@ export default function GoogleAccountModal({
                     borderRadius: 12,
                     border: '1px dashed var(--border)'
                   }}>
-                    <div style={{ fontSize: 24, marginBottom: 6 }}>📬</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, color: 'var(--muted)' }}>
+                      <SendIcon size={22} />
+                    </div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                       No other accounts connected
                     </div>
@@ -1839,21 +1876,56 @@ export default function GoogleAccountModal({
 
         </div>
 
-        {/* Google-style Footer */}
+        {/* Account Legal Footer */}
         <div style={{
-          padding: '10px 20px',
-          background: 'rgba(0, 0, 0, 0.15)',
+          padding: '12px 20px',
+          background: 'var(--surface2)',
           borderTop: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'center',
+          alignItems: 'center',
           gap: 16,
-          fontSize: 11,
+          fontSize: 11.5,
           color: 'var(--muted)',
           flexShrink: 0
         }}>
-          <a href="#" onClick={e => e.preventDefault()} style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</a>
+          <button
+            type="button"
+            onClick={() => {
+              setLegalModalTab('privacy');
+              setShowLegalModal(true);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--muted)',
+              fontSize: 11.5,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              padding: 0
+            }}
+          >
+            Privacy Policy
+          </button>
           <span>&bull;</span>
-          <a href="#" onClick={e => e.preventDefault()} style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</a>
+          <button
+            type="button"
+            onClick={() => {
+              setLegalModalTab('terms');
+              setShowLegalModal(true);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--muted)',
+              fontSize: 11.5,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              padding: 0
+            }}
+          >
+            Terms of Service
+          </button>
         </div>
       </div>
 
@@ -1899,6 +1971,14 @@ export default function GoogleAccountModal({
             setNewPassword(pwd);
             setNewAccountError('');
           }}
+        />
+      )}
+
+      {showLegalModal && (
+        <LegalModal
+          isOpen={showLegalModal}
+          initialTab={legalModalTab}
+          onClose={() => setShowLegalModal(false)}
         />
       )}
     </div>

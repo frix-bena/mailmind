@@ -43,6 +43,24 @@ import {
   loadNotificationSettings,
   saveNotificationSettings
 } from '@/lib/browser-notifications';
+import LegalModal from '@/components/LegalModal';
+import {
+  CheckIcon,
+  CloseIcon,
+  KeyIcon,
+  ShieldIcon,
+  ShieldCheckIcon,
+  SunIcon,
+  MoonIcon,
+  PaletteIcon,
+  SlidersIcon,
+  SendIcon,
+  SettingsIcon,
+  BellIcon,
+  DocumentIcon,
+  RefreshIcon,
+  MenuIcon
+} from '@/components/Icons';
 
 function Section({ title, children }) {
   return (
@@ -106,6 +124,8 @@ export default function SettingsPage() {
   const [monitoringModalOpen, setMonitoringModalOpen] = useState(false);
   const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
   const [appPasswordModalTab, setAppPasswordModalTab] = useState('guide');
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState('terms');
 
   // Password Management States for Settings
   const [newAccountPassword, setNewAccountPassword] = useState('');
@@ -185,9 +205,9 @@ export default function SettingsPage() {
   }, [router]);
 
   const tones = [
-    { id: 'professional', label: '💼 Professional' },
-    { id: 'casual',       label: '😊 Casual' },
-    { id: 'brief',        label: '⚡ Brief' },
+    { id: 'professional', label: 'Professional' },
+    { id: 'casual',       label: 'Conversational' },
+    { id: 'brief',        label: 'Concise' },
   ];
 
   const handleFileUpload = (e) => {
@@ -329,7 +349,7 @@ export default function SettingsPage() {
         setBrowserPermission(perm);
       }
       await sendUnifiedDeviceNotification({
-        title: '🔔 MailMind Agent Active',
+        title: 'MailMind Agent Active',
         message: `Device notifications are working for ${user?.email || 'your account'}.`,
         urgency: 'normal',
         sound: notifSound,
@@ -466,13 +486,13 @@ export default function SettingsPage() {
             aria-label="Toggle navigation menu"
             title="Menu"
           >
-            ☰
+            <MenuIcon size={16} />
           </button>
-          <span className="topbar-title">⚙️ Settings</span>
+          <span className="topbar-title">Settings</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <ThemeToggle showLabel={true} />
             {saved ? (
-              <span className="badge badge-low fade-in" style={{ fontSize: 11, padding: '4px 10px' }}>✅ Saved</span>
+              <span className="badge badge-low fade-in" style={{ fontSize: 11, padding: '4px 10px' }}>Saved</span>
             ) : (
               <button
                 type="button"
@@ -485,7 +505,7 @@ export default function SettingsPage() {
                 {saving ? (
                   <><span className="spinner" style={{ width: 11, height: 11 }} /> Saving…</>
                 ) : (
-                  <>💾 Save</>
+                  <><CheckIcon size={12} /> Save</>
                 )}
               </button>
             )}
@@ -573,7 +593,7 @@ export default function SettingsPage() {
                       onClick={() => setShowCustomizer(!showCustomizer)}
                       style={{ fontSize: 12, cursor: 'pointer' }}
                     >
-                      📷 {showCustomizer ? 'Hide Profile Options' : 'Edit Name & Photo'}
+                      {showCustomizer ? 'Hide Profile Options' : 'Edit Name and Avatar'}
                     </button>
                   </div>
                 </div>
@@ -584,7 +604,7 @@ export default function SettingsPage() {
                     onClick={handleTestConnection}
                     disabled={testingConnection}
                   >
-                    {testingConnection ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Testing…</> : '⚡ Test Connection'}
+                    {testingConnection ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Testing…</> : 'Test Connection'}
                   </button>
                 </div>
               </div>
@@ -662,7 +682,7 @@ export default function SettingsPage() {
                             cursor: 'pointer'
                           }}
                         >
-                          📁 Upload Photo File
+                          Upload Photo
                           <input
                             type="file"
                             accept="image/*"
@@ -676,16 +696,16 @@ export default function SettingsPage() {
                           onClick={() => setAvatar('')}
                           className="btn btn-ghost btn-sm"
                           style={{ fontSize: 11 }}
-                          title="Reset to automatic Google profile or initials"
+                          title="Reset to automatic profile initials"
                         >
-                          🔄 Auto Google
+                          Reset Avatar
                         </button>
                       </div>
                     </div>
 
                     <div>
                       <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
-                        Google Material Design Avatar Color:
+                        Avatar Initial Base Color:
                       </label>
                       <div style={{
                         display: 'grid',
@@ -737,9 +757,13 @@ export default function SettingsPage() {
               padding: '12px 16px',
               fontSize: 13.5,
               color: testResult.success ? '#86efac' : '#fca5a5',
-              marginBottom: 24
+              marginBottom: 24,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
             }}>
-              {testResult.success ? '✅' : '⚠️'} {testResult.message}
+              {testResult.success ? <CheckIcon size={16} /> : <CloseIcon size={16} />}
+              <span>{testResult.message}</span>
             </div>
           )}
 
@@ -747,173 +771,230 @@ export default function SettingsPage() {
           <div id="theme-settings" style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
               <div>
-                <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
-                  🎨 Appearance &amp; Theme
+                <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <PaletteIcon size={16} /> Appearance and Theme Studio
                 </h2>
-                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
-                  Switch between Light Mode, Dark Mode, or fully customize your color palette, presets, and styling.
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>
+                  Warm architectural dark tones, archival paper light mode, and handcrafted artisanal palettes.
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="badge badge-purple" style={{ fontSize: 11, textTransform: 'capitalize' }}>
-                  Current: {theme.mode === 'custom' ? (CUSTOM_PRESETS.find(p => p.id === theme.preset)?.name || 'Custom Palette') : `${theme.mode} Mode`}
+                  Active: {theme.mode === 'custom' ? (CUSTOM_PRESETS.find(p => p.id === theme.preset)?.name || 'Custom Palette') : `${theme.mode} Mode`}
                 </span>
                 {theme.mode === THEME_MODES.CUSTOM && (
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
-                    style={{ fontSize: 11, padding: '3px 8px' }}
+                    style={{ fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
                     onClick={() => setMode(THEME_MODES.DARK)}
                     title="Reset theme to default Dark mode"
                   >
-                    🔄 Reset Default Dark
+                    <RefreshIcon size={12} /> Reset to Default Dark
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="card" style={{ padding: 22 }}>
-              {/* 3 Main Theme Mode Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 16 }}>
-                {/* Dark Mode Card */}
-                <div
-                  onClick={() => setMode(THEME_MODES.DARK)}
-                  style={{
-                    border: `2px solid ${theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'var(--border)'}`,
-                    background: theme.mode === THEME_MODES.DARK ? 'var(--accent-glow)' : 'var(--surface2)',
-                    borderRadius: 14,
-                    padding: '16px 18px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                    boxShadow: theme.mode === THEME_MODES.DARK ? '0 4px 18px var(--accent-glow)' : 'none'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 24 }}>🌙</span>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Dark Mode</span>
-                    </div>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%',
-                      border: `2px solid ${theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'var(--muted)'}`,
-                      background: theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 11, fontWeight: 'bold'
-                    }}>
-                      {theme.mode === THEME_MODES.DARK ? '✓' : ''}
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.4 }}>
-                    Obsidian dark background with deep purple neon accents. Easy on the eyes.
-                  </p>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#090a10', border: '1px solid rgba(255,255,255,0.2)' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#161622', border: '1px solid rgba(255,255,255,0.2)' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#6c63ff' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f1f1f5' }} />
-                  </div>
-                </div>
-
-                {/* Light Mode Card */}
-                <div
-                  onClick={() => setMode(THEME_MODES.LIGHT)}
-                  style={{
-                    border: `2px solid ${theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'var(--border)'}`,
-                    background: theme.mode === THEME_MODES.LIGHT ? 'var(--accent-glow)' : 'var(--surface2)',
-                    borderRadius: 14,
-                    padding: '16px 18px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                    boxShadow: theme.mode === THEME_MODES.LIGHT ? '0 4px 18px var(--accent-glow)' : 'none'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 24 }}>☀️</span>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Light Mode</span>
-                    </div>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%',
-                      border: `2px solid ${theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'var(--muted)'}`,
-                      background: theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 11, fontWeight: 'bold'
-                    }}>
-                      {theme.mode === THEME_MODES.LIGHT ? '✓' : ''}
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.4 }}>
-                    Crisp white &amp; soft slate cards with high contrast indigo typography.
-                  </p>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f4f6fb', border: '1px solid rgba(0,0,0,0.1)' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(0,0,0,0.1)' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#5b4ef0' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#0f172a' }} />
-                  </div>
-                </div>
-
-                {/* Custom Theme Card */}
-                <div
-                  onClick={() => setMode(THEME_MODES.CUSTOM)}
-                  style={{
-                    border: `2px solid ${theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'var(--border)'}`,
-                    background: theme.mode === THEME_MODES.CUSTOM ? 'var(--accent-glow)' : 'var(--surface2)',
-                    borderRadius: 14,
-                    padding: '16px 18px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                    boxShadow: theme.mode === THEME_MODES.CUSTOM ? '0 4px 18px var(--accent-glow)' : 'none'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 24 }}>✨</span>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Custom Palette</span>
-                    </div>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: '50%',
-                      border: `2px solid ${theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'var(--muted)'}`,
-                      background: theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 11, fontWeight: 'bold'
-                    }}>
-                      {theme.mode === THEME_MODES.CUSTOM ? '✓' : ''}
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.4 }}>
-                    Curated presets (Cyberpunk, Emerald, Sunset, Ocean) or customize hex colors.
-                  </p>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#00f0ff' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#10b981' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f43f5e' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#f59e0b' }} />
-                    <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#a855f7' }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Custom Theme Controls - Expands when Custom mode is selected */}
-              {theme.mode === THEME_MODES.CUSTOM && (
-                <div className="fade-in" style={{
-                  marginTop: 18,
-                  paddingTop: 18,
-                  borderTop: '1px solid var(--border)'
+            <div className="card" style={{ padding: 24 }}>
+              {/* Asymmetric Studio Grid: Left = Material Specimen Canvas, Right = Mode & Palette Workbench */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, alignItems: 'start' }}>
+                
+                {/* Left Panel: Material Specimen & Typography Canvas */}
+                <div style={{
+                  background: 'var(--surface2)',
+                  borderRadius: 'var(--radius)',
+                  border: '1px solid var(--border)',
+                  padding: 20,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16
                 }}>
-                  {/* Curated Presets Grid */}
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-                      1. Select a Curated Theme Preset:
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)' }}>
+                      Material Specimen
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 10.5, color: 'var(--accent)', background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 4 }}>
+                      Active Root Styles
+                    </span>
+                  </div>
+
+                  {/* Editorial Typography Specimen */}
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Editorial Display Font (Newsreader)
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-                      Designer-crafted palettes engineered for contrast, aesthetic vibrancy, and focus.
+                    <div style={{ fontFamily: 'var(--font-serif, "Newsreader", Georgia, serif)', fontSize: 22, fontWeight: 500, color: 'var(--text)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+                      The Art of Thoughtful Correspondence
+                    </div>
+                  </div>
+
+                  {/* UI Body Specimen */}
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Humanist UI Sans (Plus Jakarta Sans)
+                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>
+                      MailMind synthesizes high-signal inbox intelligence with contextual craftsmanship. Natural phrasing, human cadences, and zero generic boilerplate.
+                    </p>
+                  </div>
+
+                  {/* Live Interactive Sample Email Preview Card */}
+                  <div style={{
+                    background: 'var(--surface)',
+                    borderRadius: 'var(--radius)',
+                    padding: 14,
+                    border: '1px solid var(--border2)',
+                    boxShadow: 'var(--shadow)',
+                    marginTop: 4
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: 'var(--accent)', color: '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 700, fontSize: 13
+                        }}>
+                          AM
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
+                            Alex Morgan
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                            Quarterly Strategy Review
+                          </div>
+                        </div>
+                      </div>
+                      <span className="badge badge-low" style={{ fontSize: 10.5 }}>Medium</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
+                    <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+                      Reviewed the revised scope. Let us sync tomorrow to finalize delivery checkpoints.
+                    </p>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                      <span className="badge badge-purple" style={{ fontSize: 10.5 }}>Draft Prepared</span>
+                      <button type="button" className="btn btn-primary btn-sm" style={{ fontSize: 11.5, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <SendIcon size={12} /> Send Reply
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Active Tokens Monospace Strip */}
+                  <div style={{
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: 10.5,
+                    color: 'var(--muted2)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    paddingTop: 8,
+                    borderTop: '1px solid var(--border)'
+                  }}>
+                    <span>accent: <strong style={{ color: 'var(--text)' }}>{theme.customSettings?.accent || (theme.mode === 'light' ? '#b4512b' : '#c4683c')}</strong></span>
+                    <span>radius: <strong style={{ color: 'var(--text)' }}>{theme.customSettings?.radius || '10px'}</strong></span>
+                  </div>
+                </div>
+
+                {/* Right Panel: Modes & Curated Artisanal Presets */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  
+                  {/* Mode Selector Row */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)', marginBottom: 10 }}>
+                      Theme Mode
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                      
+                      {/* Dark Mode Tile */}
+                      <button
+                        type="button"
+                        onClick={() => setMode(THEME_MODES.DARK)}
+                        style={{
+                          background: theme.mode === THEME_MODES.DARK ? 'var(--accent-glow)' : 'var(--surface2)',
+                          border: `1.5px solid ${theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 'var(--radius)',
+                          padding: '12px 10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <MoonIcon size={18} style={{ color: theme.mode === THEME_MODES.DARK ? 'var(--accent)' : 'var(--muted)' }} />
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Graphite Dark</span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#131518', border: '1px solid rgba(255,255,255,0.15)' }} />
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#c4683c' }} />
+                        </div>
+                      </button>
+
+                      {/* Light Mode Tile */}
+                      <button
+                        type="button"
+                        onClick={() => setMode(THEME_MODES.LIGHT)}
+                        style={{
+                          background: theme.mode === THEME_MODES.LIGHT ? 'var(--accent-glow)' : 'var(--surface2)',
+                          border: `1.5px solid ${theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 'var(--radius)',
+                          padding: '12px 10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <SunIcon size={18} style={{ color: theme.mode === THEME_MODES.LIGHT ? 'var(--accent)' : 'var(--muted)' }} />
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Archival Linen</span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f6f5f0', border: '1px solid rgba(0,0,0,0.15)' }} />
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#b4512b' }} />
+                        </div>
+                      </button>
+
+                      {/* Custom Mode Tile */}
+                      <button
+                        type="button"
+                        onClick={() => setMode(THEME_MODES.CUSTOM)}
+                        style={{
+                          background: theme.mode === THEME_MODES.CUSTOM ? 'var(--accent-glow)' : 'var(--surface2)',
+                          border: `1.5px solid ${theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 'var(--radius)',
+                          padding: '12px 10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <SlidersIcon size={18} style={{ color: theme.mode === THEME_MODES.CUSTOM ? 'var(--accent)' : 'var(--muted)' }} />
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Artisanal Studio</span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#388e68' }} />
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#467694' }} />
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#b37930' }} />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Artisanal Curated Presets */}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)', marginBottom: 10 }}>
+                      Curated Palettes
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {CUSTOM_PRESETS.map((p) => {
                         const isSelected = theme.preset === p.id && (!theme.customSettings || theme.customSettings._usePresetValues !== false);
                         return (
@@ -924,8 +1005,8 @@ export default function SettingsPage() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              padding: '12px 14px',
-                              borderRadius: 10,
+                              padding: '10px 14px',
+                              borderRadius: 'var(--radius)',
                               background: isSelected ? 'var(--accent-glow)' : 'var(--surface2)',
                               border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
                               cursor: 'pointer',
@@ -933,21 +1014,24 @@ export default function SettingsPage() {
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                              <span style={{ fontSize: 20, flexShrink: 0 }}>{p.emoji}</span>
+                              <span style={{
+                                width: 14, height: 14, borderRadius: '50%',
+                                background: p.accent, flexShrink: 0,
+                                border: '1px solid rgba(255,255,255,0.2)'
+                              }} />
                               <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
                                   {p.name}
                                 </div>
-                                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>
+                                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {p.desc}
                                 </div>
                               </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0, marginLeft: 8 }}>
-                              <span style={{ width: 12, height: 12, borderRadius: '50%', background: p.accent }} />
-                              <span style={{ width: 12, height: 12, borderRadius: '50%', background: p.bg, border: '1px solid rgba(255,255,255,0.2)' }} />
-                              {isSelected && <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: 12, marginLeft: 4 }}>✓</span>}
+                              <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.bg, border: '1px solid rgba(255,255,255,0.15)' }} />
+                              {isSelected && <CheckIcon size={14} style={{ color: 'var(--accent)', marginLeft: 4 }} />}
                             </div>
                           </div>
                         );
@@ -955,27 +1039,27 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Custom Fine-Tuning: Accent Color & Tone */}
-                  <div style={{
-                    background: 'var(--surface2)',
-                    borderRadius: 12,
-                    padding: '18px 20px',
-                    border: '1px solid var(--border)',
-                    marginBottom: 20
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 12 }}>
-                      2. Fine-Tune Custom Accent Color &amp; Background:
-                    </div>
+                  {/* Custom Mode Fine-Tuning Controls */}
+                  {theme.mode === THEME_MODES.CUSTOM && (
+                    <div className="fade-in" style={{
+                      background: 'var(--surface2)',
+                      borderRadius: 'var(--radius)',
+                      padding: 16,
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 14
+                    }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)' }}>
+                        Palette Customizer
+                      </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
-                      {/* Accent Color Picker */}
+                      {/* Accent Color Swatches */}
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
-                          Primary Accent Color:
-                        </label>
-                        
-                        {/* Swatch grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 12 }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
+                          Accent Swatch
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 10 }}>
                           {ACCENT_SWATCHES.map((swatch) => {
                             const currentAccent = (theme.customSettings?.accent || '').toLowerCase();
                             const isCur = currentAccent === swatch.hex.toLowerCase();
@@ -991,39 +1075,34 @@ export default function SettingsPage() {
                                       _usePresetValues: false,
                                       accent: swatch.hex,
                                       accentHover: swatch.hex,
-                                      accentGlow: hexToRgba(swatch.hex, 0.22)
+                                      accentGlow: hexToRgba(swatch.hex, 0.16)
                                     }
                                   });
                                 }}
                                 title={swatch.name}
                                 style={{
-                                  height: 32,
-                                  borderRadius: 8,
+                                  height: 28,
+                                  borderRadius: 6,
                                   background: swatch.hex,
-                                  border: isCur ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.2)',
-                                  boxShadow: isCur ? '0 0 0 2px var(--text)' : 'none',
+                                  border: isCur ? '2px solid var(--text)' : '1px solid rgba(0,0,0,0.2)',
                                   cursor: 'pointer',
-                                  transform: isCur ? 'scale(1.08)' : 'scale(1)',
-                                  transition: 'transform 0.15s ease',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  color: '#fff',
-                                  fontSize: 12,
-                                  fontWeight: 'bold'
+                                  color: '#fff'
                                 }}
                               >
-                                {isCur ? '✓' : ''}
+                                {isCur && <CheckIcon size={12} />}
                               </button>
                             );
                           })}
                         </div>
 
-                        {/* Custom Hex / Color Input */}
+                        {/* Hex Picker Input */}
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input
                             type="color"
-                            value={theme.customSettings?.accent || '#6c63ff'}
+                            value={theme.customSettings?.accent || '#c4683c'}
                             onChange={(e) => {
                               const val = e.target.value;
                               updateTheme({
@@ -1033,15 +1112,15 @@ export default function SettingsPage() {
                                   _usePresetValues: false,
                                   accent: val,
                                   accentHover: val,
-                                  accentGlow: hexToRgba(val, 0.22)
+                                  accentGlow: hexToRgba(val, 0.16)
                                 }
                               });
                             }}
                             style={{
-                              width: 38,
-                              height: 36,
+                              width: 34,
+                              height: 32,
                               padding: 2,
-                              borderRadius: 8,
+                              borderRadius: 6,
                               background: 'var(--surface)',
                               border: '1px solid var(--border)',
                               cursor: 'pointer'
@@ -1050,7 +1129,7 @@ export default function SettingsPage() {
                           />
                           <input
                             type="text"
-                            value={theme.customSettings?.accent || '#6c63ff'}
+                            value={theme.customSettings?.accent || '#c4683c'}
                             onChange={(e) => {
                               const val = e.target.value;
                               updateTheme({
@@ -1060,20 +1139,20 @@ export default function SettingsPage() {
                                   _usePresetValues: false,
                                   accent: val,
                                   accentHover: val,
-                                  accentGlow: hexToRgba(val, 0.22)
+                                  accentGlow: hexToRgba(val, 0.16)
                                 }
                               });
                             }}
-                            placeholder="#6c63ff"
+                            placeholder="#c4683c"
                             style={{
                               flex: 1,
                               background: 'var(--surface)',
                               border: '1px solid var(--border)',
-                              borderRadius: 8,
-                              padding: '8px 12px',
+                              borderRadius: 6,
+                              padding: '6px 10px',
                               color: 'var(--text)',
-                              fontSize: 13,
-                              fontFamily: 'monospace'
+                              fontSize: 12,
+                              fontFamily: 'var(--font-mono, monospace)'
                             }}
                           />
                         </div>
@@ -1081,12 +1160,11 @@ export default function SettingsPage() {
 
                       {/* Background Tone Selector */}
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
-                          Background Base Tone:
-                        </label>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 12 }}>
-                          {BACKGROUND_TONES.map((tone) => {
+                        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
+                          Background Slate Tone
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+                          {BACKGROUND_TONES.slice(0, 4).map((tone) => {
                             const isSel = (theme.customSettings?.bgToneId || 'dark-default') === tone.id;
                             return (
                               <button
@@ -1106,20 +1184,20 @@ export default function SettingsPage() {
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: 8,
-                                  padding: '7px 10px',
-                                  borderRadius: 8,
+                                  padding: '6px 10px',
+                                  borderRadius: 6,
                                   background: isSel ? 'var(--accent-glow)' : 'var(--surface)',
                                   border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
                                   color: 'var(--text)',
-                                  fontSize: 12,
-                                  fontWeight: 600,
+                                  fontSize: 11.5,
+                                  fontWeight: 500,
                                   cursor: 'pointer',
                                   textAlign: 'left'
                                 }}
                               >
                                 <span style={{
-                                  width: 14,
-                                  height: 14,
+                                  width: 12,
+                                  height: 12,
                                   borderRadius: '50%',
                                   background: tone.color,
                                   border: '1px solid rgba(128,128,128,0.4)',
@@ -1132,98 +1210,11 @@ export default function SettingsPage() {
                             );
                           })}
                         </div>
-
-                        {/* Corner Radius Selector */}
-                        <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
-                            Corner Radius:
-                          </label>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {[
-                              { id: '4px', label: 'Sharp (4px)' },
-                              { id: '8px', label: 'Compact (8px)' },
-                              { id: '12px', label: 'Medium (12px)' },
-                              { id: '18px', label: 'Rounded (18px)' }
-                            ].map((rad) => {
-                              const isRadSel = (theme.customSettings?.radius || '12px') === rad.id;
-                              return (
-                                <button
-                                  key={rad.id}
-                                  type="button"
-                                  onClick={() => {
-                                    updateTheme({
-                                      mode: THEME_MODES.CUSTOM,
-                                      customSettings: {
-                                        ...theme.customSettings,
-                                        _usePresetValues: false,
-                                        radius: rad.id
-                                      }
-                                    });
-                                  }}
-                                  style={{
-                                    flex: 1,
-                                    padding: '6px 4px',
-                                    borderRadius: rad.id,
-                                    background: isRadSel ? 'var(--accent)' : 'var(--surface)',
-                                    color: isRadSel ? '#ffffff' : 'var(--text)',
-                                    border: `1px solid ${isRadSel ? 'var(--accent)' : 'var(--border)'}`,
-                                    fontSize: 11.5,
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  {rad.label.split(' ')[0]}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Live Real-time Theme Preview Card */}
-                  <div style={{
-                    background: 'var(--surface)',
-                    borderRadius: 'var(--radius)',
-                    padding: 16,
-                    border: '1px solid var(--border2)',
-                    boxShadow: 'var(--shadow)'
-                  }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                      Live Component Preview:
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{
-                          width: 36, height: 36, borderRadius: '50%',
-                          background: 'var(--accent)', color: '#fff',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 'bold', fontSize: 14
-                        }}>
-                          M
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-                            Alex Morgan
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                            Re: Quarterly Project Roadmap Review
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span className="badge badge-purple" style={{ fontSize: 10.5 }}>💬 Suggested Reply</span>
-                        <span className="badge badge-low" style={{ fontSize: 10.5 }}>● Low</span>
-                        <button type="button" className="btn btn-primary btn-sm" style={{ fontSize: 11.5, padding: '5px 12px' }}>
-                          Send Reply 🚀
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -1350,7 +1341,7 @@ export default function SettingsPage() {
                               onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; }}
                               onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; }}
                             >
-                              ✕
+                              <CloseIcon size={12} />
                             </button>
                           )}
                         </div>
@@ -1363,12 +1354,12 @@ export default function SettingsPage() {
           </Section>
 
           {/* App Passwords & Security Helper Section */}
-          <Section title="🔐 App Passwords & Mailbox Security">
+          <Section title="App Passwords and Mailbox Security">
             <div style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
-                    Manual App Password Setup &amp; Security Assistant
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                    Manual App Password Setup and Security Assistant
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
                     Generate a 16-character App Password manually inside Google Account Security to keep MailMind connected without errors.
@@ -1381,7 +1372,7 @@ export default function SettingsPage() {
                     onClick={() => openAppPasswordModal('generator')}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
                   >
-                    <span>⚡</span> Generate App Password
+                    <KeyIcon size={14} /> Generate App Password
                   </button>
                   <button
                     type="button"
@@ -1389,7 +1380,7 @@ export default function SettingsPage() {
                     onClick={() => openAppPasswordModal('recovery')}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 12px' }}
                   >
-                    <span>🔄</span> Account Recovery
+                    <RefreshIcon size={14} /> Account Recovery
                   </button>
                   <button
                     type="button"
@@ -1397,16 +1388,16 @@ export default function SettingsPage() {
                     onClick={() => openAppPasswordModal('guide')}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 12px' }}
                   >
-                    <span>📖</span> Setup Guide
+                    <DocumentIcon size={14} /> Setup Guide
                   </button>
                 </div>
               </div>
 
               {/* Google App Passwords Direct Banner */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(234, 67, 53, 0.06))',
-                border: '1px solid rgba(66, 133, 244, 0.3)',
-                borderRadius: 14,
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
                 padding: '14px 18px',
                 marginBottom: 18,
                 display: 'flex',
@@ -1416,10 +1407,11 @@ export default function SettingsPage() {
                 flexWrap: 'wrap'
               }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🔑</span> Google App Password Generator &amp; Setup (Any Email)
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <KeyIcon size={15} style={{ color: 'var(--accent)' }} />
+                    Google App Password Generator and Setup (Any Email)
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.45 }}>
                     No email is restricted. Generate a standard 16-character Google-format App Password directly here, or create one in Google Security.
                   </div>
                 </div>
@@ -1431,12 +1423,12 @@ export default function SettingsPage() {
                       const pwd = generateAppPassword({ format: 'spaced', length: 16 });
                       setNewAccountPassword(pwd);
                       setShowNewAccountPassword(true);
-                      setPwdUpdateSuccess('✨ 16-character Google App Password generated! Click "Save Password" below to apply.');
+                      setPwdUpdateSuccess('16-character Google App Password generated. Click "Save Password" below to apply.');
                       setTimeout(() => setPwdUpdateSuccess(''), 4000);
                     }}
-                    style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontWeight: 700 }}
+                    style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', fontWeight: 600 }}
                   >
-                    <span>⚡ Generate Password</span>
+                    <KeyIcon size={13} /> Generate Password
                   </button>
                   <a
                     href="https://myaccount.google.com/apppasswords"
@@ -1453,16 +1445,16 @@ export default function SettingsPage() {
               {/* Manual Password Update Form */}
               <div style={{
                 background: 'var(--surface2)',
-                borderRadius: 14,
+                borderRadius: 'var(--radius)',
                 padding: '18px 20px',
                 border: '1px solid var(--border)',
                 marginBottom: 20
               }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>
                   Update Password / App Password for Active Account ({user?.email || 'Current Account'}):
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-                  Paste or generate the 16-character App Password (spaces like <code style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>abcd efgh ijkl mnop</code> will be normalized automatically).
+                  Paste or generate the 16-character App Password (spaces like <code style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono, monospace)' }}>abcd efgh ijkl mnop</code> will be normalized automatically).
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1477,10 +1469,10 @@ export default function SettingsPage() {
                         background: 'var(--surface)',
                         border: '1px solid var(--border)',
                         borderRadius: 8,
-                        padding: '9px 36px 9px 12px',
+                        padding: '9px 44px 9px 12px',
                         color: 'var(--text)',
                         fontSize: 13.5,
-                        fontFamily: showNewAccountPassword ? 'monospace' : 'inherit',
+                        fontFamily: showNewAccountPassword ? 'var(--font-mono, monospace)' : 'inherit',
                         boxSizing: 'border-box'
                       }}
                     />
@@ -1489,18 +1481,20 @@ export default function SettingsPage() {
                       onClick={() => setShowNewAccountPassword(!showNewAccountPassword)}
                       style={{
                         position: 'absolute',
-                        right: 8,
+                        right: 10,
                         top: '50%',
                         transform: 'translateY(-50%)',
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        fontSize: 14,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
                         color: 'var(--muted)',
-                        padding: 2
+                        padding: '2px 4px'
                       }}
                     >
-                      {showNewAccountPassword ? '🙈' : '👁️'}
+                      {showNewAccountPassword ? 'HIDE' : 'SHOW'}
                     </button>
                   </div>
 
@@ -1511,12 +1505,12 @@ export default function SettingsPage() {
                       const pwd = generateAppPassword({ format: 'spaced', length: 16 });
                       setNewAccountPassword(pwd);
                       setShowNewAccountPassword(true);
-                      setPwdUpdateSuccess('✨ 16-character Google App Password generated! Click "Save Password" to apply.');
+                      setPwdUpdateSuccess('16-character Google App Password generated. Click "Save to Active Account" to apply.');
                       setTimeout(() => setPwdUpdateSuccess(''), 3000);
                     }}
                     style={{ fontSize: 12.5, padding: '8px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
                   >
-                    <span>⚡ Quick Generate</span>
+                    Quick Generate
                   </button>
 
                   <button
@@ -1552,7 +1546,7 @@ export default function SettingsPage() {
                           });
                         }
 
-                        setPwdUpdateSuccess(`Applied new App Password (${clean.slice(0, 4)}••••) to ${user.email}!`);
+                        setPwdUpdateSuccess(`Applied new App Password (${clean.slice(0, 4)}••••) to ${user.email}`);
                         setNewAccountPassword('');
                         setTimeout(() => setPwdUpdateSuccess(''), 3500);
                       } catch (err) {
@@ -1562,9 +1556,9 @@ export default function SettingsPage() {
                       }
                     }}
                     disabled={savingNewPassword || !newAccountPassword.trim()}
-                    style={{ fontSize: 12, padding: '9px 16px', borderRadius: 8, fontWeight: 700 }}
+                    style={{ fontSize: 12, padding: '9px 16px', borderRadius: 8, fontWeight: 600 }}
                   >
-                    {savingNewPassword ? 'Updating…' : '⚡ Save to Active Account'}
+                    {savingNewPassword ? 'Updating…' : 'Save to Active Account'}
                   </button>
                 </div>
               </div>
@@ -1572,34 +1566,34 @@ export default function SettingsPage() {
               {/* Password Feedback Banners */}
               {pwdUpdateSuccess && (
                 <div style={{
-                  background: 'rgba(34, 197, 94, 0.15)',
+                  background: 'rgba(34, 197, 94, 0.12)',
                   border: '1px solid var(--success)',
                   color: '#86efac',
                   fontSize: 12.5,
                   padding: '9px 14px',
-                  borderRadius: 10,
+                  borderRadius: 8,
                   marginBottom: 16,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8
                 }}>
-                  <span>✅</span> {pwdUpdateSuccess}
+                  <CheckIcon size={14} /> {pwdUpdateSuccess}
                 </div>
               )}
               {pwdUpdateError && (
                 <div style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
+                  background: 'rgba(239, 68, 68, 0.12)',
                   border: '1px solid var(--danger)',
                   color: '#fca5a5',
                   fontSize: 12.5,
                   padding: '9px 14px',
-                  borderRadius: 10,
+                  borderRadius: 8,
                   marginBottom: 16,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8
                 }}>
-                  <span>⚠️</span> {pwdUpdateError}
+                  <CloseIcon size={14} /> {pwdUpdateError}
                 </div>
               )}
 
@@ -1689,15 +1683,15 @@ export default function SettingsPage() {
           </Section>
 
           {/* Monitoring Mode & Agent Reply Policy */}
-          <Section title="Agent Monitoring & Reply Permission Mode">
+          <Section title="Agent Monitoring and Reply Policy">
             <div style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
-                    Inbox Monitoring &amp; Reply Policy
+                    Inbox Monitoring and Reply Policy
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
-                    Choose whether MailMind must ask for permission before sending replies, or if it can reply autonomously without permission.
+                    Choose whether MailMind must ask for permission before sending replies, or if it can reply autonomously.
                   </div>
                 </div>
                 <button
@@ -1712,9 +1706,9 @@ export default function SettingsPage() {
                     padding: '6px 14px',
                     fontWeight: 600
                   }}
-                  title="Open pop-up bar to switch monitoring mode"
+                  title="Open pop-up to switch monitoring mode"
                 >
-                  <span>⚙️</span> Open Mode Dialog
+                  <SlidersIcon size={14} /> Open Mode Dialog
                 </button>
               </div>
 
@@ -1727,14 +1721,11 @@ export default function SettingsPage() {
                     background: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission')
                       ? 'var(--accent-glow)'
                       : 'var(--surface2)',
-                    border: `2px solid ${(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: 14,
+                    border: `1.5px solid ${(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 'var(--radius)',
                     padding: '18px 20px',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
-                    boxShadow: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission')
-                      ? '0 4px 18px var(--accent-glow)'
-                      : 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -1744,9 +1735,15 @@ export default function SettingsPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 24 }}>🛡️</span>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: 'var(--surface)', border: '1px solid var(--border)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <ShieldCheckIcon size={20} style={{ color: 'var(--accent)' }} />
+                        </div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
                             Ask Permission
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
@@ -1755,21 +1752,21 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <div style={{
-                        width: 22, height: 22, borderRadius: '50%',
-                        border: `2px solid ${(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
+                        width: 20, height: 20, borderRadius: '50%',
+                        border: `1.5px solid ${(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
                         background: (monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? 'var(--accent)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: '#fff', fontSize: 11, fontWeight: 'bold'
                       }}>
-                        {(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? '✓' : ''}
+                        {(monitoringMode !== 'auto_reply' && monitoringMode !== 'without_permission') ? <CheckIcon size={12} /> : null}
                       </div>
                     </div>
                     <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.45 }}>
-                      The AI prepares draft replies. No email is sent without your explicit review and one-click approval in your Inbox.
+                      The AI prepares draft replies. No email is dispatched without your explicit review and one-click approval in your Inbox.
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <span className="badge badge-low" style={{ fontSize: 10.5 }}>🔒 100% Safe</span>
+                    <span className="badge badge-low" style={{ fontSize: 10.5 }}>Strict Approval</span>
                     <span className="badge" style={{ fontSize: 10.5, background: 'var(--surface)', border: '1px solid var(--border)' }}>Review Drafts First</span>
                   </div>
                 </div>
@@ -1781,14 +1778,11 @@ export default function SettingsPage() {
                     background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
                       ? 'var(--accent-glow)'
                       : 'var(--surface2)',
-                    border: `2px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: 14,
+                    border: `1.5px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 'var(--radius)',
                     padding: '18px 20px',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
-                    boxShadow: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission')
-                      ? '0 4px 18px var(--accent-glow)'
-                      : 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -1798,9 +1792,15 @@ export default function SettingsPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 24 }}>⚡</span>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: 'var(--surface)', border: '1px solid var(--border)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <SendIcon size={18} style={{ color: 'var(--accent)' }} />
+                        </div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
                             Without Permission
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
@@ -1809,13 +1809,13 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <div style={{
-                        width: 22, height: 22, borderRadius: '50%',
-                        border: `2px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
+                        width: 20, height: 20, borderRadius: '50%',
+                        border: `1.5px solid ${(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'var(--muted)'}`,
                         background: (monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? 'var(--accent)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: '#fff', fontSize: 11, fontWeight: 'bold'
                       }}>
-                        {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? '✓' : ''}
+                        {(monitoringMode === 'auto_reply' || monitoringMode === 'without_permission') ? <CheckIcon size={12} /> : null}
                       </div>
                     </div>
                     <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: 0, lineHeight: 1.45 }}>
@@ -1823,8 +1823,8 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <span className="badge badge-purple" style={{ fontSize: 10.5 }}>⚡ Autonomous</span>
-                    <span className="badge" style={{ fontSize: 10.5, background: 'var(--surface)', border: '1px solid var(--border)' }}>Instant SMTP Send</span>
+                    <span className="badge badge-purple" style={{ fontSize: 10.5 }}>Autonomous Send</span>
+                    <span className="badge" style={{ fontSize: 10.5, background: 'var(--surface)', border: '1px solid var(--border)' }}>Instant SMTP Dispatch</span>
                   </div>
                 </div>
               </div>
@@ -1832,24 +1832,24 @@ export default function SettingsPage() {
           </Section>
 
           {/* Notifications */}
-          <Section title="Notifications & Device Alerts">
+          <Section title="Notifications and Device Alerts">
             <Row
               label="Device & Desktop Notifications"
               desc="Allow the MailMind agent to send native OS desktop notifications to your device when new emails or drafts arrive"
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 {browserPermission === 'granted' ? (
-                  <span className="badge badge-low" style={{ fontSize: 11, padding: '3px 8px' }}>🟢 Granted</span>
+                  <span className="badge badge-low" style={{ fontSize: 11, padding: '3px 8px' }}>● Granted</span>
                 ) : browserPermission === 'denied' ? (
-                  <span className="badge badge-high" style={{ fontSize: 11, padding: '3px 8px' }}>🔴 Blocked in Browser</span>
+                  <span className="badge badge-high" style={{ fontSize: 11, padding: '3px 8px' }}>● Blocked in Browser</span>
                 ) : (
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={handleRequestPermission}
-                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    style={{ fontSize: 12, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5 }}
                   >
-                    🔔 Grant Permission
+                    <BellIcon size={13} /> Grant Permission
                   </button>
                 )}
                 <Toggle value={deviceNotifications} onChange={handleToggleDeviceNotifications} />
@@ -1901,7 +1901,7 @@ export default function SettingsPage() {
                   disabled={testingNotif}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
                 >
-                  <span>{testingNotif ? '⏳' : '🔔'}</span>
+                  <BellIcon size={14} />
                   <span>{testingNotif ? 'Sending...' : 'Send Test Notification'}</span>
                 </button>
               </div>
@@ -1950,25 +1950,76 @@ export default function SettingsPage() {
             </Row>
           </Section>
 
+          {/* Data Governance & Legal Compliance */}
+          <Section title="Data Governance and Privacy Protections">
+            <Row
+              label="Legal Protections & Terms of Service"
+              desc="MailMind adheres to strict zero-retention principles. All email data is processed ephemerally in-memory and never used for model training."
+            >
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setLegalModalTab('privacy');
+                    setLegalModalOpen(true);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+                >
+                  <ShieldCheckIcon size={14} /> Privacy Policy
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setLegalModalTab('terms');
+                    setLegalModalOpen(true);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+                >
+                  <DocumentIcon size={14} /> Terms of Service
+                </button>
+              </div>
+            </Row>
+            <Row
+              label="Client Session & Memory Cache"
+              desc="Draft suggestions and temporary vector indices stored in your browser session"
+            >
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.clear();
+                    alert('Session cache cleared successfully.');
+                  }
+                }}
+                style={{ fontSize: 12, color: 'var(--muted)' }}
+              >
+                Clear Local Session
+              </button>
+            </Row>
+          </Section>
+
           {/* Sticky Save Bar */}
           <div style={{
             position: 'sticky',
             bottom: 0,
             padding: '16px 20px 24px',
-            background: 'linear-gradient(to top, var(--bg, #090a10) 80%, transparent)',
+            background: 'linear-gradient(to top, var(--bg, #131518) 80%, transparent)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: 14,
             zIndex: 10,
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+            borderTop: '1px solid var(--border)',
             marginTop: 10
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {saved ? (
                 <span className="badge badge-low fade-in" style={{ fontSize: 13, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>✅</span> Settings saved successfully!
+                  <CheckIcon size={14} /> Settings saved successfully
                 </span>
               ) : (
                 <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
@@ -1987,8 +2038,7 @@ export default function SettingsPage() {
                   minWidth: 150,
                   padding: '10px 22px',
                   fontSize: 14,
-                  fontWeight: 700,
-                  boxShadow: '0 4px 18px var(--accent-glow)',
+                  fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2002,7 +2052,7 @@ export default function SettingsPage() {
                   </>
                 ) : (
                   <>
-                    <span>💾</span>
+                    <CheckIcon size={15} />
                     <span>Save changes</span>
                   </>
                 )}
@@ -2064,6 +2114,12 @@ export default function SettingsPage() {
           }}
         />
       )}
+
+      <LegalModal
+        isOpen={legalModalOpen}
+        initialTab={legalModalTab}
+        onClose={() => setLegalModalOpen(false)}
+      />
     </div>
   );
 }

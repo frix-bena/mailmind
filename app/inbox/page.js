@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
@@ -14,8 +15,48 @@ import {
   requestDeviceNotificationPermission,
   loadNotificationSettings
 } from '@/lib/browser-notifications';
+import {
+  RefreshIcon,
+  SearchIcon,
+  ShieldCheckIcon,
+  BellIcon,
+  InboxIcon,
+  ComposeIcon,
+  DocumentIcon,
+  MenuIcon,
+  CheckIcon,
+  AlertCircleIcon,
+  CloseIcon
+} from '@/components/Icons';
 
 const FILTERS = ['All', 'Needs Reply', 'No Reply Needed', 'Replied'];
+
+function InboxSkeleton() {
+  return (
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="skeleton-card">
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div className="skeleton" style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div className="skeleton" style={{ width: 140 + i * 24, height: 14 }} />
+                <div className="skeleton" style={{ width: 64, height: 12 }} />
+              </div>
+              <div className="skeleton" style={{ width: '70%', height: 14, marginBottom: 12 }} />
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                <div className="skeleton" style={{ width: 56, height: 18, borderRadius: 4 }} />
+                <div className="skeleton" style={{ width: 84, height: 18, borderRadius: 4 }} />
+              </div>
+              <div className="skeleton" style={{ width: '100%', height: 12, marginBottom: 6 }} />
+              <div className="skeleton" style={{ width: '84%', height: 12 }} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function InboxPage() {
   const router = useRouter();
@@ -100,9 +141,9 @@ export default function InboxPage() {
               const isUrgent = urgency === 'high' || urgency === 'urgent';
               const needsReply = e.needsReply || e.needs_reply;
 
-              let title = `📨 New Email from ${sender}`;
-              if (isUrgent) title = `🚨 Urgent Email: ${sender}`;
-              else if (needsReply) title = `💬 Action Needed: ${sender}`;
+              let title = `New message from ${sender}`;
+              if (isUrgent) title = `Urgent: ${sender}`;
+              else if (needsReply) title = `Action required: ${sender}`;
 
               let message = `"${subj}"`;
               if (e.summary) message += `\n• ${e.summary}`;
@@ -119,7 +160,7 @@ export default function InboxPage() {
               });
             });
 
-            showToast(`🔔 ${newArrivals.length} new email(s) arrived`);
+            showToast(`${newArrivals.length} new message(s) arrived`);
           }
         }
 
@@ -178,9 +219,9 @@ export default function InboxPage() {
     const perm = await requestDeviceNotificationPermission();
     setBrowserPermission(perm);
     if (perm === 'granted') {
-      showToast('Device notifications enabled!');
+      showToast('Device notifications enabled');
       sendUnifiedDeviceNotification({
-        title: '🔔 MailMind Notifications Active',
+        title: 'MailMind Notifications Active',
         message: 'You will receive real-time alerts on this device when new emails arrive.',
         urgency: 'normal'
       });
@@ -220,7 +261,7 @@ export default function InboxPage() {
       const data = await res.json();
       if (res.ok && data.success && data.emails) {
         setEmails(data.emails);
-        showToast(`Loaded ${data.emails.length} emails from history`);
+        showToast(`Loaded ${data.emails.length} messages from history`);
       }
     } catch {
       // ignore
@@ -257,9 +298,9 @@ export default function InboxPage() {
             body: sendBody
           });
         }
-        showToast('✅ Reply sent successfully via SMTP');
+        showToast('Reply sent successfully via SMTP');
       } catch {
-        showToast('⚠️ Error sending reply');
+        showToast('Error sending reply');
       }
     } else if (action === 'declined') {
       showToast('Draft declined');
@@ -316,9 +357,9 @@ export default function InboxPage() {
             aria-label="Toggle navigation menu"
             title="Menu"
           >
-            ☰
+            <MenuIcon size={16} />
           </button>
-          <span className="topbar-title">📥 Inbox</span>
+          <span className="topbar-title">Inbox</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <span className="chip" style={{ fontSize: 11.5, padding: '3px 8px' }}>
               <span className={`notif-dot ${isLive ? 'notif-dot-green' : ''}`} style={{ width: 6, height: 6 }} />
@@ -330,10 +371,14 @@ export default function InboxPage() {
               className="btn btn-ghost btn-sm"
               onClick={() => loadEmails(historyLimit)}
               disabled={loading}
-              style={{ fontSize: 12, padding: '6px 10px' }}
+              style={{ fontSize: 12, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 5 }}
               title="Refresh inbox messages"
             >
-              {loading ? <><span className="spinner" style={{ width: 12, height: 12 }} /> <span className="hide-on-mobile">Refreshing…</span></> : <>🔄 <span className="hide-on-mobile">Refresh</span></>}
+              {loading ? (
+                <><span className="spinner" style={{ width: 12, height: 12 }} /> <span className="hide-on-mobile">Refreshing…</span></>
+              ) : (
+                <><RefreshIcon size={12} /> <span className="hide-on-mobile">Refresh</span></>
+              )}
             </button>
 
             {/* Monitoring Mode Badge */}
@@ -341,11 +386,12 @@ export default function InboxPage() {
               type="button"
               onClick={() => router.push('/settings')}
               className={user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? 'badge badge-purple' : 'chip'}
-              style={{ fontSize: 11.5, padding: '3px 8px', cursor: 'pointer', border: 'none' }}
-              title={`Monitoring Mode: ${user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? 'Reply Without Permission (Autonomous)' : 'Ask Permission (Permission-First)'}. Click to change in Settings.`}
+              style={{ fontSize: 11.5, padding: '3px 8px', cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              title={`Monitoring mode: ${user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? 'Autonomous dispatch' : 'Permission-first drafts'}. Click to configure.`}
             >
+              <ShieldCheckIcon size={12} />
               <span className="hide-on-mobile">
-                {user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? '⚡ Auto-Reply Active' : '🛡️ Ask Permission'}
+                {user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission' ? 'Autonomous Mode' : 'Permission-First'}
               </span>
             </button>
 
@@ -360,17 +406,17 @@ export default function InboxPage() {
               </button>
             )}
 
-            {/* Device Notifications Toggle / Status button */}
+            {/* Device Notifications Button */}
             {browserPermission === 'default' && (
               <button
                 type="button"
                 onClick={handleEnableDeviceNotifications}
                 className="btn btn-secondary btn-sm"
                 style={{ fontSize: 11.5, padding: '4px 9px', display: 'flex', alignItems: 'center', gap: 5 }}
-                title="Click to allow MailMind agent to send device alerts"
+                title="Enable device notifications"
               >
-                <span>🔔</span>
-                <span className="hide-on-mobile">Enable Device Alerts</span>
+                <BellIcon size={12} />
+                <span className="hide-on-mobile">Device Alerts</span>
               </button>
             )}
 
@@ -384,57 +430,90 @@ export default function InboxPage() {
           {toastMessage && (
             <div className="fade-in" style={{
               position: 'fixed',
-              top: 70,
+              top: 64,
               right: 24,
               zIndex: 300,
               background: 'var(--surface)',
-              border: '1px solid var(--accent)',
-              borderRadius: 8,
-              padding: '10px 18px',
-              fontSize: 13.5,
-              fontWeight: 600,
+              border: '1px solid var(--accent-border)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 500,
               boxShadow: 'var(--shadow-lg)',
-              color: 'var(--text)'
+              color: 'var(--text)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
             }}>
-              {toastMessage}
+              <CheckIcon size={14} style={{ color: 'var(--success)' }} />
+              <span>{toastMessage}</span>
             </div>
           )}
 
-          {/* Email banner */}
+          {/* Monitoring mode status banner */}
           {newBanner && user?.email && (
             <div className="fade-in" style={{
-              background: 'var(--accent-glow)', border: '1px solid var(--accent)',
-              borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
-              display: 'flex', alignItems: 'center', gap: 12,
+              background: 'var(--accent-subtle)',
+              border: '1px solid var(--accent-border)',
+              borderRadius: 'var(--radius)',
+              padding: '12px 16px',
+              marginBottom: 18,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
             }}>
-              <span style={{ fontSize: 18 }}>{(user.monitoringMode === 'auto_reply' || user.monitoringMode === 'without_permission') ? '⚡' : '📬'}</span>
-              <div style={{ flex: 1, fontSize: 14 }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                background: 'var(--accent-subtle)',
+                color: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <ShieldCheckIcon size={16} />
+              </div>
+              <div style={{ flex: 1, fontSize: 13.5, color: 'var(--text)' }}>
                 <strong>Inbox: {user.email}</strong>
                 {(user.monitoringMode === 'auto_reply' || user.monitoringMode === 'without_permission')
-                  ? ' — ⚡ Autonomous mode: Agent replies automatically to actionable emails without asking for permission.'
-                  : (pending > 0 ? ` — 🛡️ Permission-first mode: ${pending} email(s) awaiting your review & approval.` : ' — 🛡️ Permission-first mode: Monitoring your inbox in real time.')}
+                  ? ': Autonomous mode. Replies are drafted and sent automatically to actionable messages.'
+                  : (pending > 0 ? `: Permission-first mode. ${pending} message(s) awaiting your review and approval.` : ': Permission-first mode. Monitoring your inbox in real time.')}
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setNewBanner(false)}>Dismiss</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setNewBanner(false)} style={{ padding: '4px 8px', fontSize: 11.5 }}>
+                Dismiss
+              </button>
             </div>
           )}
 
           {/* Error Message if IMAP fails */}
           {errorMessage && (
             <div className="fade-in" style={{
-              background: 'rgba(239, 68, 68, 0.12)', border: '1px solid var(--danger)',
-              borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 20,
-              color: '#fca5a5', fontSize: 13.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              gap: 12, flexWrap: 'wrap'
+              background: 'rgba(184, 76, 76, 0.1)',
+              border: '1px solid var(--danger)',
+              borderRadius: 'var(--radius)',
+              padding: '14px 18px',
+              marginBottom: 20,
+              color: 'var(--text)',
+              fontSize: 13.5,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap'
             }}>
-              <div>
-                <strong>⚠️ Sync Issue:</strong> {errorMessage}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircleIcon size={16} style={{ color: 'var(--danger)' }} />
+                <span><strong>Sync Issue:</strong> {errorMessage}</span>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => loadEmails(historyLimit)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5 }}
                 >
-                  🔄 Retry
+                  <RefreshIcon size={12} /> Retry
                 </button>
                 <button
                   className="btn btn-danger btn-sm"
@@ -448,12 +527,24 @@ export default function InboxPage() {
 
           {/* Search bar with clear button */}
           <div style={{ position: 'relative', marginBottom: 16 }}>
+            <div style={{
+              position: 'absolute',
+              left: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--muted)',
+              pointerEvents: 'none',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <SearchIcon size={14} />
+            </div>
             <input
               className="input"
-              placeholder='🔍  Search emails, sender name, email address, or summary…'
+              placeholder="Search emails, sender name, address, or summary…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ paddingRight: search ? 36 : 14 }}
+              style={{ paddingLeft: 38, paddingRight: search ? 36 : 14 }}
             />
             {search && (
               <button
@@ -467,18 +558,20 @@ export default function InboxPage() {
                   border: 'none',
                   color: 'var(--muted)',
                   cursor: 'pointer',
-                  fontSize: 14
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center'
                 }}
                 title="Clear search"
               >
-                ✕
+                <CloseIcon size={13} />
               </button>
             )}
           </div>
 
           {/* Filter chips */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {FILTERS.map(f => (
                 <button
                   key={f}
@@ -486,9 +579,11 @@ export default function InboxPage() {
                   className="btn btn-sm"
                   style={{
                     background: filter === f ? 'var(--accent)' : 'var(--surface)',
-                    color: filter === f ? '#fff' : 'var(--muted)',
+                    color: filter === f ? '#ffffff' : 'var(--muted)',
                     border: `1px solid ${filter === f ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: 20, padding: '6px 16px',
+                    borderRadius: 6,
+                    padding: '5px 14px',
+                    fontSize: 12.5
                   }}
                 >{f}</button>
               ))}
@@ -505,34 +600,35 @@ export default function InboxPage() {
                 </button>
               )}
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Showing {filtered.length} of {emails.length} emails
+                Showing {filtered.length} of {emails.length} messages
               </div>
             </div>
           </div>
 
-          {/* Loading state */}
+          {/* Loading state: Real multi-item skeleton loader */}
           {loading ? (
-            <div className="card fade-in" style={{ padding: 48, textAlign: 'center' }}>
-              <div className="spinner" style={{ width: 28, height: 28, margin: '0 auto 16px' }} />
-              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Connecting to {user?.email || 'inbox'} via IMAP...</p>
-            </div>
+            <InboxSkeleton />
           ) : filtered.length === 0 ? (
             <div className="empty-state card fade-in" style={{ padding: 48 }}>
-              <div className="empty-state-icon">📭</div>
-              <h3>{emails.length === 0 ? 'Your inbox is clear' : 'No emails match this filter'}</h3>
-              <p>{emails.length === 0 ? 'No messages found in your inbox. Click Refresh to check for new emails.' : 'Try a different filter or search query.'}</p>
+              <div className="empty-state-icon">
+                <InboxIcon size={22} />
+              </div>
+              <h3>{emails.length === 0 ? 'Your inbox is clear' : 'No messages match this filter'}</h3>
+              <p>{emails.length === 0 ? 'No messages found in your inbox. Click refresh to check for new emails.' : 'Try a different filter or search query.'}</p>
               <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => loadEmails(historyLimit)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                 >
-                  🔄 Check for New Emails
+                  <RefreshIcon size={12} /> Check for New Messages
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => setComposeOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                 >
-                  ✏️ Compose New Email
+                  <ComposeIcon size={12} /> Compose Message
                 </button>
               </div>
             </div>
@@ -551,14 +647,18 @@ export default function InboxPage() {
               ))}
 
               {/* Load more history button */}
-              <div style={{ textAlign: 'center', margin: '32px 0 48px' }}>
+              <div style={{ textAlign: 'center', margin: '28px 0 40px' }}>
                 <button
                   className="btn btn-ghost"
                   onClick={loadMoreHistory}
                   disabled={loadingHistory}
-                  style={{ fontSize: 13 }}
+                  style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 >
-                  {loadingHistory ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Loading history…</> : '📜 Load More Email History (Past Messages)'}
+                  {loadingHistory ? (
+                    <><span className="spinner" style={{ width: 13, height: 13 }} /> Loading history…</>
+                  ) : (
+                    <><DocumentIcon size={14} /> Load Older Messages</>
+                  )}
                 </button>
               </div>
             </>
@@ -571,7 +671,7 @@ export default function InboxPage() {
           user={user}
           onClose={() => setComposeOpen(false)}
           onSent={() => {
-            showToast('✅ New email sent successfully');
+            showToast('New message sent successfully');
             loadEmails(historyLimit);
           }}
         />

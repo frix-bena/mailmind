@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme, THEME_MODES, CUSTOM_PRESETS } from '@/lib/theme-manager';
+import { SunIcon, MoonIcon, PaletteIcon, SettingsIcon, CheckIcon } from '@/components/Icons';
 
 export default function ThemeToggle({ showLabel = false, style = {} }) {
   const router = useRouter();
@@ -24,17 +25,17 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
 
   const getModeInfo = () => {
     if (mode === THEME_MODES.LIGHT) {
-      return { icon: '☀️', label: 'Light', title: 'Theme: Light mode' };
+      return { icon: <SunIcon size={14} />, label: 'Light', title: 'Theme: Light mode' };
     }
     if (mode === THEME_MODES.CUSTOM) {
       const p = CUSTOM_PRESETS.find(x => x.id === preset);
       return {
-        icon: p ? p.emoji : '🎨',
+        icon: <PaletteIcon size={14} />,
         label: p ? p.name.split(' ')[0] : 'Custom',
         title: `Theme: Custom (${p ? p.name : 'Custom Palette'})`
       };
     }
-    return { icon: '🌙', label: 'Dark', title: 'Theme: Dark mode' };
+    return { icon: <MoonIcon size={14} />, label: 'Dark', title: 'Theme: Dark mode' };
   };
 
   const info = getModeInfo();
@@ -122,9 +123,9 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>🌙</span> Dark Mode
+                <MoonIcon size={14} style={{ color: 'var(--muted)' }} /> Dark Mode
               </span>
-              {mode === THEME_MODES.DARK && <span style={{ color: 'var(--accent)', fontSize: 12 }}>✓</span>}
+              {mode === THEME_MODES.DARK && <CheckIcon size={13} style={{ color: 'var(--accent)' }} />}
             </button>
 
             <button
@@ -149,9 +150,9 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>☀️</span> Light Mode
+                <SunIcon size={14} style={{ color: 'var(--muted)' }} /> Light Mode
               </span>
-              {mode === THEME_MODES.LIGHT && <span style={{ color: 'var(--accent)', fontSize: 12 }}>✓</span>}
+              {mode === THEME_MODES.LIGHT && <CheckIcon size={13} style={{ color: 'var(--accent)' }} />}
             </button>
 
             <button
@@ -176,9 +177,9 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>🎨</span> Custom Theme
+                <PaletteIcon size={14} style={{ color: 'var(--muted)' }} /> Custom Theme
               </span>
-              {mode === THEME_MODES.CUSTOM && <span style={{ color: 'var(--accent)', fontSize: 12 }}>✓</span>}
+              {mode === THEME_MODES.CUSTOM && <CheckIcon size={13} style={{ color: 'var(--accent)' }} />}
             </button>
           </div>
 
@@ -197,7 +198,7 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
               marginBottom: 6,
               padding: '0 4px'
             }}>
-              Custom Presets
+              Curated Palettes
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
               {CUSTOM_PRESETS.map((p) => {
@@ -225,7 +226,7 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
                       textAlign: 'left'
                     }}
                   >
-                    <span style={{ fontSize: 12 }}>{p.emoji}</span>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.colors.accent, flexShrink: 0 }} />
                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.name.split(' ')[0]}
                     </span>
@@ -254,10 +255,11 @@ export default function ThemeToggle({ showLabel = false, style = {} }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 4
+              gap: 5
             }}
           >
-            ⚙️ Customize Palette in Settings &rarr;
+            <SettingsIcon size={12} style={{ color: 'var(--accent)' }} />
+            <span>Customize Palette in Settings &rarr;</span>
           </button>
         </div>
       )}

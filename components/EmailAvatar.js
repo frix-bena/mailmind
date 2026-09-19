@@ -300,7 +300,7 @@ export default function EmailAvatar({
       */}
       {!showCameraBadge && (showVerifiedBadge || (showVerifiedBadge !== false && isVerified && numericSize >= 30)) && (
         <span
-          title="Verified Sender — Google verified domain (BIMI / DMARC Authenticated)"
+          title="Verified Sender: Google verified domain (BIMI / DMARC Authenticated)"
           className="email-avatar-badge"
           style={badgeStyle}
         >

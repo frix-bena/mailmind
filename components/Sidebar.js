@@ -1,15 +1,30 @@
 'use client';
+
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import ComposeModal from '@/components/ComposeModal';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
+import LegalModal from '@/components/LegalModal';
 import ProviderIcon from '@/components/ProviderIcon';
 import { extractDisplayName } from '@/lib/avatar-utils';
-
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 import { useTheme, THEME_MODES, CUSTOM_PRESETS } from '@/lib/theme-manager';
 import { sendUnifiedDeviceNotification } from '@/lib/browser-notifications';
+import {
+  InboxIcon,
+  SearchIcon,
+  SettingsIcon,
+  ComposeIcon,
+  BellIcon,
+  MailIcon,
+  CheckIcon,
+  CloseIcon,
+  SunIcon,
+  MoonIcon,
+  PaletteIcon,
+  ShieldCheckIcon
+} from '@/components/Icons';
 
 export default function Sidebar({ user: propUser }) {
   const pathname = usePathname();
@@ -18,10 +33,11 @@ export default function Sidebar({ user: propUser }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { theme, mode, preset, toggleNextMode } = useTheme();
   const [notifications, setNotifications] = useState([
-    { id: 'n1', type: 'connected', text: 'Email inbox connected & monitoring', time: 'Just now', read: false },
+    { id: 'n1', type: 'connected', text: 'Inbox connected and monitoring', time: 'Just now', read: false },
     { id: 'n2', type: 'system', text: 'Permission-first reply protection active', time: 'Just now', read: false }
   ]);
 
@@ -85,9 +101,9 @@ export default function Sidebar({ user: propUser }) {
   const unread = notifications.filter(n => !n.read).length;
 
   const nav = [
-    { href: '/inbox',    icon: '📥', label: 'Inbox',    badge: null },
-    { href: '/search',   icon: '🔍', label: 'Ask AI',   badge: null },
-    { href: '/settings', icon: '⚙️',  label: 'Settings', badge: null },
+    { href: '/inbox',    icon: InboxIcon,    label: 'Inbox',    badge: null },
+    { href: '/search',   icon: SearchIcon,   label: 'Ask AI',   badge: null },
+    { href: '/settings', icon: SettingsIcon, label: 'Settings', badge: null },
   ];
 
   const markAllRead = () => setNotifications(n => n.map(x => ({ ...x, read: true })));
@@ -130,7 +146,9 @@ export default function Sidebar({ user: propUser }) {
             style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1 }}
             title="Go to Inbox"
           >
-            <div className="sidebar-logo-icon">✉️</div>
+            <div className="sidebar-logo-icon">
+              <MailIcon size={16} />
+            </div>
             <div className="sidebar-logo-text">Mail<span>Mind</span></div>
           </div>
           {/* Mobile Close Button */}
@@ -139,7 +157,7 @@ export default function Sidebar({ user: propUser }) {
             onClick={() => setDrawerOpen(false)}
             aria-label="Close navigation drawer"
           >
-            ✕
+            <CloseIcon size={14} />
           </button>
         </div>
 
@@ -148,40 +166,49 @@ export default function Sidebar({ user: propUser }) {
           <button
             className="btn btn-primary"
             onClick={() => { setComposeOpen(true); setDrawerOpen(false); }}
-            style={{ width: '100%', fontSize: 13, padding: '9px 14px', borderRadius: 8 }}
+            style={{ width: '100%', fontSize: 13, padding: '9px 14px', borderRadius: 'var(--radius-sm)' }}
           >
-            ✏️ New Email
+            <ComposeIcon size={14} style={{ marginRight: 6 }} />
+            New Email
           </button>
         </div>
 
         <nav className="sidebar-nav">
-          {nav.map(item => (
-            <a
-              key={item.href}
-              className={`nav-item${pathname === item.href ? ' active' : ''}`}
-              href={item.href}
-              onClick={e => {
-                e.preventDefault();
-                setDrawerOpen(false);
-                router.push(item.href);
-              }}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-              {item.badge && <span className="nav-badge">{item.badge}</span>}
-            </a>
-          ))}
+          {nav.map(item => {
+            const IconComp = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <a
+                key={item.href}
+                className={`nav-item${isActive ? ' active' : ''}`}
+                href={item.href}
+                onClick={e => {
+                  e.preventDefault();
+                  setDrawerOpen(false);
+                  router.push(item.href);
+                }}
+              >
+                <span className="nav-icon">
+                  <IconComp size={16} />
+                </span>
+                {item.label}
+                {item.badge && <span className="nav-badge">{item.badge}</span>}
+              </a>
+            );
+          })}
         </nav>
 
         <div className="sidebar-bottom">
           {/* Notification bell */}
-          <div style={{ position: 'relative', marginBottom: 8 }}>
+          <div style={{ position: 'relative', marginBottom: 6 }}>
             <div
               className="nav-item"
               onClick={() => setNotifOpen(o => !o)}
               style={{ cursor: 'pointer' }}
             >
-              <span className="nav-icon">🔔</span>
+              <span className="nav-icon">
+                <BellIcon size={15} />
+              </span>
               Notifications
               {unread > 0 && <span className="nav-badge">{unread}</span>}
             </div>
@@ -189,13 +216,13 @@ export default function Sidebar({ user: propUser }) {
               <div style={{
                 position: 'absolute', bottom: '110%', left: 0, right: 0,
                 background: 'var(--surface)', border: '1px solid var(--border2)',
-                borderRadius: 'var(--radius)', padding: 16,
+                borderRadius: 'var(--radius)', padding: 14,
                 boxShadow: 'var(--shadow-lg)', zIndex: 200,
                 minWidth: 260,
                 maxWidth: 'calc(100vw - 32px)'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>Notifications</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Notifications</span>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--accent)', cursor: 'pointer' }}
@@ -222,18 +249,21 @@ export default function Sidebar({ user: propUser }) {
                       key={n.id}
                       onClick={() => setNotifications(list => list.map(item => item.id === n.id ? { ...item, read: true } : item))}
                       style={{
-                        display: 'flex', gap: 10, padding: '8px 0',
+                        display: 'flex', gap: 8, padding: '8px 0',
                         borderBottom: '1px solid var(--border)',
                         opacity: n.read ? 0.55 : 1,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        alignItems: 'center'
                       }}
                     >
-                      <span style={{ fontSize: 16 }}>{n.type === 'sent' ? '✅' : '📩'}</span>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: n.read ? 400 : 600 }}>{n.text}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{n.time}</div>
+                      <span style={{ color: n.type === 'sent' ? 'var(--success)' : 'var(--accent)', flexShrink: 0 }}>
+                        {n.type === 'sent' ? <CheckIcon size={14} /> : <MailIcon size={14} />}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: n.read ? 400 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.text}</div>
+                        <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{n.time}</div>
                       </div>
-                      {!n.read && <span className="notif-dot" style={{ marginLeft: 'auto', marginTop: 6 }} />}
+                      {!n.read && <span className="notif-dot" style={{ marginLeft: 'auto' }} />}
                     </div>
                   ))
                 )}
@@ -246,48 +276,65 @@ export default function Sidebar({ user: propUser }) {
             className="nav-item"
             onClick={toggleNextMode}
             title={`Current theme: ${mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.name || 'Custom') : mode}. Click to cycle Light / Dark / Custom.`}
-            style={{ cursor: 'pointer', marginBottom: 8, padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}
+            style={{ cursor: 'pointer', marginBottom: 6, padding: '7px 12px', borderRadius: 'var(--radius-sm)' }}
           >
             <span className="nav-icon">
-              {mode === THEME_MODES.LIGHT ? '☀️' : (mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.emoji || '🎨') : '🌙')}
+              {mode === THEME_MODES.LIGHT ? (
+                <SunIcon size={15} />
+              ) : mode === THEME_MODES.CUSTOM ? (
+                <PaletteIcon size={15} />
+              ) : (
+                <MoonIcon size={15} />
+              )}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>
-              Theme: {mode === THEME_MODES.LIGHT ? 'Light' : (mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.name.split(' ')[0] || 'Custom') : 'Dark')}
+            <span style={{ fontSize: 12.5, fontWeight: 500 }}>
+              Theme: {mode === THEME_MODES.LIGHT ? 'Light' : mode === THEME_MODES.CUSTOM ? (CUSTOM_PRESETS.find(p => p.id === preset)?.name.split(' ')[0] || 'Custom') : 'Dark'}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--muted)', opacity: 0.8 }}>⇄</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--muted)', opacity: 0.8 }}>cycle</span>
           </div>
 
-          {/* User profile clickable chip with real Gmail avatar and Google Account modal */}
+          {/* Real Legal & Privacy Policy shortcut */}
+          <div
+            className="nav-item"
+            onClick={() => setLegalModalOpen(true)}
+            style={{ cursor: 'pointer', marginBottom: 8, padding: '7px 12px', borderRadius: 'var(--radius-sm)', fontSize: 12 }}
+            title="View Terms of Service and Privacy Policy"
+          >
+            <span className="nav-icon">
+              <ShieldCheckIcon size={14} />
+            </span>
+            <span>Terms &amp; Privacy</span>
+          </div>
+
+          {/* User profile clickable chip */}
           {user && user.email && (
             <div
               className="user-chip"
               onClick={() => { setUserModalOpen(true); setDrawerOpen(false); }}
-              title="Google Account: Click to customize profile picture and view details"
+              title="Account settings and profile"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
                 padding: '8px 10px',
-                borderRadius: 12,
-                cursor: 'pointer',
-                transition: 'background 0.15s ease'
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer'
               }}
             >
               <EmailAvatar
                 src={userAvatarSrc}
                 email={user.email}
                 name={displayName}
-                size={36}
+                size={34}
                 isUser={true}
                 color={userAvatarColor}
                 showTooltip={false}
                 style={{
-                  border: '1.5px solid rgba(255, 255, 255, 0.2)',
-                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)'
+                  border: '1px solid var(--border2)'
                 }}
               />
               <div className="user-info">
-                <div className="user-name" style={{ fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif' }}>
+                <div className="user-name">
                   {displayName}
                 </div>
                 <div className="user-email" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -308,7 +355,9 @@ export default function Sidebar({ user: propUser }) {
           onClick={() => router.push('/inbox')}
           aria-label="Inbox"
         >
-          <span className="mobile-bottom-icon">📥</span>
+          <span className="mobile-bottom-icon">
+            <InboxIcon size={17} />
+          </span>
           <span className="mobile-bottom-label">Inbox</span>
           {unread > 0 && <span className="mobile-bottom-dot" />}
         </button>
@@ -319,7 +368,9 @@ export default function Sidebar({ user: propUser }) {
           onClick={() => router.push('/search')}
           aria-label="Ask AI"
         >
-          <span className="mobile-bottom-icon">🔍</span>
+          <span className="mobile-bottom-icon">
+            <SearchIcon size={17} />
+          </span>
           <span className="mobile-bottom-label">Ask AI</span>
         </button>
 
@@ -330,7 +381,7 @@ export default function Sidebar({ user: propUser }) {
           aria-label="New Email"
           title="Compose New Email"
         >
-          <span>✏️</span>
+          <ComposeIcon size={17} />
         </button>
 
         <button
@@ -339,7 +390,9 @@ export default function Sidebar({ user: propUser }) {
           onClick={() => router.push('/settings')}
           aria-label="Settings"
         >
-          <span className="mobile-bottom-icon">⚙️</span>
+          <span className="mobile-bottom-icon">
+            <SettingsIcon size={17} />
+          </span>
           <span className="mobile-bottom-label">Settings</span>
         </button>
       </nav>
@@ -359,6 +412,14 @@ export default function Sidebar({ user: propUser }) {
         />
       )}
 
+      {legalModalOpen && (
+        <LegalModal
+          isOpen={legalModalOpen}
+          initialTab="terms"
+          onClose={() => setLegalModalOpen(false)}
+        />
+      )}
+
       {composeOpen && (
         <ComposeModal
           user={user}
@@ -369,7 +430,7 @@ export default function Sidebar({ user: propUser }) {
               ...n
             ]);
             sendUnifiedDeviceNotification({
-              title: '✅ Email Sent',
+              title: 'Email Sent',
               message: 'Your email was successfully sent via SMTP.',
               urgency: 'normal',
               category: 'reply',

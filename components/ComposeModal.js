@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { SendIcon, MailIcon, CheckIcon, CloseIcon, SlidersIcon } from '@/components/Icons';
 
 export default function ComposeModal({
   user,
@@ -120,11 +121,12 @@ export default function ComposeModal({
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 640 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-            {inReplyTo ? '↩️ Reply to Email' : '✉️ Compose New Email'}
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+            {inReplyTo ? <SendIcon size={18} /> : <MailIcon size={18} />}
+            <span>{inReplyTo ? 'Reply to Email' : 'Compose Email'}</span>
           </h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose} style={{ padding: '4px 8px' }}>
-            ✕
+            <CloseIcon size={14} />
           </button>
         </div>
 
@@ -136,9 +138,13 @@ export default function ComposeModal({
             padding: '10px 14px',
             fontSize: 13,
             color: '#fca5a5',
-            marginBottom: 16
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
           }}>
-            ⚠️ {error}
+            <CloseIcon size={14} />
+            <span>{error}</span>
           </div>
         )}
 
@@ -148,14 +154,15 @@ export default function ComposeModal({
             border: '1px solid var(--success)',
             borderRadius: 8,
             padding: '12px 14px',
-            fontSize: 14,
+            fontSize: 13.5,
             color: '#86efac',
             marginBottom: 16,
             display: 'flex',
             alignItems: 'center',
             gap: 8
           }}>
-            ✅ Email sent successfully!
+            <CheckIcon size={14} />
+            <span>Email sent successfully</span>
           </div>
         )}
 
@@ -190,41 +197,42 @@ export default function ComposeModal({
 
           {/* Quick AI & Template Toolbar */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-              Quick Draft:
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Draft Tools:
             </span>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11, padding: '3px 10px', background: 'var(--accent-glow)', color: 'var(--accent)', borderColor: 'var(--accent)' }}
+              style={{ fontSize: 11.5, padding: '3px 10px', background: 'var(--accent-glow)', color: 'var(--accent)', borderColor: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}
               onClick={handleGenerateAI}
               disabled={generating}
             >
-              {generating ? '✨ Generating…' : '✨ AI Draft Assistant'}
+              <SlidersIcon size={12} />
+              <span>{generating ? 'Drafting…' : 'Synthesize Draft'}</span>
             </button>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11, padding: '3px 8px' }}
+              style={{ fontSize: 11.5, padding: '3px 8px' }}
               onClick={() => handleInsertTemplate('followup')}
             >
-              ⚡ Follow-up
+              Follow-up
             </button>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11, padding: '3px 8px' }}
+              style={{ fontSize: 11.5, padding: '3px 8px' }}
               onClick={() => handleInsertTemplate('thanks')}
             >
-              🙏 Thank You
+              Gratitude
             </button>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11, padding: '3px 8px' }}
+              style={{ fontSize: 11.5, padding: '3px 8px' }}
               onClick={() => handleInsertTemplate('intro')}
             >
-              🤝 Introduction
+              Introduction
             </button>
           </div>
 
@@ -257,8 +265,19 @@ export default function ComposeModal({
                 type="submit"
                 className="btn btn-primary"
                 disabled={sending || success}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                {sending ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Sending…</> : '🚀 Send Email'}
+                {sending ? (
+                  <>
+                    <span className="spinner" style={{ width: 14, height: 14 }} />
+                    <span>Sending…</span>
+                  </>
+                ) : (
+                  <>
+                    <SendIcon size={14} />
+                    <span>Send Email</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

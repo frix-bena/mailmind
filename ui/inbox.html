@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MailMind — Inbox</title>
+<title>MailMind: Inbox</title>
 <link rel="stylesheet" href="styles.css">
 <style>
 /* ── Inbox-specific ── */
@@ -13,7 +13,7 @@
 }
 .banner-text{flex:1;font-size:14px}
 .search-wrap{position:relative;margin-bottom:16px}
-.search-wrap .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+.search-wrap .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;color:var(--muted)}
 .search-wrap input{padding-left:42px;height:44px;font-size:14px}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
 .filter-chip{
@@ -28,10 +28,8 @@
 .email-card{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   margin-bottom:14px;overflow:hidden;transition:all var(--t);
-  border-left:3px solid transparent;
 }
 .email-card:hover{border-color:var(--border2);box-shadow:var(--shadow)}
-.email-card.needs-reply{border-left-color:var(--accent)}
 .email-card.done{opacity:.58}
 .email-card-header{padding:18px 20px 0;display:flex;gap:13px;align-items:flex-start}
 .email-avatar{
@@ -74,7 +72,7 @@
   <div id="sidebar-root"></div>
   <div class="main">
     <div class="topbar">
-      <span class="topbar-title">📥 Inbox</span>
+      <span class="topbar-title">Inbox</span>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div class="poll-chip"><span class="dot dot-green"></span><span id="poll-status">Checking…</span></div>
         <span class="badge badge-accent" id="pending-badge">2 awaiting approval</span>
@@ -84,7 +82,6 @@
     <div class="content">
       <!-- Banner -->
       <div class="banner" id="banner" style="display:none">
-        <span style="font-size:20px">📬</span>
         <div class="banner-text" id="banner-text">Loading inbox...</div>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('banner').remove()">Dismiss</button>
       </div>
@@ -92,7 +89,6 @@
 
       <!-- Search -->
       <div class="search-wrap">
-        <span class="search-icon">🔍</span>
         <input class="input" id="search-input" placeholder="Search emails…" oninput="renderEmails()">
       </div>
 

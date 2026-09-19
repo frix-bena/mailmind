@@ -7,6 +7,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import GoogleAccountModal from '@/components/GoogleAccountModal';
 import { getActiveUser, isDemoAccount } from '@/lib/account-manager';
 import { sendUnifiedDeviceNotification } from '@/lib/browser-notifications';
+import { CheckIcon, CopyIcon, RefreshIcon, MailIcon } from '@/components/Icons';
 
 const QUICK_COMMANDS = [
   'status',
@@ -29,8 +30,8 @@ export default function TerminalPage() {
   const [commandHistory, setCommandHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [history, setHistory] = useState([
-    { type: 'system', text: '🤖 MailMind Autonomous AI Agent Console v2.4' },
-    { type: 'system', text: '🔒 Secure Inbox Access Active — Full permission-first inbox intelligence.' },
+    { type: 'system', text: 'MailMind Autonomous Agent Console v2.4' },
+    { type: 'system', text: 'Secure Inbox Access Active: Full permission-first inbox intelligence.' },
     { type: 'system', text: 'Type "help" to list agent commands, or click any quick command chip below.' }
   ]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ export default function TerminalPage() {
         ...newHistory,
         {
           type: 'output',
-          text: `📧 MailMind Autonomous Agent Command Suite:
+          text: `MailMind Autonomous Agent Command Suite:
 --------------------------------------------------
   • status                  Show agent health, active inbox & tone mode
   • test-notify             Trigger instant test notification to your device
@@ -95,7 +96,7 @@ export default function TerminalPage() {
       setLoading(true);
       try {
         await sendUnifiedDeviceNotification({
-          title: '🔔 MailMind Agent Active',
+          title: 'MailMind Agent Active',
           message: `Device notification verified from Web Terminal for ${user?.email || 'user'}.`,
           urgency: 'normal'
         });
@@ -103,7 +104,7 @@ export default function TerminalPage() {
           ...newHistory,
           {
             type: 'output',
-            text: `✔ Test notification dispatched successfully to your device (OS desktop & browser push enabled).`
+            text: `Test notification dispatched successfully to your device (OS desktop & browser push enabled).`
           }
         ]);
       } catch (err) {
@@ -111,7 +112,7 @@ export default function TerminalPage() {
           ...newHistory,
           {
             type: 'output',
-            text: `⚠️ Notification dispatch note: ${err.message}`
+            text: `Notification dispatch note: ${err.message}`
           }
         ]);
       } finally {
@@ -129,7 +130,7 @@ export default function TerminalPage() {
       setLoading(true);
       try {
         await sendUnifiedDeviceNotification({
-          title: '🔔 MailMind Alert',
+          title: 'MailMind Alert',
           message: msg,
           urgency: 'normal'
         });
@@ -137,7 +138,7 @@ export default function TerminalPage() {
           ...newHistory,
           {
             type: 'output',
-            text: `✔ Notification sent to device: "${msg}"`
+            text: `Notification sent to device: "${msg}"`
           }
         ]);
       } catch (err) {
@@ -145,7 +146,7 @@ export default function TerminalPage() {
           ...newHistory,
           {
             type: 'output',
-            text: `❌ Error sending notification: ${err.message}`
+            text: `Error sending notification: ${err.message}`
           }
         ]);
       } finally {
@@ -159,7 +160,7 @@ export default function TerminalPage() {
         ...newHistory,
         {
           type: 'output',
-          text: `💻 Run MailMind Agent in your local terminal:
+          text: `Run MailMind Agent in your local terminal:
 --------------------------------------------------
 1. Start the CLI Agent:
    $ npm run agent
@@ -183,20 +184,20 @@ export default function TerminalPage() {
       const activeEmail = user?.email || 'No active account';
       const isAuto = user?.monitoringMode === 'auto_reply' || user?.monitoringMode === 'without_permission';
       const modeLabel = isAuto
-        ? '⚡ Reply Without Permission (Autonomous Mode)'
-        : '🛡️ Ask Permission (Permission-First Mode)';
+        ? 'Autonomous Mode (Reply without permission)'
+        : 'Permission-First Mode (Ask permission)';
       const policyDesc = isAuto
-        ? '⚡ Autonomous (Replies sent automatically without manual confirmation)'
-        : '🙋 Permission-First (All AI drafts require manual review before sending)';
+        ? 'Autonomous (Replies sent automatically without manual confirmation)'
+        : 'Permission-First (All AI drafts require manual review before sending)';
 
       setHistory([
         ...newHistory,
         {
           type: 'output',
-          text: `🤖 MailMind Autonomous Agent Status:
+          text: `MailMind Autonomous Agent Status:
 --------------------------------------------------
-  • System State:      🟢 Online & Active
-  • Access Mode:       🔒 Private Mailbox Connected
+  • System State:      Online & Active
+  • Access Mode:       Private Mailbox Connected
   • Active Account:    ${activeEmail} (${user?.provider || 'IMAP/SMTP'})
   • Reply Tone:        ${user?.tone || 'professional'}
   • Monitoring Mode:   ${modeLabel}
@@ -214,11 +215,11 @@ export default function TerminalPage() {
         ...newHistory,
         {
           type: 'output',
-          text: `📊 MailMind Autonomous Agent Performance & Metrics:
+          text: `MailMind Autonomous Agent Performance & Metrics:
 --------------------------------------------------
   • Active Mailbox:            ${user?.email || 'Connected'}
   • Status:                    Monitoring in real time
-  • Monitoring Mode:           ${isAuto ? '⚡ Autonomous (Reply without permission)' : '🛡️ Permission-First (Ask permission)'}
+  • Monitoring Mode:           ${isAuto ? 'Autonomous (Reply without permission)' : 'Permission-First (Ask permission)'}
   • Safety Policy:             ${isAuto ? 'Autonomous dispatch enabled for actionable emails' : '100% human-approved drafts before send'}
   • AI Classification:         Active (Action Required vs FYI)
   • Draft Engine:              Ready`
@@ -249,14 +250,14 @@ export default function TerminalPage() {
         } catch (_) {}
 
         const modeName = targetMode === 'auto_reply'
-          ? '⚡ Reply Without Permission (Autonomous Mode)'
-          : '🛡️ Ask Permission (Permission-First Mode)';
+          ? 'Autonomous Mode (Reply Without Permission)'
+          : 'Permission-First Mode (Ask Permission)';
 
         setHistory([
           ...newHistory,
           {
             type: 'output',
-            text: `✅ Monitoring mode updated to: ${modeName}\n${targetMode === 'auto_reply' ? 'The agent will now reply automatically to actionable messages without asking for permission.' : 'The agent will now ask for your explicit permission and review before sending any replies.'}`
+            text: `Monitoring mode updated to: ${modeName}\n${targetMode === 'auto_reply' ? 'The agent will now reply automatically to actionable messages without asking for permission.' : 'The agent will now ask for your explicit permission and review before sending any replies.'}`
           }
         ]);
       } else {
@@ -281,7 +282,7 @@ export default function TerminalPage() {
           ...newHistory,
           {
             type: 'output',
-            text: `✅ Reply tone updated to: "${selectedTone}". Future drafts will adopt this voice style.`
+            text: `Reply tone updated to: "${selectedTone}". Future drafts will adopt this voice style.`
           }
         ]);
       } else {
@@ -320,7 +321,7 @@ export default function TerminalPage() {
           });
         }
         const data = await res.json();
-        setHistory([...newHistory, { type: 'output', text: `📋 Executive Inbox Digest:\n\n${data.answer || 'Inbox clear.'}` }]);
+        setHistory([...newHistory, { type: 'output', text: `Executive Inbox Digest:\n\n${data.answer || 'Inbox clear.'}` }]);
       } catch (err) {
         setHistory([...newHistory, { type: 'error', text: `Summary error: ${err.message}` }]);
       } finally {
@@ -346,7 +347,7 @@ export default function TerminalPage() {
         }
 
         if (emailList.length === 0) {
-          setHistory([...newHistory, { type: 'output', text: '📬 No emails found in your inbox to classify.' }]);
+          setHistory([...newHistory, { type: 'output', text: 'No emails found in your inbox to classify.' }]);
           setLoading(false);
           return;
         }
@@ -354,14 +355,14 @@ export default function TerminalPage() {
         const actionItems = emailList.filter(e => e.needsReply || e.needs_reply);
         const fyiItems = emailList.filter(e => !(e.needsReply || e.needs_reply));
 
-        let out = `🧠 Smart Classification Matrix (${emailList.length} total emails):\n\n`;
-        out += `⚡ ACTION REQUIRED (${actionItems.length}):\n`;
+        let out = `Smart Classification Matrix (${emailList.length} total emails):\n\n`;
+        out += `ACTION REQUIRED (${actionItems.length}):\n`;
         actionItems.forEach((e, idx) => {
-          out += `  [${idx + 1}] ${e.sender || e.sender_name} — "${e.subject}"\n      Urgency: ${e.urgency || 'medium'} | Status: Draft Ready\n`;
+          out += `  [${idx + 1}] ${e.sender || e.sender_name}: "${e.subject}"\n      Urgency: ${e.urgency || 'medium'} | Status: Draft Ready\n`;
         });
-        out += `\n📌 INFORMATIONAL / NO ACTION NEEDED (${fyiItems.length}):\n`;
+        out += `\nINFORMATIONAL / NO ACTION NEEDED (${fyiItems.length}):\n`;
         fyiItems.forEach((e, idx) => {
-          out += `  [${idx + 1}] [${e.category?.toUpperCase() || 'INFO'}] ${e.sender || e.sender_name} — "${e.subject}"\n`;
+          out += `  [${idx + 1}] [${e.category?.toUpperCase() || 'INFO'}] ${e.sender || e.sender_name}: "${e.subject}"\n`;
         });
 
         setHistory([...newHistory, { type: 'output', text: out }]);
@@ -396,7 +397,7 @@ export default function TerminalPage() {
         const targetEmail = emailList.find(e => (e.needsReply || e.needs_reply) && (!targetSubj || (e.subject && e.subject.toLowerCase().includes(targetSubj)))) || emailList[0];
 
         if (!targetEmail) {
-          setHistory([...newHistory, { type: 'output', text: '📬 No actionable emails found in your inbox needing a draft.' }]);
+          setHistory([...newHistory, { type: 'output', text: 'No actionable emails found in your inbox needing a draft.' }]);
           setLoading(false);
           return;
         }
@@ -407,16 +408,16 @@ export default function TerminalPage() {
           ...newHistory,
           {
             type: 'output',
-            text: `✍️ AI Generated Reply Draft (${currentTone.toUpperCase()} TONE):
+            text: `Generated Reply Draft (${currentTone.toUpperCase()} TONE):
 --------------------------------------------------
 To: ${targetEmail.sender_email || targetEmail.senderEmail || 'recipient@domain.com'}
 Subject: Re: ${targetEmail.subject}
-Permission Status: 🟡 Pending Your Approval
+Permission Status: Pending Your Approval
 
 ${draftContent}
 
 --------------------------------------------------
-💡 Note: MailMind never sends without your explicit consent. You can approve or edit this in the Inbox view.`
+Note: MailMind never sends without your explicit consent. You can approve or edit this in the Inbox view.`
           }
         ]);
       } catch (err) {
@@ -461,12 +462,12 @@ ${draftContent}
             ...newHistory,
             {
               type: 'output',
-              text: `📬 Inbox is clear. No recent messages found for ${user?.email || 'account'}.`
+              text: `Inbox is clear. No recent messages found for ${user?.email || 'account'}.`
             }
           ]);
         } else {
           const list = emailsToDisplay.map((m, i) => {
-            const actionTag = (m.needsReply || m.needs_reply) ? '⚡ [NEEDS REPLY]' : '📌 [NO REPLY NEEDED]';
+            const actionTag = (m.needsReply || m.needs_reply) ? '[NEEDS REPLY]' : '[NO REPLY NEEDED]';
             const urgencyTag = m.urgency ? `[${m.urgency.toUpperCase()}]` : '';
             return `[${i + 1}] ${actionTag} ${urgencyTag} ${m.subject}\n    From: ${m.sender || m.sender_name} <${m.sender_email || m.senderEmail || ''}>\n    Summary: ${m.summary || m.ai_summary || 'No summary available.'}`;
           }).join('\n\n');
@@ -475,7 +476,7 @@ ${draftContent}
             ...newHistory,
             {
               type: 'output',
-              text: `📥 Retrieved ${emailsToDisplay.length} messages from inbox:\n\n${list}`
+              text: `Retrieved ${emailsToDisplay.length} messages from inbox:\n\n${list}`
             }
           ]);
         }
@@ -527,7 +528,7 @@ ${draftContent}
           const formatted = matches.map((m, i) =>
             `[${i + 1}] ${m.subject}\n    From: ${m.sender || m.sender_name} | Date: ${new Date(m.receivedAt || m.received_at || Date.now()).toLocaleDateString()}\n    Summary: ${m.summary || m.ai_summary || 'No summary'}`
           ).join('\n\n');
-          setHistory([...newHistory, { type: 'output', text: `🔍 Found ${matches.length} matching message(s) for "${q}":\n\n${formatted}` }]);
+          setHistory([...newHistory, { type: 'output', text: `Found ${matches.length} matching message(s) for "${q}":\n\n${formatted}` }]);
         }
       } catch (err) {
         setHistory([...newHistory, { type: 'error', text: `Search error: ${err.message}` }]);
@@ -568,7 +569,7 @@ ${draftContent}
           ...newHistory,
           {
             type: 'output',
-            text: `🤖 AI Inbox Intelligence Response:\n\n${data.answer || data.error || 'No answer available.'}`
+            text: `Inbox Intelligence Response:\n\n${data.answer || data.error || 'No answer available.'}`
           }
         ]);
       } catch (err) {
@@ -671,30 +672,34 @@ ${draftContent}
             aria-label="Toggle navigation menu"
             title="Menu"
           >
-            ☰
+            <span></span>
+            <span></span>
+            <span></span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-            <span className="topbar-title">🤖 AI Agent</span>
-            <span className="chip hide-on-mobile" style={{ fontSize: 11, background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', borderColor: 'rgba(34, 197, 94, 0.3)' }}>
-              🟢 Live Link
+            <span className="topbar-title">Agent Console</span>
+            <span className="chip hide-on-mobile" style={{ fontSize: 11, background: 'rgba(34, 197, 94, 0.12)', color: '#86efac', borderColor: 'rgba(34, 197, 94, 0.25)' }}>
+              ● Live Link
             </span>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
             <button
               className="btn btn-ghost btn-sm"
               onClick={handleCopyLog}
-              style={{ fontSize: 12, padding: '4px 8px' }}
+              style={{ fontSize: 12, padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
               title="Copy terminal session log"
             >
-              {copied ? '✅' : '📋'} <span className="hide-on-mobile">{copied ? 'Copied' : 'Copy'}</span>
+              {copied ? <CheckIcon size={13} style={{ color: 'var(--success, #22c55e)' }} /> : <CopyIcon size={13} />}
+              <span className="hide-on-mobile">{copied ? 'Copied' : 'Copy'}</span>
             </button>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setHistory([])}
-              style={{ fontSize: 12, padding: '4px 8px' }}
+              style={{ fontSize: 12, padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
               title="Clear terminal screen"
             >
-              🧹 <span className="hide-on-mobile">Clear</span>
+              <RefreshIcon size={13} />
+              <span className="hide-on-mobile">Clear</span>
             </button>
             <ThemeToggle />
             <TopbarUserButton user={user} onClick={() => setUserModalOpen(true)} />
@@ -704,8 +709,8 @@ ${draftContent}
         <div className="page-content">
           {/* Agent Banner */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(22, 24, 38, 0.95) 0%, rgba(15, 17, 28, 0.98) 100%)',
-            border: '1px solid var(--border2)',
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: '18px 22px',
             marginBottom: 18,
@@ -713,24 +718,21 @@ ${draftContent}
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 16,
-            flexWrap: 'wrap',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.35)'
+            flexWrap: 'wrap'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{
-                width: 48,
-                height: 48,
-                borderRadius: '14px',
-                background: 'linear-gradient(135deg, #6c63ff 0%, #3b82f6 100%)',
+                width: 44,
+                height: 44,
+                borderRadius: '10px',
+                background: 'var(--surface)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 22,
-                border: '1.5px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 0 20px var(--accent-glow)',
+                border: '1px solid var(--border)',
                 flexShrink: 0
               }}>
-                🤖
+                <MailIcon size={20} style={{ color: 'var(--accent)' }} />
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -747,18 +749,18 @@ ${draftContent}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="chip" style={{ fontSize: 11.5, background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
-                🤖 Active Agent
+              <span className="chip" style={{ fontSize: 11.5, background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                Active Agent
               </span>
-              <span className="chip" style={{ fontSize: 11.5, background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}>
-                ⚡ Permission First
+              <span className="chip" style={{ fontSize: 11.5, background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                Permission First
               </span>
               <button
                 onClick={() => router.push('/inbox')}
                 className="btn btn-secondary btn-sm"
-                style={{ fontSize: 11.5, padding: '4px 10px' }}
+                style={{ fontSize: 11.5, padding: '5px 12px' }}
               >
-                📥 Open Inbox View →
+                Open Inbox View →
               </button>
             </div>
           </div>
@@ -785,39 +787,37 @@ ${draftContent}
           </div>
 
           <div style={{
-            background: 'linear-gradient(180deg, #0d1117 0%, #080a0f 100%)',
+            background: 'var(--surface2)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius)',
             padding: 20,
             fontFamily: 'monospace',
             minHeight: '62vh',
             display: 'flex',
-            flexDirection: 'column',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)'
+            flexDirection: 'column'
           }}>
             <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16, fontSize: 13, lineHeight: 1.6 }}>
               {history.map((item, index) => (
                 <div key={index} style={{
                   marginBottom: 10,
                   whiteSpace: 'pre-wrap',
-                  color: item.type === 'input' ? '#58a6ff' :
-                         item.type === 'error' ? '#f85149' :
-                         item.type === 'system' ? '#8b949e' : '#c9d1d9'
+                  color: item.type === 'input' ? 'var(--accent)' :
+                         item.type === 'error' ? 'var(--danger, #f85149)' :
+                         item.type === 'system' ? 'var(--muted)' : 'var(--text)'
                 }}>
                   {item.text}
                 </div>
               ))}
               {loading && (
-                <div style={{ color: '#d29922', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span className="spinner" style={{ width: 14, height: 14 }} /> Executing command…
                 </div>
               )}
               <div ref={terminalEndRef} />
             </div>
 
-            <form onSubmit={handleCommand} style={{ display: 'flex', gap: 10, alignItems: 'center', borderTop: '1px solid #30363d', paddingTop: 12 }}>
-              <span style={{ color: '#58a6ff', fontWeight: 'bold' }}>mailmind-agent$</span>
+            <form onSubmit={handleCommand} style={{ display: 'flex', gap: 10, alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>mailmind-agent$</span>
               <input
                 type="text"
                 autoFocus
@@ -827,7 +827,7 @@ ${draftContent}
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  color: '#fff',
+                  color: 'var(--text)',
                   fontFamily: 'monospace',
                   fontSize: 14,
                   padding: 0
@@ -862,7 +862,7 @@ ${draftContent}
             setUser(switched);
             setHistory(h => [
               ...h,
-              { type: 'output', text: `🔄 Active account switched to ${switched.email}` }
+              { type: 'output', text: `Active account switched to ${switched.email}` }
             ]);
           }}
         />

@@ -1,37 +1,65 @@
 'use client';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar from '@/components/EmailAvatar';
 import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
 import AppPasswordModal from '@/components/AppPasswordModal';
+import LegalModal from '@/components/LegalModal';
 import { extractDisplayName, isValidEmail } from '@/lib/avatar-utils';
 import { addOrUpdateAccount, isExistingUser } from '@/lib/account-manager';
-import { cleanAppPassword, generateAppPassword, PROVIDER_GUIDES } from '@/lib/app-password-generator';
+import { generateAppPassword, PROVIDER_GUIDES } from '@/lib/app-password-generator';
 import {
   requestDeviceNotificationPermission,
   getDeviceNotificationPermission,
   saveNotificationSettings
 } from '@/lib/browser-notifications';
+import {
+  MailIcon,
+  KeyIcon,
+  CheckIcon,
+  CloseIcon,
+  ShieldCheckIcon,
+  ChevronRightIcon
+} from '@/components/Icons';
 
 const STEPS = ['connect', 'tone', 'notifications', 'done'];
 
 const providers = PROVIDER_LIST;
 
-const tones = [
-  { id: 'professional', label: 'Professional', emoji: '💼', desc: 'Polished and clear — great for work emails' },
-  { id: 'casual',       label: 'Casual',       emoji: '😊', desc: 'Relaxed and friendly — feels like you' },
-  { id: 'brief',        label: 'Brief',         emoji: '⚡', desc: 'Short and direct — max 3 sentences' },
+const TONE_OPTIONS = [
+  {
+    id: 'professional',
+    label: 'Executive & Articulate',
+    tagline: 'Polished, clear, and balanced for professional correspondence',
+    sample: "Thank you for the update, Sarah. I have reviewed the proposal and the timeline aligns with our objectives. Let us proceed with Tuesday's deployment as planned.",
+    badge: 'Recommended for Work'
+  },
+  {
+    id: 'casual',
+    label: 'Conversational & Warm',
+    tagline: 'Friendly, natural, and personable for collaborative teams',
+    sample: "Hey Sarah, thanks for passing this along! Everything looks great to me. Let's aim for Tuesday to get it out the door. Talk soon!",
+    badge: 'Internal Collaboration'
+  },
+  {
+    id: 'brief',
+    label: 'Concise & Direct',
+    tagline: 'Direct sentences with zero filler for high-volume inboxes',
+    sample: "Reviewed and approved. Ready to proceed with the Tuesday launch.",
+    badge: 'High Efficiency'
+  },
 ];
 
 function ProgressBar({ step }) {
   const idx = STEPS.indexOf(step);
   const pct = (idx / (STEPS.length - 1)) * 100;
   return (
-    <div style={{ width: '100%', height: 3, background: 'var(--border)', borderRadius: 2, marginBottom: 36 }}>
+    <div style={{ width: '100%', height: 3, background: 'var(--border)', borderRadius: 2, marginBottom: 32 }}>
       <div style={{
         height: '100%', width: `${pct}%`,
-        background: 'linear-gradient(90deg, var(--accent), #a78bfa)',
-        borderRadius: 2, transition: 'width 0.5s ease',
+        background: 'var(--accent)',
+        borderRadius: 2, transition: 'width 0.35s ease',
       }} />
     </div>
   );
@@ -52,6 +80,8 @@ export default function OnboardingPage() {
   const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
   const [appPasswordModalTab, setAppPasswordModalTab] = useState('generator');
   const [isSavedEmailFound, setIsSavedEmailFound] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState('terms');
 
   const [tone, setTone] = useState('professional');
   const [inApp, setInApp] = useState(true);
@@ -69,7 +99,7 @@ export default function OnboardingPage() {
     setPassword(pwd);
     setShowPassword(true);
     setAuthError('');
-    setAuthHint('✨ 16-character Google App Password generated & applied! (Compatible with any email address)');
+    setAuthHint('Generated standard 16-character App Password applied.');
   };
 
   const handleToggleDevice = async (val) => {
@@ -113,7 +143,7 @@ export default function OnboardingPage() {
 
     const passToUse = targetPassword !== undefined ? targetPassword : password;
     if (passToUse == null || String(passToUse).trim() === '') {
-      setAuthError('Password is required. Please enter or generate a 16-character App Password for this email.');
+      setAuthError('Password is required. Please enter or generate an App Password.');
       return;
     }
 
@@ -152,16 +182,16 @@ export default function OnboardingPage() {
         setStep('tone');
       } else {
         setConnecting(false);
-        setAuthError(data.error || 'Authentication failed. Please check your credentials.');
+        setAuthError(data.error || 'Authentication failed. Please verify your credentials.');
         if (data.hint) {
           setAuthHint(data.hint);
         } else if (selectedProvider === 'google' || cleanEmail.includes('gmail')) {
-          setAuthHint('Google requires generating a 16-character App Password manually at https://myaccount.google.com/apppasswords.');
+          setAuthHint('Google accounts require a 16-character App Password generated in your Google Security Console.');
         }
       }
     } catch (err) {
       setConnecting(false);
-      setAuthError('Connection error: ' + (err.message || 'Unable to connect to email authentication service.'));
+      setAuthError('Connection error: ' + (err.message || 'Unable to connect to email server.'));
     }
   };
 
@@ -199,6 +229,7 @@ export default function OnboardingPage() {
   const currentProviderObj = providers.find(p => p.id === selectedProvider) || providers[0];
   const guide = PROVIDER_GUIDES[selectedProvider] || PROVIDER_GUIDES.google;
   const isGoogle = selectedProvider === 'google' || email.toLowerCase().includes('gmail');
+  const activeToneObj = TONE_OPTIONS.find(t => t.id === tone) || TONE_OPTIONS[0];
 
   return (
     <div style={{
@@ -207,25 +238,28 @@ export default function OnboardingPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px 14px',
+      padding: '32px 16px',
       boxSizing: 'border-box',
       width: '100%',
       maxWidth: '100vw',
       overflowX: 'hidden'
     }}>
-      <div style={{ width: '100%', maxWidth: 540, boxSizing: 'border-box' }} className="fade-in">
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+      <div style={{ width: '100%', maxWidth: 560, boxSizing: 'border-box' }} className="fade-in">
+        {/* Brand Header */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 52, height: 52, background: 'linear-gradient(135deg, var(--accent), #a78bfa)',
-            borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 26, margin: '0 auto 12px', boxShadow: '0 4px 20px rgba(108,99,255,0.35)'
-          }}>✉️</div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>
+            width: 44, height: 44, background: 'var(--surface2)',
+            border: '1px solid var(--border2)', color: 'var(--accent)',
+            borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 12px'
+          }}>
+            <MailIcon size={20} />
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5 }}>
             Mail<span style={{ color: 'var(--accent)' }}>Mind</span>
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 13.5, marginTop: 4 }}>
-            Connect your inbox to monitor emails and automate replies with AI
+            Thoughtful inbox monitoring and permission-first drafts
           </p>
         </div>
 
@@ -235,12 +269,12 @@ export default function OnboardingPage() {
         {step === 'connect' && (
           <div className="fade-in">
             {/* Header */}
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 18 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
-                Sign in to your email account
+                Connect your inbox
               </h2>
               <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-                Select your email provider and sign in with your email address and 16-character App Password.
+                Choose your mail host and authenticate with standard protocol credentials.
               </p>
             </div>
 
@@ -264,16 +298,16 @@ export default function OnboardingPage() {
                       gap: 6,
                       padding: '12px 6px',
                       borderRadius: 'var(--radius-sm)',
-                      background: isSelected ? 'var(--accent-glow)' : 'var(--surface)',
-                      border: `1.5px solid ${isSelected ? (p.color || 'var(--accent)') : 'var(--border)'}`,
+                      background: isSelected ? 'var(--accent-subtle)' : 'var(--surface)',
+                      border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
                       color: isSelected ? 'var(--text)' : 'var(--muted)',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.15s ease',
                       textAlign: 'center'
                     }}
                     title={p.brandName || p.name}
                   >
-                    <ProviderIcon provider={p.id} size={22} />
+                    <ProviderIcon provider={p.id} size={20} />
                     <span style={{ fontSize: 11, fontWeight: isSelected ? 700 : 600, lineHeight: 1.2 }}>
                       {p.shortName || p.name.split('/')[0].trim()}
                     </span>
@@ -282,17 +316,17 @@ export default function OnboardingPage() {
               })}
             </div>
 
-            {/* Google / App Password Guide & Generator Banner (Unrestricted) */}
+            {/* App Password Guide & Generator Panel */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.12), rgba(234, 67, 53, 0.08))',
-              border: '1px solid rgba(66, 133, 244, 0.35)',
-              borderRadius: 14,
+              background: 'var(--surface2)',
+              border: '1px solid var(--border2)',
+              borderRadius: 'var(--radius-sm)',
               padding: '14px 16px',
               marginBottom: 16
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>🔑</span> Google App Password Generator (Any Email Supported)
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <KeyIcon size={14} style={{ color: 'var(--accent)' }} /> App Password Security
                 </div>
                 <button
                   type="button"
@@ -304,102 +338,57 @@ export default function OnboardingPage() {
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
-                    padding: 0,
-                    textDecoration: 'underline'
+                    padding: 0
                   }}
                 >
-                  ⚡ Open Full Generator
+                  Generator &amp; Guide
                 </button>
               </div>
 
-              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, marginBottom: 10 }}>
-                No email is restricted. Generate a standard <strong>16-character Google App Password</strong> for any email account (Gmail, Google Workspace, custom domains, or any mail host).
+              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 10 }}>
+                Mail hosts require a standard 16-character App Password to synchronize over secure IMAP without sharing your account master password.
               </div>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={handleGenerateGooglePassword}
-                  className="btn btn-primary btn-sm"
-                  style={{
-                    fontSize: 12,
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontWeight: 700
-                  }}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: 12, padding: '5px 12px' }}
                 >
-                  <span>⚡ Generate Google Password</span>
+                  Generate Format
                 </button>
                 <a
                   href="https://myaccount.google.com/apppasswords"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    fontSize: 12,
-                    padding: '6px 12px',
-                    borderRadius: 8,
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontWeight: 600
-                  }}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 12, padding: '5px 12px' }}
                 >
-                  <span>Google Console ↗</span>
+                  Google Console ↗
                 </a>
                 <button
                   type="button"
                   onClick={() => openAppPasswordModal('guide')}
                   className="btn btn-ghost btn-sm"
-                  style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8 }}
+                  style={{ fontSize: 12, padding: '5px 12px' }}
                 >
-                  <span>📖 Instructions</span>
+                  Instructions
                 </button>
               </div>
             </div>
 
             {/* Login Form */}
-            <form onSubmit={handleConnect} className="card" style={{ padding: 24 }}>
+            <form onSubmit={handleConnect} className="card" style={{ padding: 22 }}>
               {authError && (
                 <div style={{
-                  background: 'rgba(239, 68, 68, 0.12)', border: '1px solid var(--danger)',
-                  borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#fca5a5', marginBottom: 16,
+                  background: 'rgba(184, 76, 76, 0.1)', border: '1px solid var(--danger)',
+                  borderRadius: 6, padding: '12px 14px', fontSize: 13, color: 'var(--text)', marginBottom: 16,
                   lineHeight: 1.5
                 }}>
-                  <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>⚠️</span> Authentication Failed
-                  </div>
-                  <div style={{ marginTop: 4 }}>{authError}</div>
-                  {authHint && <div style={{ marginTop: 6, fontSize: 12, opacity: 0.95 }}>💡 {authHint}</div>}
-
-                  {isGoogle && (
-                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text)' }}>Need a Google App Password?</span>
-                      <a
-                        href="https://myaccount.google.com/apppasswords"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          background: '#EA4335',
-                          color: '#fff',
-                          fontSize: 11.5,
-                          fontWeight: 700,
-                          borderRadius: 6,
-                          padding: '5px 12px',
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 5
-                        }}
-                      >
-                        <span>Open Google App Passwords ↗</span>
-                      </a>
-                    </div>
-                  )}
+                  <div style={{ fontWeight: 600 }}>Authentication Failed</div>
+                  <div style={{ marginTop: 2, color: 'var(--muted)' }}>{authError}</div>
+                  {authHint && <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text)' }}>Note: {authHint}</div>}
                 </div>
               )}
 
@@ -410,8 +399,8 @@ export default function OnboardingPage() {
                     Email Address
                   </label>
                   {isSavedEmailFound && (
-                    <span style={{ fontSize: 11, color: '#86efac', background: 'rgba(34, 197, 94, 0.15)', padding: '2px 8px', borderRadius: 6 }}>
-                      ✓ Saved account on device
+                    <span style={{ fontSize: 11, color: 'var(--success)', background: 'rgba(56, 142, 104, 0.12)', padding: '2px 8px', borderRadius: 4 }}>
+                      Saved on this device
                     </span>
                   )}
                 </div>
@@ -419,7 +408,7 @@ export default function OnboardingPage() {
                   type="email"
                   required
                   className="input"
-                  placeholder="e.g. you@gmail.com, you@outlook.com"
+                  placeholder="e.g. you@example.com"
                   value={email}
                   onChange={e => handleEmailChange(e.target.value)}
                   autoComplete="email"
@@ -430,43 +419,23 @@ export default function OnboardingPage() {
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
                   <label style={{ fontSize: 13, fontWeight: 600 }}>
-                    {isGoogle ? 'Google 16-Character App Password' : 'Password / App Password'} <span style={{ color: 'var(--danger)' }}>*</span>
+                    {isGoogle ? '16-Character App Password' : 'Password or App Password'}
                   </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={handleGenerateGooglePassword}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent)',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        padding: '1px 4px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 3
-                      }}
-                    >
-                      <span>✨</span> Generate Google Password
-                    </button>
-                    {guide.appPasswordUrl && (
-                      <a
-                        href={guide.appPasswordUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: 'var(--muted)',
-                          fontSize: 11.5,
-                          fontWeight: 500,
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        {guide.shortName} Portal ↗
-                      </a>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateGooglePassword}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    Auto-Generate Format
+                  </button>
                 </div>
 
                 <div style={{ position: 'relative' }}>
@@ -474,14 +443,14 @@ export default function OnboardingPage() {
                     type={showPassword ? 'text' : 'password'}
                     required
                     className="input"
-                    placeholder="Paste or generate 16-char Google App Password (e.g. abcd efgh ijkl mnop)"
+                    placeholder="Enter or paste 16-character App Password"
                     value={password}
                     onChange={e => {
                       setPassword(e.target.value);
                       setAuthError('');
                       setAuthHint('');
                     }}
-                    style={{ paddingRight: 40, fontFamily: showPassword ? 'monospace' : 'inherit' }}
+                    style={{ paddingRight: 40, fontFamily: showPassword ? 'var(--font-mono)' : 'inherit' }}
                     autoComplete="current-password"
                   />
                   <button
@@ -495,54 +464,13 @@ export default function OnboardingPage() {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      fontSize: 15,
+                      fontSize: 12,
                       color: 'var(--muted)',
                       padding: '4px'
                     }}
-                    title={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? 'Hide' : 'Show'}
                   </button>
-                </div>
-
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                  <span>
-                    Works with any email. Generate a standard 16-character Google App Password with 1 click.
-                  </span>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={handleGenerateGooglePassword}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent)',
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        padding: 0,
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      ⚡ Quick Generate
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openAppPasswordModal('generator')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent)',
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        padding: 0,
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      🔑 Generator &amp; Guide
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -581,52 +509,126 @@ export default function OnboardingPage() {
                 disabled={connecting || !email || !password}
               >
                 {connecting ? (
-                  <><span className="spinner" style={{ width: 16, height: 16 }} /> Verifying & Connecting…</>
+                  <><span className="spinner" style={{ width: 14, height: 14 }} /> Verifying Connection…</>
                 ) : (
-                  'Verify & Connect Inbox →'
+                  'Connect Mailbox'
                 )}
               </button>
             </form>
+
+            {/* Legal Links Footer */}
+            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'var(--muted)' }}>
+              <span>Protected by permission-first security. </span>
+              <button
+                type="button"
+                onClick={() => { setLegalModalTab('terms'); setLegalModalOpen(true); }}
+                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 12 }}
+              >
+                Terms of Service
+              </button>
+              <span> &amp; </span>
+              <button
+                type="button"
+                onClick={() => { setLegalModalTab('privacy'); setLegalModalOpen(true); }}
+                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 12 }}
+              >
+                Privacy Policy
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Step: Tone */}
+        {/* Step: Tone Workshop (Asymmetric interactive preview layout) */}
         {step === 'tone' && (
           <div className="fade-in">
-            <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>✅</span> Connected as: <strong>{email}</strong>
+            <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckIcon size={14} /> Connected: <strong>{email}</strong>
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Pick your AI reply tone</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>
-              MailMind will adapt to this style when drafting email responses for your review and approval.
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>
+              Select your drafting tone
+            </h2>
+            <p style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 20 }}>
+              MailMind personalizes response drafts using this voice profile. Every draft remains editable before sending.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
-              {tones.map(t => (
-                <div
-                  key={t.id}
-                  onClick={() => setTone(t.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px',
-                    background: tone === t.id ? 'var(--accent-glow)' : 'var(--surface)',
-                    border: `1px solid ${tone === t.id ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: 'var(--radius)', cursor: 'pointer', transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: 24 }}>{t.emoji}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{t.label}</div>
-                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>{t.desc}</div>
+
+            {/* Asymmetric layout: Selector strip + live sample workbench */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {TONE_OPTIONS.map(t => {
+                const isSelected = tone === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => setTone(t.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 14,
+                      padding: '14px 18px',
+                      background: isSelected ? 'var(--surface)' : 'var(--surface2)',
+                      border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                      borderRadius: 'var(--radius)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                        <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--text)' }}>
+                          {t.label}
+                        </span>
+                        <span className="badge" style={{ fontSize: 10, background: 'var(--surface2)' }}>
+                          {t.badge}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+                        {t.tagline}
+                      </div>
+                    </div>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%',
+                      border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--muted2)'}`,
+                      background: isSelected ? 'var(--accent)' : 'transparent',
+                      color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: 2
+                    }}>
+                      {isSelected && <CheckIcon size={10} style={{ color: '#fff' }} />}
+                    </div>
                   </div>
-                  {tone === t.id && <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontSize: 18 }}>✓</span>}
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {/* Live Draft Demonstration Sandbox */}
+            <div className="card" style={{ padding: 18, marginBottom: 24, background: 'var(--surface2)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent)', letterSpacing: '0.6px', marginBottom: 6 }}>
+                Live Tone Demonstration Preview
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+                Scenario: Confirming a partner launch schedule
+              </div>
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: 14,
+                fontSize: 13.5,
+                lineHeight: 1.6,
+                color: 'var(--text)',
+                fontStyle: 'normal'
+              }}>
+                &ldquo;{activeToneObj.sample}&rdquo;
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost btn-lg" style={{ flex: 1 }} onClick={() => setStep('connect')}>
-                ← Back
+                Back
               </button>
               <button className="btn btn-primary btn-lg" style={{ flex: 2 }} onClick={() => setStep('notifications')}>
-                Continue →
+                Continue
               </button>
             </div>
           </div>
@@ -635,22 +637,22 @@ export default function OnboardingPage() {
         {/* Step: Notifications */}
         {step === 'notifications' && (
           <div className="fade-in">
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Notification preferences</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>
-              Choose how you would like to be alerted when new emails and reply drafts arrive.
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Notification preferences</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 20 }}>
+              Configure how alerts reach you when important emails and proposed replies arrive.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               {[
-                { label: 'Device & desktop notifications', desc: 'Real-time alerts sent to your OS desktop or device', val: deviceNotifications, set: handleToggleDevice },
-                { label: 'Notification sound alert', desc: 'Audio chime when important emails arrive', val: notifSound, set: setNotifSound },
-                { label: 'In-app notifications', desc: 'Real-time bell updates inside MailMind', val: inApp, set: setInApp },
-                { label: 'Daily digest email', desc: 'Morning summary of key emails', val: digest, set: setDigest },
+                { label: 'Device notifications', desc: 'Alerts dispatched to your desktop or device', val: deviceNotifications, set: handleToggleDevice },
+                { label: 'Audio alert chime', desc: 'Subtle tone played on urgent message arrival', val: notifSound, set: setNotifSound },
+                { label: 'In-app indicators', desc: 'Activity indicator in the MailMind shell', val: inApp, set: setInApp },
+                { label: 'Daily summary digest', desc: 'Consolidated briefing of key email activity', val: digest, set: setDigest },
               ].map(item => (
-                <div key={item.label} className="card" style={{ padding: '16px 20px' }}>
+                <div key={item.label} className="card" style={{ padding: '14px 18px' }}>
                   <div className="toggle-wrap">
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>{item.label}</div>
-                      <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{item.desc}</div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{item.desc}</div>
                     </div>
                     <div className={`toggle${item.val ? ' on' : ''}`} onClick={() => item.set(!item.val)} />
                   </div>
@@ -659,10 +661,10 @@ export default function OnboardingPage() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost btn-lg" style={{ flex: 1 }} onClick={() => setStep('tone')}>
-                ← Back
+                Back
               </button>
               <button className="btn btn-primary btn-lg" style={{ flex: 2 }} onClick={() => setStep('done')}>
-                Save & continue →
+                Save Preferences
               </button>
             </div>
           </div>
@@ -675,28 +677,37 @@ export default function OnboardingPage() {
               <EmailAvatar
                 email={email}
                 name={extractDisplayName('', email)}
-                size={72}
+                size={68}
                 isUser={true}
                 style={{
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                  boxShadow: '0 4px 20px rgba(108, 99, 255, 0.35)'
+                  border: '2px solid var(--border2)'
                 }}
               />
             </div>
-            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, fontFamily: '"Google Sans", "Product Sans", Roboto, system-ui, sans-serif' }}>
-              You&apos;re all set!
+            <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
+              Setup Complete
             </h2>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>
-              MailMind is now connected to your inbox, reading incoming messages, summarizing email history, and drafting replies — always waiting for your approval before sending.
+            <p style={{ color: 'var(--muted)', fontSize: 13.5, marginBottom: 24, maxWidth: 380, margin: '0 auto 24px' }}>
+              MailMind is now connected to your inbox, reading incoming messages, summarizing history, and drafting replies, always waiting for your approval before sending.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 340, margin: '0 auto 32px', textAlign: 'left' }}>
-              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ {currentProviderObj.name} Account: <strong>{email}</strong></div>
-              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ AI Reply Tone: {tone}</div>
-              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Full History &amp; Search Enabled</div>
-              <div style={{ fontSize: 14, color: 'var(--success)' }}>✅ Permission-first: No replies sent without your approval</div>
+            <div className="card" style={{ maxWidth: 380, margin: '0 auto 28px', textAlign: 'left', padding: 18 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+                  <CheckIcon size={14} style={{ color: 'var(--success)' }} />
+                  <span>{currentProviderObj.name} Account: <strong>{email}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+                  <CheckIcon size={14} style={{ color: 'var(--success)' }} />
+                  <span>Draft Voice Tone: <strong>{activeToneObj.label}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+                  <CheckIcon size={14} style={{ color: 'var(--success)' }} />
+                  <span>Permission-First: No automated dispatch without approval</span>
+                </div>
+              </div>
             </div>
             <button className="btn btn-primary btn-lg" style={{ width: '100%', maxWidth: 320, margin: '0 auto' }} onClick={handleDone}>
-              Open my inbox →
+              Open Inbox
             </button>
           </div>
         )}
@@ -714,6 +725,14 @@ export default function OnboardingPage() {
             setAuthError('');
             setAuthHint('');
           }}
+        />
+      )}
+
+      {legalModalOpen && (
+        <LegalModal
+          isOpen={legalModalOpen}
+          initialTab={legalModalTab}
+          onClose={() => setLegalModalOpen(false)}
         />
       )}
     </div>

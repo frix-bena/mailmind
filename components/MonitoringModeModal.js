@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ShieldCheckIcon, SendIcon, CheckIcon, CloseIcon } from '@/components/Icons';
 
 /**
  * MonitoringModeModal - A sleek pop-up bar dialog for configuring
@@ -70,18 +71,16 @@ export default function MonitoringModeModal({
           maxWidth: 620,
           padding: 0,
           overflow: 'hidden',
-          borderRadius: 20,
-          border: '1px solid var(--border2)',
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.65)',
-          background: 'rgba(22, 24, 38, 0.98)'
+          borderRadius: 'var(--radius)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow)',
+          background: 'var(--surface)'
         }}
       >
-        {/* Pop-up Bar Top Header Banner */}
+        {/* Modal Header */}
         <div
           style={{
-            background: isAuto
-              ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(32, 32, 50, 0.8) 100%)'
-              : 'linear-gradient(135deg, rgba(108, 99, 255, 0.25) 0%, rgba(32, 32, 50, 0.8) 100%)',
+            background: 'var(--surface2)',
             padding: '20px 24px',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
@@ -93,19 +92,19 @@ export default function MonitoringModeModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: isAuto ? 'rgba(168, 85, 247, 0.25)' : 'rgba(108, 99, 255, 0.25)',
-                border: `1px solid ${isAuto ? 'rgba(168, 85, 247, 0.5)' : 'rgba(108, 99, 255, 0.5)'}`,
+                width: 42,
+                height: 42,
+                borderRadius: 10,
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 22,
+                color: 'var(--accent)',
                 flexShrink: 0
               }}
             >
-              {isAuto ? '⚡' : '🛡️'}
+              {isAuto ? <SendIcon size={20} /> : <ShieldCheckIcon size={20} />}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -128,7 +127,7 @@ export default function MonitoringModeModal({
                 </span>
               </div>
               <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '3px 0 0 0' }}>
-                Select how MailMind AI acts upon incoming messages in your inbox.
+                Select how MailMind acts upon incoming messages in your inbox.
               </p>
             </div>
           </div>
@@ -138,31 +137,10 @@ export default function MonitoringModeModal({
             onClick={onClose}
             disabled={saving}
             aria-label="Close"
-            style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              color: 'var(--muted)',
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: 16,
-              transition: 'all 0.15s ease',
-              flexShrink: 0
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text)';
-              e.currentTarget.style.borderColor = 'var(--border2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--muted)';
-              e.currentTarget.style.borderColor = 'var(--border)';
-            }}
+            className="btn btn-ghost btn-sm"
+            style={{ padding: '4px 8px' }}
           >
-            ✕
+            <CloseIcon size={14} />
           </button>
         </div>
 
@@ -177,13 +155,12 @@ export default function MonitoringModeModal({
             onClick={() => setSelectedMode('ask_permission')}
             style={{
               background: !isAuto ? 'var(--accent-glow)' : 'var(--surface2)',
-              border: `2px solid ${!isAuto ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: 14,
+              border: `1.5px solid ${!isAuto ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius)',
               padding: '16px 18px',
               cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              position: 'relative',
-              boxShadow: !isAuto ? '0 4px 20px rgba(108, 99, 255, 0.2)' : 'none'
+              transition: 'all 0.18s ease',
+              position: 'relative'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -193,16 +170,16 @@ export default function MonitoringModeModal({
                     width: 38,
                     height: 38,
                     borderRadius: 10,
-                    background: !isAuto ? 'rgba(108, 99, 255, 0.25)' : 'var(--surface)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 20,
                     flexShrink: 0,
                     marginTop: 2
                   }}
                 >
-                  🛡️
+                  <ShieldCheckIcon size={20} style={{ color: 'var(--accent)' }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -210,7 +187,7 @@ export default function MonitoringModeModal({
                       Ask Permission (Permission-First)
                     </span>
                     <span className="badge badge-low" style={{ fontSize: 10.5, padding: '2px 7px' }}>
-                      🔒 100% Safe
+                      Strict Approval
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
@@ -236,22 +213,20 @@ export default function MonitoringModeModal({
               {/* Radio Indicator */}
               <div
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: 20,
+                  height: 20,
                   borderRadius: '50%',
-                  border: `2px solid ${!isAuto ? 'var(--accent)' : 'var(--muted)'}`,
+                  border: `1.5px solid ${!isAuto ? 'var(--accent)' : 'var(--muted)'}`,
                   background: !isAuto ? 'var(--accent)' : 'transparent',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#fff',
-                  fontSize: 12,
-                  fontWeight: 'bold',
                   flexShrink: 0,
                   marginTop: 2
                 }}
               >
-                {!isAuto ? '✓' : ''}
+                {!isAuto && <CheckIcon size={12} />}
               </div>
             </div>
           </div>
@@ -261,13 +236,12 @@ export default function MonitoringModeModal({
             onClick={() => setSelectedMode('auto_reply')}
             style={{
               background: isAuto ? 'var(--accent-glow)' : 'var(--surface2)',
-              border: `2px solid ${isAuto ? 'var(--accent)' : 'var(--border)'}`,
-              borderRadius: 14,
+              border: `1.5px solid ${isAuto ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius)',
               padding: '16px 18px',
               cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              position: 'relative',
-              boxShadow: isAuto ? '0 4px 20px rgba(168, 85, 247, 0.2)' : 'none'
+              transition: 'all 0.18s ease',
+              position: 'relative'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -277,16 +251,16 @@ export default function MonitoringModeModal({
                     width: 38,
                     height: 38,
                     borderRadius: 10,
-                    background: isAuto ? 'rgba(168, 85, 247, 0.25)' : 'var(--surface)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 20,
                     flexShrink: 0,
                     marginTop: 2
                   }}
                 >
-                  ⚡
+                  <SendIcon size={18} style={{ color: 'var(--accent)' }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -294,7 +268,7 @@ export default function MonitoringModeModal({
                       Reply Without Permission (Autonomous)
                     </span>
                     <span className="badge badge-purple" style={{ fontSize: 10.5, padding: '2px 7px' }}>
-                      ⚡ Auto-Pilot
+                      Autonomous Mode
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
@@ -320,22 +294,20 @@ export default function MonitoringModeModal({
               {/* Radio Indicator */}
               <div
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: 20,
+                  height: 20,
                   borderRadius: '50%',
-                  border: `2px solid ${isAuto ? 'var(--accent)' : 'var(--muted)'}`,
+                  border: `1.5px solid ${isAuto ? 'var(--accent)' : 'var(--muted)'}`,
                   background: isAuto ? 'var(--accent)' : 'transparent',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#fff',
-                  fontSize: 12,
-                  fontWeight: 'bold',
                   flexShrink: 0,
                   marginTop: 2
                 }}
               >
-                {isAuto ? '✓' : ''}
+                {isAuto && <CheckIcon size={12} />}
               </div>
             </div>
           </div>
@@ -344,9 +316,9 @@ export default function MonitoringModeModal({
           <div
             style={{
               padding: '12px 16px',
-              borderRadius: 10,
-              background: isAuto ? 'rgba(168, 85, 247, 0.12)' : 'rgba(34, 197, 94, 0.12)',
-              border: `1px solid ${isAuto ? 'rgba(168, 85, 247, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+              borderRadius: 'var(--radius)',
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
               fontSize: 12.5,
               color: 'var(--text)',
               display: 'flex',
@@ -354,7 +326,9 @@ export default function MonitoringModeModal({
               gap: 10
             }}
           >
-            <span style={{ fontSize: 16 }}>{isAuto ? '⚡' : '🛡️'}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+              {isAuto ? <SendIcon size={16} style={{ color: 'var(--accent)' }} /> : <ShieldCheckIcon size={16} style={{ color: 'var(--accent)' }} />}
+            </span>
             <div>
               <strong>Policy Summary: </strong>
               {isAuto
@@ -412,7 +386,7 @@ export default function MonitoringModeModal({
                 </>
               ) : (
                 <>
-                  <span>✓</span>
+                  <CheckIcon size={14} />
                   Save & Apply Mode
                 </>
               )}
