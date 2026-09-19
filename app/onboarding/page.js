@@ -6,7 +6,7 @@ import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
 import AppPasswordModal from '@/components/AppPasswordModal';
 import { extractDisplayName, isValidEmail } from '@/lib/avatar-utils';
 import { addOrUpdateAccount, isExistingUser } from '@/lib/account-manager';
-import { cleanAppPassword, PROVIDER_GUIDES } from '@/lib/app-password-generator';
+import { cleanAppPassword, generateAppPassword, PROVIDER_GUIDES } from '@/lib/app-password-generator';
 import {
   requestDeviceNotificationPermission,
   getDeviceNotificationPermission,
@@ -50,7 +50,7 @@ export default function OnboardingPage() {
   const [authError, setAuthError] = useState('');
   const [authHint, setAuthHint] = useState('');
   const [appPasswordModalOpen, setAppPasswordModalOpen] = useState(false);
-  const [appPasswordModalTab, setAppPasswordModalTab] = useState('guide');
+  const [appPasswordModalTab, setAppPasswordModalTab] = useState('generator');
   const [isSavedEmailFound, setIsSavedEmailFound] = useState(false);
 
   const [tone, setTone] = useState('professional');
@@ -59,9 +59,17 @@ export default function OnboardingPage() {
   const [notifSound, setNotifSound] = useState(true);
   const [digest, setDigest] = useState(false);
 
-  const openAppPasswordModal = (tab = 'guide') => {
+  const openAppPasswordModal = (tab = 'generator') => {
     setAppPasswordModalTab(tab);
     setAppPasswordModalOpen(true);
+  };
+
+  const handleGenerateGooglePassword = () => {
+    const pwd = generateAppPassword({ format: 'spaced', length: 16 });
+    setPassword(pwd);
+    setShowPassword(true);
+    setAuthError('');
+    setAuthHint('✨ 16-character Google App Password generated & applied! (Compatible with any email address)');
   };
 
   const handleToggleDevice = async (val) => {
@@ -105,11 +113,7 @@ export default function OnboardingPage() {
 
     const passToUse = targetPassword !== undefined ? targetPassword : password;
     if (passToUse == null || String(passToUse).trim() === '') {
-      setAuthError(
-        selectedProvider === 'google' || cleanEmail.includes('gmail')
-          ? 'Password is required. Please generate a 16-character Google App Password manually and paste it here.'
-          : 'Password is required. Please enter your email password or App Password.'
-      );
+      setAuthError('Password is required. Please enter or generate a 16-character App Password for this email.');
       return;
     }
 
@@ -278,109 +282,85 @@ export default function OnboardingPage() {
               })}
             </div>
 
-            {/* Manual Google App Password Guide Banner */}
-            {isGoogle ? (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(234, 67, 53, 0.08))',
-                border: '1px solid rgba(66, 133, 244, 0.3)',
-                borderRadius: 14,
-                padding: '14px 16px',
-                marginBottom: 16
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🔑</span> Google App Password Required
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openAppPasswordModal('guide')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--accent)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: 0,
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    📖 View Step-by-Step Guide
-                  </button>
+            {/* Google / App Password Guide & Generator Banner (Unrestricted) */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.12), rgba(234, 67, 53, 0.08))',
+              border: '1px solid rgba(66, 133, 244, 0.35)',
+              borderRadius: 14,
+              padding: '14px 16px',
+              marginBottom: 16
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>🔑</span> Google App Password Generator (Any Email Supported)
                 </div>
-
-                <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, marginBottom: 10 }}>
-                  Google requires a <strong>16-character App Password</strong> (not your regular password) when 2-Step Verification is active.
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <a
-                    href="https://myaccount.google.com/apppasswords"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary btn-sm"
-                    style={{
-                      fontSize: 12,
-                      padding: '6px 14px',
-                      borderRadius: 8,
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      fontWeight: 700
-                    }}
-                  >
-                    <span>Generate App Password in Google ↗</span>
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => openAppPasswordModal('guide')}
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8 }}
-                  >
-                    <span>📖 Instructions</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => openAppPasswordModal('generator')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0,
+                    textDecoration: 'underline'
+                  }}
+                >
+                  ⚡ Open Full Generator
+                </button>
               </div>
-            ) : (
-              guide.appPasswordUrl && (
-                <div style={{
-                  background: 'rgba(108, 99, 255, 0.08)',
-                  border: '1px solid rgba(108, 99, 255, 0.25)',
-                  borderRadius: 12,
-                  padding: '12px 14px',
-                  marginBottom: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                  flexWrap: 'wrap'
-                }}>
-                  <div style={{ fontSize: 12, color: 'var(--text)', flex: 1, minWidth: 200 }}>
-                    <strong>Using {guide.name}?</strong> Generate a 16-character App Password in your account security console.
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <a
-                      href={guide.appPasswordUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary btn-sm"
-                      style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8, textDecoration: 'none' }}
-                    >
-                      <span>Open {guide.shortName} Console ↗</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => openAppPasswordModal('guide')}
-                      className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 11.5, padding: '5px 10px', borderRadius: 8 }}
-                    >
-                      Guide
-                    </button>
-                  </div>
-                </div>
-              )
-            )}
+
+              <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45, marginBottom: 10 }}>
+                No email is restricted. Generate a standard <strong>16-character Google App Password</strong> for any email account (Gmail, Google Workspace, custom domains, or any mail host).
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleGenerateGooglePassword}
+                  className="btn btn-primary btn-sm"
+                  style={{
+                    fontSize: 12,
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontWeight: 700
+                  }}
+                >
+                  <span>⚡ Generate Google Password</span>
+                </button>
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    fontSize: 12,
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontWeight: 600
+                  }}
+                >
+                  <span>Google Console ↗</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => openAppPasswordModal('guide')}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8 }}
+                >
+                  <span>📖 Instructions</span>
+                </button>
+              </div>
+            </div>
 
             {/* Login Form */}
             <form onSubmit={handleConnect} className="card" style={{ padding: 24 }}>
@@ -452,21 +432,41 @@ export default function OnboardingPage() {
                   <label style={{ fontSize: 13, fontWeight: 600 }}>
                     {isGoogle ? 'Google 16-Character App Password' : 'Password / App Password'} <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
-                  {guide.appPasswordUrl && (
-                    <a
-                      href={guide.appPasswordUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={handleGenerateGooglePassword}
                       style={{
+                        background: 'none',
+                        border: 'none',
                         color: 'var(--accent)',
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        textDecoration: 'underline'
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        padding: '1px 4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3
                       }}
                     >
-                      Get {guide.shortName} App Password ↗
-                    </a>
-                  )}
+                      <span>✨</span> Generate Google Password
+                    </button>
+                    {guide.appPasswordUrl && (
+                      <a
+                        href={guide.appPasswordUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: 'var(--muted)',
+                          fontSize: 11.5,
+                          fontWeight: 500,
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        {guide.shortName} Portal ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ position: 'relative' }}>
@@ -474,7 +474,7 @@ export default function OnboardingPage() {
                     type={showPassword ? 'text' : 'password'}
                     required
                     className="input"
-                    placeholder={isGoogle ? 'Paste 16-character Google code (e.g. abcd efgh ijkl mnop)' : 'Enter your email or 16-char App Password'}
+                    placeholder="Paste or generate 16-char Google App Password (e.g. abcd efgh ijkl mnop)"
                     value={password}
                     onChange={e => {
                       setPassword(e.target.value);
@@ -507,26 +507,42 @@ export default function OnboardingPage() {
 
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <span>
-                    {isGoogle
-                      ? 'Copy the 16-character code from Google and paste it here.'
-                      : `Enter your ${currentProviderObj.name} password or App Password.`}
+                    Works with any email. Generate a standard 16-character Google App Password with 1 click.
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => openAppPasswordModal('guide')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--accent)',
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      padding: 0,
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    Setup instructions
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={handleGenerateGooglePassword}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      ⚡ Quick Generate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAppPasswordModal('generator')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent)',
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      🔑 Generator &amp; Guide
+                    </button>
+                  </div>
                 </div>
               </div>
 

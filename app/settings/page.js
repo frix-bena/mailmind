@@ -1377,6 +1377,14 @@ export default function SettingsPage() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => openAppPasswordModal('generator')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                  >
+                    <span>⚡</span> Generate App Password
+                  </button>
+                  <button
+                    type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => openAppPasswordModal('recovery')}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 12px' }}
@@ -1385,11 +1393,11 @@ export default function SettingsPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-ghost btn-sm"
                     onClick={() => openAppPasswordModal('guide')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 14px' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '7px 12px' }}
                   >
-                    <span>📖</span> Setup Instructions &amp; Guide
+                    <span>📖</span> Setup Guide
                   </button>
                 </div>
               </div>
@@ -1409,21 +1417,37 @@ export default function SettingsPage() {
               }}>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🔑</span> Generate Google App Password Manually
+                    <span>🔑</span> Google App Password Generator &amp; Setup (Any Email)
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, lineHeight: 1.4 }}>
-                    Visit your Google Account Security page to create a 16-character App Password for MailMind, then update your password below.
+                    No email is restricted. Generate a standard 16-character Google-format App Password directly here, or create one in Google Security.
                   </div>
                 </div>
-                <a
-                  href="https://myaccount.google.com/apppasswords"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary btn-sm"
-                  style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontWeight: 700 }}
-                >
-                  <span>Open Google App Passwords ↗</span>
-                </a>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const pwd = generateAppPassword({ format: 'spaced', length: 16 });
+                      setNewAccountPassword(pwd);
+                      setShowNewAccountPassword(true);
+                      setPwdUpdateSuccess('✨ 16-character Google App Password generated! Click "Save Password" below to apply.');
+                      setTimeout(() => setPwdUpdateSuccess(''), 4000);
+                    }}
+                    style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', fontWeight: 700 }}
+                  >
+                    <span>⚡ Generate Password</span>
+                  </button>
+                  <a
+                    href="https://myaccount.google.com/apppasswords"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
+                  >
+                    <span>Google Console ↗</span>
+                  </a>
+                </div>
               </div>
 
               {/* Manual Password Update Form */}
@@ -1438,14 +1462,14 @@ export default function SettingsPage() {
                   Update Password / App Password for Active Account ({user?.email || 'Current Account'}):
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-                  Paste the 16-character App Password generated from Google or your provider (spaces like <code style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>abcd efgh ijkl mnop</code> will be normalized automatically).
+                  Paste or generate the 16-character App Password (spaces like <code style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>abcd efgh ijkl mnop</code> will be normalized automatically).
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
                     <input
                       type={showNewAccountPassword ? 'text' : 'password'}
-                      placeholder="Paste 16-character code (e.g. abcd efgh ijkl mnop)"
+                      placeholder="Paste or generate 16-character code (e.g. abcd efgh ijkl mnop)"
                       value={newAccountPassword}
                       onChange={(e) => setNewAccountPassword(e.target.value)}
                       style={{
@@ -1479,6 +1503,21 @@ export default function SettingsPage() {
                       {showNewAccountPassword ? '🙈' : '👁️'}
                     </button>
                   </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      const pwd = generateAppPassword({ format: 'spaced', length: 16 });
+                      setNewAccountPassword(pwd);
+                      setShowNewAccountPassword(true);
+                      setPwdUpdateSuccess('✨ 16-character Google App Password generated! Click "Save Password" to apply.');
+                      setTimeout(() => setPwdUpdateSuccess(''), 3000);
+                    }}
+                    style={{ fontSize: 12.5, padding: '8px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                  >
+                    <span>⚡ Quick Generate</span>
+                  </button>
 
                   <button
                     type="button"

@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import ProviderIcon, { PROVIDER_LIST, getProviderInfo } from '@/components/ProviderIcon';
 import {
+  generateAppPassword,
   cleanAppPassword,
   formatAppPassword,
+  calculatePasswordStrength,
   PROVIDER_GUIDES,
   getProviderAppPasswordGuide
 } from '@/lib/app-password-generator';
@@ -15,10 +17,12 @@ export default function AppPasswordModal({
   initialProvider = 'google',
   userEmail = '',
   onSelectPassword,
-  initialTab = 'guide' // 'guide' | 'paste' | 'faq' | 'recovery'
+  initialTab = 'generator' // 'generator' | 'guide' | 'paste' | 'faq' | 'recovery'
 }) {
-  const [activeTab, setActiveTab] = useState('guide');
+  const [activeTab, setActiveTab] = useState(initialTab || 'generator');
   const [selectedProvider, setSelectedProvider] = useState(initialProvider || 'google');
+  const [formatType, setFormatType] = useState('spaced'); // 'spaced' | 'dashed' | 'alphanumeric'
+  const [generatedPassword, setGeneratedPassword] = useState('');
   const [pastedPassword, setPastedPassword] = useState('');
   const [copied, setCopied] = useState(false);
   const [appliedMsg, setAppliedMsg] = useState('');
@@ -31,12 +35,27 @@ export default function AppPasswordModal({
   }, [initialProvider]);
 
   useEffect(() => {
-    if (initialTab && initialTab !== 'generator' && initialTab !== 'forgot' && initialTab !== 'create') {
+    if (initialTab) {
       setActiveTab(initialTab);
-    } else {
-      setActiveTab('guide');
     }
   }, [initialTab]);
+
+  const handleRegenerate = () => {
+    let fmt = formatType;
+    if (selectedProvider === 'icloud' && formatType === 'spaced') {
+      fmt = 'dashed';
+    }
+    const newPwd = generateAppPassword({
+      format: fmt,
+      length: 16
+    });
+    setGeneratedPassword(newPwd);
+    setCopied(false);
+  };
+
+  useEffect(() => {
+    handleRegenerate();
+  }, [formatType, selectedProvider]);
 
   const handleCopy = (textToCopy) => {
     if (!textToCopy) return;
@@ -122,10 +141,14 @@ export default function AppPasswordModal({
             </span>
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-                {guide.name} App Password Setup Guide
+                {activeTab === 'generator'
+                  ? '⚡ App Password Generator (Any Email Supported)'
+                  : `${guide.name} App Password Setup Guide`}
               </h2>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                Generate a 16-character App Password manually in your Google / provider account
+                {userEmail
+                  ? `Target Account: ${userEmail} • Generate standard 16-character App Passwords with no email restrictions`
+                  : 'Generate a 16-character App Password for any email account without domain restrictions'}
               </div>
             </div>
           </div>
@@ -158,6 +181,7 @@ export default function AppPasswordModal({
           overflowX: 'auto'
         }}>
           {[
+            { id: 'generator', label: '⚡ Generate App Password', icon: '⚡' },
             { id: 'guide', label: '📖 Step-by-Step Guide', icon: '📖' },
             { id: 'paste', label: '📋 Paste & Apply', icon: '📋' },
             { id: 'faq', label: '🛡️ Security & 2FA FAQ', icon: '🛡️' },
@@ -253,6 +277,203 @@ export default function AppPasswordModal({
               })}
             </div>
           </div>
+
+          {/* ══════════════════ TAB: GENERATE APP PASSWORD (UNRESTRICTED) ══════════════════ */}
+          {activeTab === 'generator' && (
+            <div className="fade-in">
+              {/* Unrestricted email callout */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(66, 133, 244, 0.12), rgba(34, 197, 94, 0.1))',
+                border: '1px solid rgba(66, 133, 244, 0.35)',
+                borderRadius: 14,
+                padding: '14px 16px',
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                    <span>✨</span> Universal 16-Character App Password Generator
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 }}>
+                    No email is restricted. You can generate a standard 16-character Google-compatible App Password for <strong>any email address</strong> (Gmail, Google Workspace, custom domains, or any mail host).
+                  </div>
+                </div>
+                {userEmail && (
+                  <div style={{
+                    padding: '4px 10px',
+                    borderRadius: 8,
+                    background: 'rgba(66, 133, 244, 0.2)',
+                    border: '1px solid rgba(66, 133, 244, 0.4)',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: '#93c5fd',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    📧 {userEmail}
+                  </div>
+                )}
+              </div>
+
+              {/* Password Generator Card */}
+              <div style={{
+                background: 'var(--surface2, #252538)',
+                borderRadius: 16,
+                padding: '20px 18px',
+                border: '1px solid var(--border)',
+                marginBottom: 18,
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Generated 16-Character Password ({formatType === 'spaced' ? 'Google Standard' : formatType === 'dashed' ? 'Apple Style' : 'Alphanumeric'}):</span>
+                  <span style={{
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: calculatePasswordStrength(generatedPassword).color,
+                    background: 'var(--surface)',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    border: '1px solid var(--border)'
+                  }}>
+                    🛡️ {calculatePasswordStrength(generatedPassword).label} Entropy
+                  </span>
+                </div>
+
+                {/* Password Display Box */}
+                <div style={{
+                  background: 'var(--surface, #181824)',
+                  border: '1.5px dashed var(--accent)',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  fontFamily: 'monospace',
+                  fontSize: 21,
+                  fontWeight: 700,
+                  letterSpacing: '2px',
+                  color: 'var(--text)',
+                  marginBottom: 14,
+                  userSelect: 'all',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 12,
+                  wordBreak: 'break-all'
+                }}>
+                  <span>{generatedPassword}</span>
+                </div>
+
+                {/* Quick Action Buttons */}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(cleanAppPassword(generatedPassword))}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span>{copied ? '✅' : '📋'}</span>
+                    <span>{copied ? 'Copied to Clipboard!' : 'Copy Password'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRegenerate}
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: 12, padding: '7px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5 }}
+                    title="Generate another 16-character password"
+                  >
+                    <span>🔄</span>
+                    <span>Generate New One</span>
+                  </button>
+
+                  {onSelectPassword && (
+                    <button
+                      type="button"
+                      onClick={() => handleApply(generatedPassword)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '7px 16px', borderRadius: 8, fontWeight: 700 }}
+                    >
+                      Use in Login Form →
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Format Options */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>
+                  Password Formatting Style:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {[
+                    { id: 'spaced', label: '4x4 Spaced (Google / Yahoo)', example: 'abcd efgh ijkl mnop' },
+                    { id: 'dashed', label: '4x4 Dashed (Apple iCloud)', example: 'abcd-efgh-ijkl-mnop' },
+                    { id: 'alphanumeric', label: 'Alphanumeric (Microsoft)', example: 'k9Nm-2PxL-8VbQ-4WtZ' }
+                  ].map((fmt) => {
+                    const isFmtActive = formatType === fmt.id;
+                    return (
+                      <button
+                        key={fmt.id}
+                        type="button"
+                        onClick={() => setFormatType(fmt.id)}
+                        style={{
+                          padding: '7px 8px',
+                          fontSize: 11,
+                          fontWeight: isFmtActive ? 700 : 500,
+                          borderRadius: 8,
+                          border: `1px solid ${isFmtActive ? 'var(--accent)' : 'var(--border)'}`,
+                          background: isFmtActive ? 'var(--accent-glow)' : 'var(--surface2)',
+                          color: isFmtActive ? 'var(--text)' : 'var(--muted)',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>{fmt.label}</div>
+                        <div style={{ fontSize: 9.5, opacity: 0.7, fontFamily: 'monospace', marginTop: 2 }}>{fmt.example.slice(0, 14)}…</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Official Google Console Option */}
+              <div style={{
+                background: 'rgba(66, 133, 244, 0.08)',
+                border: '1px solid rgba(66, 133, 244, 0.25)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ fontSize: 12, color: 'var(--text)' }}>
+                  Need to generate directly inside your Google Security Console instead?
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <a
+                    href="https://myaccount.google.com/apppasswords"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: 11.5, padding: '5px 12px', borderRadius: 8, textDecoration: 'none' }}
+                  >
+                    Open Google App Passwords ↗
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('guide')}
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: 11.5, padding: '5px 10px', borderRadius: 8 }}
+                  >
+                    Step Guide →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ══════════════════ TAB: STEP-BY-STEP MANUAL GUIDE ══════════════════ */}
           {activeTab === 'guide' && (

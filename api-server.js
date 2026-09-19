@@ -267,7 +267,11 @@ app.post('/api/auth/disconnect', (req, res) => {
 app.get('/api/auth/app-password', (req, res) => {
   try {
     const provider = req.query.provider || 'google';
-    const guide = getProviderAppPasswordGuide(provider);
+    const email = req.query.email || '';
+    const shouldGenerate = req.query.generate === 'true' || req.query.generate === '1';
+    const format = req.query.format || 'spaced';
+    const guide = getProviderAppPasswordGuide(email || provider);
+    const generatedPassword = shouldGenerate ? generateAppPassword({ format, length: 16 }) : null;
 
     res.json({
       success: true,
@@ -276,6 +280,8 @@ app.get('/api/auth/app-password', (req, res) => {
       appPasswordUrl: guide.appPasswordUrl,
       securityUrl: guide.securityUrl,
       recoveryUrl: guide.recoveryUrl,
+      generatedPassword,
+      cleanGeneratedPassword: generatedPassword ? cleanAppPassword(generatedPassword) : null,
       guide,
       allGuides: PROVIDER_GUIDES
     });
@@ -286,13 +292,16 @@ app.get('/api/auth/app-password', (req, res) => {
 
 app.post('/api/auth/app-password', (req, res) => {
   try {
-    const { provider = 'google', password = '' } = req.body || {};
-    const guide = getProviderAppPasswordGuide(provider);
+    const { provider = 'google', email = '', password = '', generate = false, format = 'spaced' } = req.body || {};
+    const guide = getProviderAppPasswordGuide(email || provider);
+    const generatedPassword = generate ? generateAppPassword({ format, length: 16 }) : null;
+    const rawPassword = generatedPassword || password;
 
     res.json({
       success: true,
       provider: guide.id,
-      cleanPassword: cleanAppPassword(password),
+      cleanPassword: cleanAppPassword(rawPassword),
+      generatedPassword,
       appPasswordUrl: guide.appPasswordUrl,
       guide
     });

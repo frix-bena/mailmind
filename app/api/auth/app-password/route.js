@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  generateAppPassword,
   cleanAppPassword,
   formatAppPassword,
   PROVIDER_GUIDES,
@@ -10,7 +11,11 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const provider = searchParams.get('provider') || 'google';
-    const guide = getProviderAppPasswordGuide(provider);
+    const email = searchParams.get('email') || '';
+    const shouldGenerate = searchParams.get('generate') === 'true' || searchParams.get('generate') === '1';
+    const format = searchParams.get('format') || 'spaced';
+    const guide = getProviderAppPasswordGuide(email || provider);
+    const generatedPassword = shouldGenerate ? generateAppPassword({ format, length: 16 }) : null;
 
     return NextResponse.json({
       success: true,
@@ -19,6 +24,8 @@ export async function GET(request) {
       appPasswordUrl: guide.appPasswordUrl,
       securityUrl: guide.securityUrl,
       recoveryUrl: guide.recoveryUrl,
+      generatedPassword,
+      cleanGeneratedPassword: generatedPassword ? cleanAppPassword(generatedPassword) : null,
       guide,
       allGuides: PROVIDER_GUIDES
     });
@@ -33,13 +40,16 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { provider = 'google', password = '' } = body;
-    const guide = getProviderAppPasswordGuide(provider);
+    const { provider = 'google', email = '', password = '', generate = false, format = 'spaced' } = body;
+    const guide = getProviderAppPasswordGuide(email || provider);
+    const generatedPassword = generate ? generateAppPassword({ format, length: 16 }) : null;
+    const rawPassword = generatedPassword || password;
 
     return NextResponse.json({
       success: true,
       provider: guide.id,
-      cleanPassword: cleanAppPassword(password),
+      cleanPassword: cleanAppPassword(rawPassword),
+      generatedPassword,
       appPasswordUrl: guide.appPasswordUrl,
       guide
     });
