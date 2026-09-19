@@ -80,11 +80,7 @@ export default function AppPasswordModal({
     if (!clean) return;
     if (onSelectPassword) {
       onSelectPassword(clean);
-      setAppliedMsg('App Password applied to login form!');
-      setTimeout(() => {
-        setAppliedMsg('');
-        if (onClose) onClose();
-      }, 700);
+      if (onClose) onClose();
     }
   };
 

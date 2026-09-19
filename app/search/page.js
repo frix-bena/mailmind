@@ -117,6 +117,8 @@ function SearchContent() {
     const stored = getActiveUser();
     if (stored && stored.connected && stored.email && !isDemoAccount(stored)) {
       setUser(stored);
+      router.prefetch('/inbox');
+      router.prefetch('/settings');
       const qParam = searchParams?.get('q');
       if (qParam) {
         setQuery(qParam);

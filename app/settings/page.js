@@ -158,6 +158,8 @@ export default function SettingsPage() {
       return;
     }
     setUser(stored);
+    router.prefetch('/inbox');
+    router.prefetch('/search');
     if (stored.name) setName(stored.name);
     if (stored.avatar || stored.picture) setAvatar(stored.avatar || stored.picture || '');
     if (stored.avatarColor || stored.color) setAvatarColor(stored.avatarColor || stored.color || '');
@@ -271,7 +273,15 @@ export default function SettingsPage() {
       });
     } catch (_) {}
 
-    // Save to backend API
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mailmind:account-switched', { detail: updated }));
+    }
+
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+
+    // Save to backend API in background
     try {
       const payload = JSON.stringify({
         name: updated.name,
@@ -291,30 +301,20 @@ export default function SettingsPage() {
         pollInterval: updated.pollInterval
       });
 
-      try {
-        await fetch('/api/auth/profile', {
+      fetch('/api/auth/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      }).catch(() => {
+        fetch('http://localhost:3002/api/auth/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: payload
-        });
-      } catch {
-        await fetch('http://localhost:3002/api/auth/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload
-        });
-      }
+        }).catch(() => {});
+      });
     } catch (err) {
       console.warn('Backend save error:', err);
     }
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('mailmind:account-switched', { detail: updated }));
-    }
-
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   };
 
   const handleToggleDeviceNotifications = async (val) => {
@@ -457,9 +457,7 @@ export default function SettingsPage() {
         // ignore
       }
       localStorage.removeItem('mailmind_user');
-      setTimeout(() => {
-        router.replace('/onboarding');
-      }, 400);
+      router.replace('/onboarding');
     }
   };
 

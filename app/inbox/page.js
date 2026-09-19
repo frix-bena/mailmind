@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import EmailCard from '@/components/EmailCard';
@@ -186,6 +186,8 @@ export default function InboxPage() {
   useEffect(() => {
     setBrowserPermission(getDeviceNotificationPermission());
     loadEmails(15);
+    router.prefetch('/search');
+    router.prefetch('/settings');
 
     const handleAccountSwitched = (e) => {
       if (e.detail && e.detail.email && !isDemoAccount(e.detail)) {
@@ -270,56 +272,62 @@ export default function InboxPage() {
     }
   };
 
-  const handleAction = async (emailId, action, replyBody) => {
+  const handleAction = useCallback(async (emailId, action, replyBody) => {
     const targetEmail = emails.find(e => e.id === emailId);
     
-    if (action === 'sent' && targetEmail && user) {
-      try {
-        const sendBody = JSON.stringify({
-          email: user.email,
-          password: user.password,
-          provider: user.provider,
-          to: targetEmail.sender_email || targetEmail.senderEmail,
-          subject: targetEmail.subject,
-          body: replyBody || targetEmail.draft?.body || targetEmail.draftBody,
-          inReplyTo: targetEmail.id
-        });
+    // Optimistically update the UI immediately (0ms latency)
+    setEmails(prev => prev.map(e =>
+      e.id === emailId
+        ? {
+            ...e,
+            draftStatus: action === 'sent' ? 'sent' : (action === 'declined' ? 'declined' : e.draftStatus),
+            draft: e.draft ? { ...e.draft, status: action === 'sent' ? 'sent' : (action === 'declined' ? 'declined' : e.draft.status) } : e.draft
+          }
+        : e
+    ));
 
+    if (action === 'sent') {
+      showToast('Reply sent successfully');
+      if (targetEmail && user) {
         try {
-          await fetch('/api/send-email', {
+          const sendBody = JSON.stringify({
+            email: user.email,
+            password: user.password,
+            provider: user.provider,
+            to: targetEmail.sender_email || targetEmail.senderEmail,
+            subject: targetEmail.subject,
+            body: replyBody || targetEmail.draft?.body || targetEmail.draftBody,
+            inReplyTo: targetEmail.id
+          });
+
+          fetch('/api/send-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: sendBody
+          }).catch(() => {
+            fetch('http://localhost:3002/api/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: sendBody
+            }).catch(() => {});
           });
-        } catch {
-          await fetch('http://localhost:3002/api/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: sendBody
-          });
+        } catch (err) {
+          console.error(err);
         }
-        showToast('Reply sent successfully via SMTP');
-      } catch {
-        showToast('Error sending reply');
       }
     } else if (action === 'declined') {
       showToast('Draft declined');
     } else if (action === 'dismissed') {
       showToast('Email dismissed');
     }
+  }, [emails, user]);
 
-    setEmails(prev => prev.map(e =>
-      e.id === emailId
-        ? {
-            ...e,
-            draftStatus: action === 'sent' ? 'sent' : 'declined',
-            draft: e.draft ? { ...e.draft, status: action === 'sent' ? 'sent' : 'declined' } : e.draft
-          }
-        : e
-    ));
-  };
+  const handleFilterTag = useCallback((tag) => setSearch(tag), []);
+  const handleAskAI = useCallback((sender) => {
+    router.push(`/search?q=${encodeURIComponent(sender)}`);
+  }, [router]);
 
-  const filtered = (emails || []).filter(e => {
+  const filtered = useMemo(() => (emails || []).filter(e => {
     if (!e) return false;
     const subject = e?.subject ?? '';
     const sender = e?.sender_name || e?.sender || '';
@@ -341,9 +349,9 @@ export default function InboxPage() {
     if (filter === 'No Reply Needed') return !needsReply;
     if (filter === 'Replied') return isSent;
     return true;
-  });
+  }), [emails, search, filter]);
 
-  const pending = (emails || []).filter(e => e && (e.needs_reply || e.needsReply) && (e.draft?.status === 'pending_approval' || e.draftStatus === 'pending')).length;
+  const pending = useMemo(() => (emails || []).filter(e => e && (e.needs_reply || e.needsReply) && (e.draft?.status === 'pending_approval' || e.draftStatus === 'pending')).length, [emails]);
 
   return (
     <div className="app-shell">
@@ -639,10 +647,8 @@ export default function InboxPage() {
                   key={email.id}
                   email={email}
                   onAction={handleAction}
-                  onFilterTag={(tag) => setSearch(tag)}
-                  onAskAI={(sender) => {
-                    router.push(`/search?q=${encodeURIComponent(sender)}`);
-                  }}
+                  onFilterTag={handleFilterTag}
+                  onAskAI={handleAskAI}
                 />
               ))}
 

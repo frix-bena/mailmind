@@ -93,6 +93,13 @@ export default function Sidebar({ user: propUser }) {
     };
   }, []);
 
+  // Prefetch main routes so clicks are instant
+  useEffect(() => {
+    router.prefetch('/inbox');
+    router.prefetch('/search');
+    router.prefetch('/settings');
+  }, [router]);
+
   // Close drawer on route change
   useEffect(() => {
     setDrawerOpen(false);

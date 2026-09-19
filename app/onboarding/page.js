@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import EmailAvatar from '@/components/EmailAvatar';
 import ProviderIcon, { PROVIDER_LIST } from '@/components/ProviderIcon';
@@ -88,6 +88,10 @@ export default function OnboardingPage() {
   const [deviceNotifications, setDeviceNotifications] = useState(true);
   const [notifSound, setNotifSound] = useState(true);
   const [digest, setDigest] = useState(false);
+
+  useEffect(() => {
+    router.prefetch('/inbox');
+  }, [router]);
 
   const openAppPasswordModal = (tab = 'generator') => {
     setAppPasswordModalTab(tab);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import EmailAvatar from '@/components/EmailAvatar';
 import SenderProfileModal from '@/components/SenderProfileModal';
 import {
@@ -293,7 +293,7 @@ function FullEmailModal({ email, onClose, onReply, onOpenProfile }) {
   );
 }
 
-export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
+function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
   const senderEmail = extractCleanEmail(email.sender_email || email.senderEmail || '');
   const senderName = extractDisplayName(email.sender_name || email.sender, senderEmail);
   const organization = extractOrganization(senderEmail, senderName);
@@ -317,12 +317,9 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
   const isDone = status === 'sent' || status === 'declined';
 
   const handleSend = (emailId, body) => {
-    setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      setStatus('sent');
-      onAction && onAction(emailId, 'sent', body);
-    }, 800);
+    setStatus('sent');
+    setSending(false);
+    onAction && onAction(emailId, 'sent', body);
   };
 
   const handleDecline = () => {
@@ -615,3 +612,5 @@ export default function EmailCard({ email, onAction, onFilterTag, onAskAI }) {
     </>
   );
 }
+
+export default memo(EmailCard);

@@ -20,24 +20,20 @@ export default function ComposeModal({
   const [success, setSuccess] = useState(false);
 
   const handleGenerateAI = () => {
-    setGenerating(true);
-    setTimeout(() => {
-      const myName = (user?.name || (user?.email ? user.email.split('@')[0] : 'Me')).replace(/[._]/g, ' ');
-      const cleanSubj = subject ? subject.replace(/^(re:\s*|fwd:\s*)+/i, '').trim() : 'our discussion';
-      const recipientName = to ? (to.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : 'there';
+    const myName = (user?.name || (user?.email ? user.email.split('@')[0] : 'Me')).replace(/[._]/g, ' ');
+    const cleanSubj = subject ? subject.replace(/^(re:\s*|fwd:\s*)+/i, '').trim() : 'our discussion';
+    const recipientName = to ? (to.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : 'there';
 
-      let aiDraft = '';
-      if (user?.tone === 'brief') {
-        aiDraft = `Hi ${recipientName},\n\nI'm writing regarding ${cleanSubj}. Please let me know when you have a moment to connect on next steps.\n\nBest,\n${myName}`;
-      } else if (user?.tone === 'casual') {
-        aiDraft = `Hey ${recipientName},\n\nHope you're having a great week! Wanted to quickly reach out regarding ${cleanSubj}.\n\nLooking forward to catching up soon!\n\nCheers,\n${myName}`;
-      } else {
-        aiDraft = `Dear ${recipientName},\n\nI hope this email finds you well.\n\nI am writing to you regarding ${cleanSubj}. Please let me know your thoughts on this matter and your availability for any follow-up discussions.\n\nThank you for your time and consideration.\n\nSincerely,\n${myName}`;
-      }
+    let aiDraft = '';
+    if (user?.tone === 'brief') {
+      aiDraft = `Hi ${recipientName},\n\nI'm writing regarding ${cleanSubj}. Please let me know when you have a moment to connect on next steps.\n\nBest,\n${myName}`;
+    } else if (user?.tone === 'casual') {
+      aiDraft = `Hey ${recipientName},\n\nHope you're having a great week! Wanted to quickly reach out regarding ${cleanSubj}.\n\nLooking forward to catching up soon!\n\nCheers,\n${myName}`;
+    } else {
+      aiDraft = `Dear ${recipientName},\n\nI hope this email finds you well.\n\nI am writing to you regarding ${cleanSubj}. Please let me know your thoughts on this matter and your availability for any follow-up discussions.\n\nThank you for your time and consideration.\n\nSincerely,\n${myName}`;
+    }
 
-      setBody(prev => (prev ? `${prev}\n\n${aiDraft}` : aiDraft));
-      setGenerating(false);
-    }, 400);
+    setBody(prev => (prev ? `${prev}\n\n${aiDraft}` : aiDraft));
   };
 
   const handleInsertTemplate = (templateType) => {
@@ -103,10 +99,10 @@ export default function ComposeModal({
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccess(true);
+        onSent && onSent({ to, subject, body });
         setTimeout(() => {
-          onSent && onSent({ to, subject, body });
           onClose();
-        }, 1200);
+        }, 180);
       } else {
         setError(data.error || 'Failed to send email. Check your SMTP settings and credentials.');
       }
