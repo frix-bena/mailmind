@@ -73,5 +73,4 @@ MailMind connects to your inbox using **OAuth 2.0** ("Sign in with Google" / "Si
 
 > ⚠️ Google and Microsoft have blocked plain password sign-in for third-party mail apps for years — OAuth isn't just safer, it's required.
 
----
 
